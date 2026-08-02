@@ -19,6 +19,7 @@ import hmac
 import json
 import logging
 import os
+import sys
 import time
 from pathlib import Path
 from urllib.parse import parse_qsl
@@ -73,7 +74,11 @@ log = logging.getLogger("apexwords")
 
 if not BOT_TOKEN:
     raise SystemExit(
-        "BOT_TOKEN topilmadi. .env faylini yarating (.env.example dan nusxa oling)."
+        "\n" + "=" * 64 +
+        "\nISHGA TUSHMADI: BOT_TOKEN yo'q.\n"
+        "  Lokalda : .env faylini yarating (.env.example dan nusxa oling)\n"
+        "  Railway : Variables bo'limiga BOT_TOKEN qo'shing\n"
+        + "=" * 64
     )
 
 
@@ -305,10 +310,55 @@ async def cmd_stats(message: Message):
 
 # --------------------------------- Boshlash -----------------------------------
 
+def log_startup_config():
+    """
+    Ishga tushishda sozlamalarni chop etadi.
+
+    Railway'da nimadir ishlamasa, log birinchi qaraladigan joy. Shuning uchun
+    har bir muhim o'zgaruvchi holati aniq yoziladi. Token to'liq chop etilmaydi —
+    log saqlanib qolishi mumkin.
+    """
+    log.info("=" * 56)
+    log.info("Apex Words ishga tushmoqda")
+    log.info("  BOT_TOKEN   : %s (id: %s)",
+             "bor" if BOT_TOKEN else "YO'Q",
+             BOT_TOKEN.split(":")[0] if ":" in BOT_TOKEN else "shakli noto'g'ri")
+    if WEBAPP_URL.startswith("https://"):
+        log.info("  WEBAPP_URL  : %s", WEBAPP_URL)
+    elif WEBAPP_URL:
+        log.warning("  WEBAPP_URL  : %s  <-- https:// EMAS, o'yin tugmasi chiqmaydi",
+                    WEBAPP_URL)
+    else:
+        log.warning("  WEBAPP_URL  : YO'Q  <-- o'yin tugmasi chiqmaydi")
+    log.info("  PORT        : %s", PORT)
+    log.info("  Mini App    : %s", "topildi" if (WEB_DIR / "index.html").exists()
+             else "web_app/index.html YO'Q")
+    log.info("=" * 56)
+
+
 async def main():
+    log_startup_config()
     await db.init()
 
     bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+    # Tokenni darhol tekshiramiz. Aks holda xato faqat polling boshlangach
+    # chiqadi va logda tushunarsiz TelegramUnauthorizedError ko'rinadi.
+    try:
+        me = await bot.get_me()
+        log.info("Bot ulandi: @%s (%s)", me.username, me.full_name)
+    except Exception as e:
+        await bot.session.close()
+        raise SystemExit(
+            "\n" + "=" * 64 +
+            f"\nISHGA TUSHMADI: Telegram tokenni qabul qilmadi.\n"
+            f"  Xato: {type(e).__name__}: {e}\n"
+            "  Sabab odatda: token noto'g'ri, yoki @BotFather da /revoke\n"
+            "  qilinib eski token qolib ketgan.\n"
+            "  Yechim: @BotFather dan yangi tokenni oling va Railway'dagi\n"
+            "  BOT_TOKEN o'zgaruvchisini yangilang.\n"
+            + "=" * 64
+        )
 
     runner = web.AppRunner(make_app())
     await runner.setup()
@@ -338,5 +388,17 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         pass
+    except SystemExit as e:
+        # SystemExit ni shunchaki 'pass' qilib bo'lmaydi: u holda xato sababi
+        # hech qayerda chop etilmaydi va Railway logida faqat jimgina
+        # to'xtash ko'rinadi. Xabarni chiqarib, nolga teng bo'lmagan kod bilan
+        # chiqamiz — shunda Railway ham buni muvaffaqiyatsizlik deb biladi.
+        if e.code is not None and not isinstance(e.code, int):
+            print(e.code, file=sys.stderr, flush=True)
+            raise SystemExit(1)
+        raise
+    except Exception:
+        log.exception("Kutilmagan xato — jarayon to'xtadi")
+        raise SystemExit(1)
