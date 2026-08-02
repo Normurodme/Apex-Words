@@ -130,6 +130,8 @@ MANUAL_DROP = {
     "rah", "rel", "roc", "sha", "sho", "slain", "slew", "soc", "soho", "tae",
     "tai", "taj", "tat", "tau", "tay", "tele", "toro", "toto", "tra", "tron",
     "tum", "vis", "wen", "wight", "wis", "yah", "yan", "yee", "zac", "alp",
+    "carr", "fiat", "apa", "bain", "bose", "dum", "hah", "hud", "lux",
+    "napa", "pap", "pow", "soma",
 }
 
 # Brown korpusi qamrab olmaydigan joy nomlari, brendlar va boshqa atoqli otlar.
@@ -148,6 +150,24 @@ PLACES_AND_BRANDS = {
     "surrey", "mormon", "homer", "pagan", "mecca", "eden", "sahara",
     "malik", "manila", "guinea", "alumni", "borneo", "congo", "malta",
     "indy", "aussie", "brit", "yank", "kiwi",
+}
+
+# Olmoshlar va artikllar — TO'RGA tushmasin, faqat BONUS bo'lsin.
+#
+# 'ITS', 'HIM', 'HIS' kabi so'zlar grammatik yordamchi so'zlar: ularni katakka
+# qo'yish yangi lug'at o'rgatmaydi va o'yin zerikarli ko'rinadi. Lekin o'yinchi
+# ularni tasodifan yasab qolsa "bunday so'z yo'q" deyish ham noto'g'ri.
+# Shuning uchun core'dan chiqariladi, full'da qoladi -> topilsa +1 bonus.
+BONUS_ONLY = {
+    "i", "me", "my", "mine", "myself",
+    "you", "your", "yours", "yourself", "yourselves",
+    "he", "him", "his", "himself",
+    "she", "her", "hers", "herself",
+    "it", "its", "itself",
+    "we", "us", "our", "ours", "ourselves",
+    "they", "them", "their", "theirs", "themselves",
+    "who", "whom", "whose",
+    "the", "an", "a",
 }
 
 # Ko'plik/zamon qoidalariga TASODIFAN tushib qoladigan haqiqiy asos so'zlar.
@@ -384,7 +404,9 @@ def main():
         z = zipf_frequency(w, "en")
         if z >= FULL_ZIPF:
             full.append(w)
-            if z >= CORE_ZIPF and not is_inflected(w):
+            # BONUS_ONLY so'zlari full'da qoladi, lekin core'ga tushmaydi:
+            # o'yinchi ularni topsa +1 oladi, ammo to'rda katak bo'lmaydi.
+            if z >= CORE_ZIPF and not is_inflected(w) and w not in BONUS_ONLY:
                 core.append(w)
 
     core.sort()

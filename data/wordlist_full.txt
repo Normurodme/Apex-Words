@@ -374,7 +374,6 @@ anything
 anyway
 anywhere
 aortic
-apa
 apache
 apart
 apartheid
@@ -640,7 +639,6 @@ bagel
 baggage
 baggy
 bail
-bain
 bait
 bake
 bakery
@@ -972,7 +970,6 @@ borough
 borrow
 borrower
 bosch
-bose
 bosom
 boss
 botanical
@@ -1270,7 +1267,6 @@ carnival
 carp
 carpenter
 carpet
-carr
 carriage
 carrick
 carrier
@@ -2539,7 +2535,6 @@ duet
 duff
 dull
 duly
-dum
 dumb
 dummy
 dump
@@ -3064,7 +3059,6 @@ few
 fiance
 fiancee
 fiasco
-fiat
 fiber
 fibrosis
 fickle
@@ -3720,7 +3714,6 @@ habitual
 hack
 hacker
 hackney
-hah
 hail
 hair
 haircut
@@ -4026,7 +4019,6 @@ howl
 hub
 hubble
 hubby
-hud
 huddle
 hue
 hug
@@ -4859,7 +4851,6 @@ lupus
 lure
 lurk
 lush
-lux
 luxurious
 luxury
 lymph
@@ -5369,7 +5360,6 @@ nameless
 namely
 namesake
 nap
-napa
 napkin
 narration
 narrative
@@ -5830,7 +5820,6 @@ pant
 pantheon
 panther
 pantry
-pap
 papal
 paper
 paperback
@@ -6262,7 +6251,6 @@ poultry
 pound
 pour
 poverty
-pow
 powder
 power
 powerful
@@ -7704,7 +7692,6 @@ soluble
 solution
 solve
 solvent
-soma
 somber
 some
 somebody

@@ -744,7 +744,6 @@ cargo
 carnival
 carpenter
 carpet
-carr
 carriage
 carrier
 carrot
@@ -1846,7 +1845,6 @@ fetus
 feud
 fever
 few
-fiat
 fiber
 fiction
 fictional
@@ -2301,7 +2299,6 @@ helpful
 helpless
 hen
 hence
-her
 herd
 here
 hereby
@@ -2310,8 +2307,6 @@ heritage
 hero
 heroic
 heroin
-hers
-herself
 hesitate
 hey
 hide
@@ -2326,12 +2321,9 @@ highway
 hike
 hilarious
 hill
-him
-himself
 hint
 hip
 hire
-his
 historian
 historic
 history
@@ -2601,8 +2593,6 @@ isolate
 isolation
 issue
 item
-its
-itself
 ivory
 jacket
 jail
@@ -3045,7 +3035,6 @@ milk
 mill
 million
 mind
-mine
 miner
 mineral
 miniature
@@ -3169,7 +3158,6 @@ mutation
 mute
 mutual
 mutually
-myself
 mystery
 mystic
 mystical
@@ -3389,8 +3377,6 @@ otherwise
 ouch
 ought
 ounce
-our
-ours
 out
 outbreak
 outcome
@@ -4390,7 +4376,6 @@ shark
 sharp
 sharply
 shave
-she
 shed
 sheep
 sheer
@@ -4963,11 +4948,8 @@ than
 thank
 thankful
 that
-the
 theater
 theft
-their
-them
 theme
 then
 theology
@@ -4982,7 +4964,6 @@ thereof
 thermal
 these
 thesis
-they
 thick
 thickness
 thief
@@ -5479,14 +5460,11 @@ whisky
 whisper
 whistle
 white
-who
 whoa
 whoever
 whole
 wholesale
 wholly
-whom
-whose
 why
 wicked
 wicket
@@ -5581,12 +5559,8 @@ yesterday
 yet
 yield
 yoga
-you
 young
 younger
-your
-yours
-yourself
 youth
 youthful
 yuan

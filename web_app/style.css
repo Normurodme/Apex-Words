@@ -1,28 +1,31 @@
-/* Apex Words — Telegram Mini App
-   Rang sxemasi rasmdagi "pishiriq" uslubiga yaqin: to'q jigarrang fon,
-   sarg'ish biskvit harflar, to'q sariq tugmalar. */
+/* Apex Words — yorqin "sayohat" mavzusi.
+   Bosqichlar Countries/Cities bo'lgani uchun fon osmon + shahar siluети:
+   ochiq havorang, quyoshli oltin va marjon ranglar. */
 
 :root {
-  --bg-dark:      #4b1d14;
-  --bg-mid:       #5d2618;
-  --tray-bg:      #3d1d10;
-  --tray-edge:    #e0813a;
-  --tile:         #f2c169;
-  --tile-edge:    #c98a34;
-  --tile-text:    #6b3410;
-  --slot-bg:      #2b140a;
-  --slot-edge:    #8a4a22;
-  --accent:       #e8542f;
-  --accent-dark:  #b93a1c;
-  --accent-light: #ff7a4d;
-  --line:         #ff5722;
-  --plate:        #fbf7ef;
-  --plate-edge:   #ddd3c2;
-  --text:         #fff3e0;
-  --gold:         #ffd24a;
-  --ok:           #57c26b;
+  --sky-1:   #5fd8ff;
+  --sky-2:   #2f9bf7;
+  --sky-3:   #6a5cf5;
+  --deep:    #17246b;
+  --ink:     #0d2a5e;
+
+  --gold-1:  #ffe17a;
+  --gold-2:  #ffc93c;
+  --gold-3:  #f5a105;
+
+  --coral-1: #ff8fa6;
+  --coral-2: #ff4f6f;
+  --coral-3: #d62a4d;
+
+  --mint:    #2fe3a8;
+  --violet:  #a78bfa;
+  --white:   #ffffff;
+
+  --lock-1:  #8fa3c4;
+  --lock-2:  #62779b;
 
   --tile-size: 46px;
+  --node: 58px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -36,404 +39,484 @@ html, body {
 
 body {
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg-dark);
-  /* Dasturxon naqshi — rasmdagi katakli mato taassuroti */
-  background-image:
-    repeating-linear-gradient(0deg,   rgba(255,255,255,.045) 0 22px, transparent 22px 66px),
-    repeating-linear-gradient(90deg,  rgba(255,255,255,.045) 0 22px, transparent 22px 66px),
-    radial-gradient(circle at 50% 22%, var(--bg-mid), var(--bg-dark) 78%);
+  color: #fff;
+  background: var(--sky-2);
   user-select: none;
   -webkit-user-select: none;
 }
 
-#app {
+.screen { display: none; position: absolute; inset: 0; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* Umumiy ochko hisoblagichi */
+.coins {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px 5px 6px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.22);
+  border: 2px solid rgba(255,255,255,.55);
+  backdrop-filter: blur(6px);
+  font-weight: 800; font-size: 15px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+.coins .coin {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3b0, var(--gold-2) 60%, var(--gold-3));
+  color: #8a5a00; font-size: 12px;
+}
+
+/* ======================= XARITA EKRANI ======================= */
+
+#map-screen { background: linear-gradient(#7ee4ff 0%, var(--sky-1) 28%, var(--sky-2) 62%, var(--sky-3) 100%); }
+
+.sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.cloud {
+  position: absolute;
+  display: block;
+  background: rgba(255,255,255,.55);
+  border-radius: 50%;
+  filter: blur(.5px);
+}
+/* Har bulut uchta doiradan yig'iladi */
+.cloud::before, .cloud::after {
+  content: ""; position: absolute; background: inherit; border-radius: 50%;
+}
+.cloud::before { width: 70%; height: 90%; left: -28%; top: 18%; }
+.cloud::after  { width: 85%; height: 105%; right: -32%; top: 8%; }
+
+.c1 { width: 120px; height: 42px; top: 12%;  left: -6%;  opacity: .75; }
+.c2 { width: 90px;  height: 32px; top: 30%;  right: -4%; opacity: .6; }
+.c3 { width: 150px; height: 50px; top: 52%;  left: -10%; opacity: .45; }
+.c4 { width: 100px; height: 36px; top: 70%;  right: -6%; opacity: .38; }
+.c5 { width: 130px; height: 44px; top: 87%;  left: 8%;   opacity: .28; }
+
+#map-top {
+  position: relative; z-index: 3;
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 10px;
+}
+.brand {
+  font-size: 20px; font-weight: 900; letter-spacing: .5px;
+  text-shadow: 0 2px 0 rgba(0,0,0,.18), 0 4px 12px rgba(0,0,0,.2);
+}
+
+#map-scroll {
+  position: relative; z-index: 2;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+#map-inner { position: relative; width: 100%; }
+
+#map-path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+#map-nodes { position: absolute; inset: 0; }
+
+/* Bosqich sarlavhasi yo'l bo'ylab */
+.stage-banner {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 7px 20px;
+  border-radius: 20px;
+  background: rgba(13,42,94,.55);
+  border: 2px solid rgba(255,255,255,.5);
+  backdrop-filter: blur(6px);
+  font-size: 13px; font-weight: 800; letter-spacing: 1px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Daraja tugmasi */
+.node {
+  position: absolute;
+  width: var(--node); height: var(--node);
+  margin: calc(var(--node) / -2) 0 0 calc(var(--node) / -2);
+  border: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 21px; font-weight: 900;
+  color: #fff;
+  cursor: pointer;
+  transition: transform .12s;
+}
+.node:active { transform: scale(.92); }
+
+.node .num { line-height: 1; text-shadow: 0 2px 3px rgba(0,0,0,.35); }
+
+.node .name {
+  position: absolute;
+  bottom: -19px;
+  font-size: 11px; font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,.45);
+  opacity: .95;
+}
+
+.node.locked {
+  background: radial-gradient(circle at 35% 28%, var(--lock-1), var(--lock-2));
+  box-shadow: 0 4px 0 #46587a, 0 6px 12px rgba(0,0,0,.25);
+  cursor: not-allowed;
+}
+.node.locked .num { opacity: .35; }
+.node.locked::after {
+  content: "🔒"; position: absolute; font-size: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.4));
+}
+
+.node.done {
+  background: radial-gradient(circle at 35% 28%, var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+  box-shadow: 0 4px 0 #b87700, 0 6px 14px rgba(0,0,0,.3);
+  color: #6b3d00;
+}
+
+.node.current {
+  background: radial-gradient(circle at 35% 28%, var(--coral-1), var(--coral-2) 55%, var(--coral-3));
+  box-shadow: 0 4px 0 var(--coral-3), 0 0 0 6px rgba(255,255,255,.45),
+              0 8px 18px rgba(0,0,0,.3);
+  animation: bob 1.6s ease-in-out infinite;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+/* Tugun ustidagi yulduzchalar */
+.node .stars {
+  position: absolute;
+  top: -15px;
+  display: flex; gap: 1px;
+  font-size: 13px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+}
+.node .stars i { font-style: normal; color: rgba(255,255,255,.45); }
+.node .stars i.on { color: var(--gold-2); }
+.node .stars i:nth-child(2) { transform: translateY(-3px); font-size: 15px; }
+
+/* Progress halqasi (nechta puzzle yechilgan) */
+.node .ring { position: absolute; inset: -5px; transform: rotate(-90deg); }
+.node .ring circle { fill: none; stroke-linecap: round; }
+.node .ring .bg { stroke: rgba(255,255,255,.3); stroke-width: 4; }
+.node .ring .fg { stroke: var(--mint); stroke-width: 4; }
+
+#map-bottom {
+  position: relative; z-index: 3;
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  padding: 6px 8px calc(env(safe-area-inset-bottom, 0px) + 6px);
+  background: rgba(13,42,94,.35);
+  backdrop-filter: blur(10px);
+  border-top: 2px solid rgba(255,255,255,.3);
+}
+.tab {
+  flex: 1;
+  display: grid; place-items: center; gap: 2px;
+  padding: 7px 0;
+  border: none; border-radius: 14px;
+  background: transparent;
+  color: rgba(255,255,255,.75);
+  font-size: 11px; font-weight: 700;
+  cursor: pointer;
+}
+.tab.active { background: rgba(255,255,255,.2); color: #fff; }
+.tab-ico { font-size: 19px; }
+
+/* ======================== O'YIN EKRANI ======================== */
+
+#game-screen {
+  background: linear-gradient(160deg, #6ddcff 0%, var(--sky-2) 45%, var(--sky-3) 100%);
   padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px
            calc(env(safe-area-inset-bottom, 0px) + 8px);
   gap: 8px;
 }
 
-/* ------------------------------- Yuqori panel ------------------------------ */
-
-#topbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
+#topbar { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 
 #level-title {
-  flex: 1;
-  text-align: center;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: .3px;
-  text-shadow: 0 2px 0 rgba(0,0,0,.45);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1; text-align: center;
+  font-size: 17px; font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,.28);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .round-btn {
-  width: 44px; height: 44px;
-  flex: 0 0 auto;
-  border: none;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, var(--accent-light), var(--accent) 55%, var(--accent-dark));
-  box-shadow: 0 3px 0 var(--accent-dark), 0 5px 10px rgba(0,0,0,.35);
+  width: 44px; height: 44px; flex: 0 0 auto;
+  border: none; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--coral-1), var(--coral-2) 55%, var(--coral-3));
+  box-shadow: 0 4px 0 var(--coral-3), 0 5px 12px rgba(0,0,0,.25);
   color: #fff;
-  display: grid;
-  place-items: center;
+  display: grid; place-items: center;
   cursor: pointer;
   transition: transform .08s, box-shadow .08s;
 }
-.round-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--accent-dark), 0 2px 6px rgba(0,0,0,.35); }
+.round-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--coral-3); }
+.round-btn .glyph { font-size: 24px; font-weight: 900; line-height: 1; }
+#btn-back .glyph { font-size: 30px; margin-top: -4px; }
 
-.icon-lines { display: grid; gap: 4px; }
-.icon-lines i { display: block; width: 18px; height: 3px; border-radius: 2px; background: #fff; }
-
-.round-btn .glyph { font-size: 22px; font-weight: 800; line-height: 1; }
-
-#coins {
-  flex: 0 0 auto;
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px 6px 8px;
-  border-radius: 22px;
-  background: linear-gradient(#7a3520, #5a2415);
-  border: 2px solid var(--tray-edge);
-  font-weight: 800;
-  font-size: 15px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,.35);
-}
-#coins .coin {
-  width: 22px; height: 22px;
-  display: grid; place-items: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffe27a, var(--gold) 60%, #d79f14);
-  color: #8a5a00;
-  font-size: 13px;
-}
-
-/* --------------------------- So'zlar taxtasi (to'r) ------------------------ */
-
+/* To'r */
 #tray {
-  flex: 1 1 auto;
-  min-height: 0;
-  border-radius: 18px;
-  background: var(--tray-bg);
-  border: 3px solid var(--tray-edge);
-  box-shadow: inset 0 3px 12px rgba(0,0,0,.55), 0 4px 0 rgba(0,0,0,.25);
-  padding: 10px 8px;
+  flex: 1 1 auto; min-height: 0;
+  border-radius: 20px;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.5);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.15) inset;
+  padding: 12px 8px;
   overflow-y: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
-
 #grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: center;
-  gap: 10px 14px;
-  width: 100%;
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-content: center;
+  gap: 12px 14px; width: 100%;
 }
 
-.word-group { display: flex; gap: 4px; }
+.word-group { display: flex; align-items: center; gap: 4px; }
 
 .cell {
   width: 30px; height: 30px;
-  border-radius: 6px;
-  background: var(--slot-bg);
-  border: 2px solid var(--slot-edge);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 16px;
+  border-radius: 8px;
+  background: rgba(13,42,94,.28);
+  border: 2px solid rgba(255,255,255,.45);
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 16px;
   color: transparent;
 }
-
 .cell.filled {
-  background: linear-gradient(#f7cf82, var(--tile) 55%, var(--tile-edge));
-  border-color: var(--tile-edge);
-  color: var(--tile-text);
-  animation: pop .25s ease-out;
+  background: linear-gradient(var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+  border-color: #fff;
+  color: #6b3d00;
+  animation: pop .28s ease-out;
 }
-
 .cell.hinted {
-  background: linear-gradient(#fff0c2, #ffe08a 60%, #e0b451);
-  border-color: #e0b451;
-  color: var(--tile-text);
+  background: rgba(255,255,255,.75);
+  border-color: #fff;
+  color: var(--ink);
 }
-
 @keyframes pop {
-  0%   { transform: scale(.4) rotate(-12deg); opacity: 0; }
-  70%  { transform: scale(1.15) rotate(3deg); }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
+  0%   { transform: scale(.4) rotate(-14deg); opacity: 0; }
+  70%  { transform: scale(1.18) rotate(4deg); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* ---------------------------- Yig'ilayotgan so'z --------------------------- */
-
-#current-word {
-  flex: 0 0 auto;
-  height: 34px;
-  display: grid;
-  place-items: center;
+/* Lampa — tarjimani ko'rsatuvchi tugma */
+.lamp {
+  width: 26px; height: 26px;
+  margin-left: 2px;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  border: 2px solid rgba(255,255,255,.6);
+  font-size: 13px; line-height: 1;
+  cursor: pointer;
+  display: grid; place-items: center;
+  animation: lampIn .3s ease-out;
+  transition: transform .1s, background .15s;
 }
+.lamp:active { transform: scale(.88); }
+.lamp.used { background: rgba(255,255,255,.14); opacity: .7; }
+@keyframes lampIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+.lamp-demo {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.5);
+  vertical-align: middle;
+}
+
+/* Yig'ilayotgan so'z */
+#current-word { flex: 0 0 auto; height: 36px; display: grid; place-items: center; }
 #current-word span {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: var(--tile);
-  text-shadow: 0 2px 0 rgba(0,0,0,.5);
-  padding: 0 10px;
-  border-radius: 10px;
-  transition: color .12s, background .12s;
+  font-size: 26px; font-weight: 900; letter-spacing: 3px;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,.35);
+  padding: 2px 14px; border-radius: 12px;
+  transition: background .12s;
 }
-#current-word span.hit    { color: #fff; background: rgba(87,194,107,.35); }
-#current-word span.repeat { color: #ffd9a0; background: rgba(255,255,255,.14); }
-#current-word span.miss   { color: #ffb3a0; animation: shake .3s; }
-
+#current-word span.hit    { background: rgba(47,227,168,.45); }
+#current-word span.repeat { background: rgba(255,255,255,.28); }
+#current-word span.miss   { background: rgba(255,79,111,.45); animation: shake .3s; }
 @keyframes shake {
   0%,100% { transform: translateX(0); }
-  25%     { transform: translateX(-7px); }
-  75%     { transform: translateX(7px); }
+  25%     { transform: translateX(-8px); }
+  75%     { transform: translateX(8px); }
 }
 
-/* ------------------------------ Harflar g'ildiragi ------------------------- */
+/* G'ildirak */
+#stage-area { flex: 0 0 auto; position: relative; display: grid; place-items: center; padding: 6px 0 4px; }
 
-#stage-area {
-  flex: 0 0 auto;
-  position: relative;
-  display: grid;
-  place-items: center;
-  padding: 6px 0 4px;
-}
-
-#wheel {
-  position: relative;
-  width: min(78vw, 300px);
-  aspect-ratio: 1;
-  touch-action: none;
-}
+#wheel { position: relative; width: min(78vw, 300px); aspect-ratio: 1; touch-action: none; }
 
 #plate {
-  position: absolute;
-  inset: 6%;
+  position: absolute; inset: 6%;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 30%, #fff, var(--plate) 55%, #ece5d8);
-  border: 5px solid var(--plate-edge);
-  box-shadow: 0 8px 18px rgba(0,0,0,.4), inset 0 -6px 14px rgba(0,0,0,.08);
+  background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.95), rgba(255,255,255,.68) 60%, rgba(255,255,255,.5));
+  border: 5px solid rgba(255,255,255,.85);
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
 }
 
 #line { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-
 #letters { position: absolute; inset: 0; }
 
 .letter {
   position: absolute;
-  width: var(--tile-size);
-  height: var(--tile-size);
+  width: var(--tile-size); height: var(--tile-size);
   margin: calc(var(--tile-size) / -2) 0 0 calc(var(--tile-size) / -2);
-  border-radius: 12px;
-  background: linear-gradient(#f9d694, var(--tile) 50%, var(--tile-edge));
-  border: 2px solid #b8802f;
-  box-shadow: 0 3px 0 #a8721f, 0 5px 10px rgba(0,0,0,.35);
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--tile-text);
+  border-radius: 14px;
+  background: linear-gradient(var(--gold-1), var(--gold-2) 50%, var(--gold-3));
+  border: 2px solid #fff;
+  box-shadow: 0 4px 0 #c98400, 0 6px 12px rgba(0,0,0,.28);
+  display: grid; place-items: center;
+  font-size: 24px; font-weight: 900;
+  color: #6b3d00;
   transition: transform .1s, box-shadow .1s, filter .1s;
 }
 .letter.active {
-  filter: brightness(1.15);
-  transform: scale(1.12);
-  box-shadow: 0 0 0 4px rgba(255,87,34,.45), 0 4px 10px rgba(0,0,0,.4);
+  filter: brightness(1.12);
+  transform: scale(1.14);
+  box-shadow: 0 0 0 5px rgba(255,79,111,.55), 0 4px 12px rgba(0,0,0,.3);
 }
 
-/* Yon tugmalar */
 .side-btn { position: absolute; bottom: 14px; width: 52px; height: 52px; }
 #btn-shuffle { left: 4px; }
 #btn-hint    { right: 4px; }
-
 #btn-hint .price {
-  position: absolute;
-  bottom: -6px; right: -6px;
-  min-width: 22px;
-  padding: 1px 5px;
+  position: absolute; bottom: -6px; right: -6px;
+  min-width: 22px; padding: 1px 5px;
   border-radius: 11px;
-  background: var(--gold);
-  color: #7a4a00;
-  font-size: 12px;
-  font-weight: 800;
-  border: 2px solid #a9791a;
+  background: var(--gold-2); color: #7a4a00;
+  font-size: 12px; font-weight: 800;
+  border: 2px solid #fff;
 }
 
 #btn-book {
-  position: absolute;
-  right: 2px; top: 6px;
+  position: absolute; right: 2px; top: 4px;
   width: 62px; height: 58px;
-  border: none;
-  border-radius: 8px 10px 10px 8px;
-  background: linear-gradient(#f0b45f, #d98a33);
-  border-left: 6px solid #a85f22;
-  box-shadow: 0 3px 0 #a85f22, 0 5px 10px rgba(0,0,0,.35);
-  color: #5b2d0c;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.15;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
+  border: none; border-radius: 10px;
+  background: linear-gradient(var(--violet), #7c5ce0);
+  border-left: 6px solid #5b41b5;
+  box-shadow: 0 4px 0 #5b41b5, 0 6px 12px rgba(0,0,0,.25);
+  color: #fff; font-size: 10px; font-weight: 800; line-height: 1.15;
+  cursor: pointer; display: grid; place-items: center;
 }
 #btn-book .book-count {
-  position: absolute;
-  top: -7px; right: -7px;
-  min-width: 22px; height: 22px;
-  border-radius: 11px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
-  display: grid; place-items: center;
-  border: 2px solid #8f2c12;
+  position: absolute; top: -7px; right: -7px;
+  min-width: 22px; height: 22px; border-radius: 11px;
+  background: var(--coral-2); color: #fff;
+  font-size: 12px; display: grid; place-items: center;
+  border: 2px solid #fff;
 }
 
-/* -------------------------------- Oynalar --------------------------------- */
+/* ========================== OYNALAR ========================== */
 
 .overlay {
   position: fixed; inset: 0;
-  background: rgba(20,7,3,.72);
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  z-index: 50;
-  backdrop-filter: blur(2px);
+  background: rgba(10,26,66,.6);
+  display: grid; place-items: center;
+  padding: 18px; z-index: 60;
+  backdrop-filter: blur(4px);
 }
 .overlay[hidden] { display: none; }
 
 .sheet {
-  width: 100%;
-  max-width: 420px;
-  max-height: 82vh;
-  display: flex;
-  flex-direction: column;
-  border-radius: 18px;
-  background: linear-gradient(#5f2a19, #431d11);
-  border: 3px solid var(--tray-edge);
-  box-shadow: 0 12px 32px rgba(0,0,0,.55);
+  width: 100%; max-width: 420px; max-height: 82vh;
+  display: flex; flex-direction: column;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #3aa8f7, #6a5cf5);
+  border: 3px solid rgba(255,255,255,.6);
+  box-shadow: 0 16px 40px rgba(0,0,0,.4);
   overflow: hidden;
 }
 .sheet-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 2px solid rgba(224,129,58,.35);
+  padding: 13px 16px;
+  border-bottom: 2px solid rgba(255,255,255,.28);
 }
 .sheet-head h2 { margin: 0; font-size: 17px; }
 .close-btn {
-  width: 32px; height: 32px;
-  border: none; border-radius: 50%;
-  background: rgba(255,255,255,.12);
-  color: var(--text);
-  font-size: 15px;
-  cursor: pointer;
+  width: 32px; height: 32px; border: none; border-radius: 50%;
+  background: rgba(255,255,255,.24); color: #fff; font-size: 15px; cursor: pointer;
 }
-.sheet-body { padding: 12px 14px 18px; overflow-y: auto; }
+.sheet-body { padding: 12px 16px 20px; overflow-y: auto; }
 
-.stage-block { margin-bottom: 16px; }
-.stage-block h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: var(--gold);
-  letter-spacing: .5px;
-}
-.level-row {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border: none;
-  border-radius: 12px;
-  background: rgba(255,255,255,.08);
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-.level-row.locked { opacity: .45; cursor: not-allowed; }
-.level-row .bar {
-  flex: 1;
-  height: 7px;
-  border-radius: 4px;
-  background: rgba(0,0,0,.35);
-  overflow: hidden;
-}
-.level-row .bar i { display: block; height: 100%; background: var(--ok); border-radius: 4px; }
-.level-row .num { font-size: 12px; opacity: .8; min-width: 46px; text-align: right; }
+.rules p { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
 
 .book-word {
-  display: flex; justify-content: space-between; gap: 10px;
-  padding: 8px 4px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  font-size: 14px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid rgba(255,255,255,.18);
+  font-size: 15px;
 }
-.book-word b { color: var(--tile); letter-spacing: 1px; }
-.book-word span { opacity: .85; text-align: right; }
-.book-empty { opacity: .6; text-align: center; padding: 24px 0; font-size: 14px; }
+.book-word b { color: var(--gold-1); letter-spacing: 1px; flex: 0 0 auto; }
+.book-word .uz { flex: 1; text-align: right; opacity: .95; font-size: 14px; }
+.book-word .uz.hidden { opacity: .3; letter-spacing: 2px; }
+.book-empty { opacity: .8; text-align: center; padding: 26px 6px; font-size: 14px; line-height: 1.5; }
 
 .done-sheet { align-items: center; text-align: center; padding: 26px 20px 22px; }
-.done-star {
-  font-size: 54px; color: var(--gold);
-  text-shadow: 0 4px 0 #a9791a;
-  animation: pop .4s ease-out;
-}
-.done-sheet h2 { margin: 8px 0 4px; }
-.done-sheet p { margin: 0 0 18px; opacity: .85; font-size: 14px; }
+.done-stars { display: flex; gap: 6px; font-size: 40px; color: var(--gold-2); }
+.done-stars span { animation: pop .4s ease-out backwards; text-shadow: 0 3px 0 #b87700; }
+.done-stars span:nth-child(2) { animation-delay: .12s; font-size: 52px; margin-top: -8px; }
+.done-stars span:nth-child(3) { animation-delay: .24s; }
+.done-sheet h2 { margin: 10px 0 4px; }
+.done-sheet p { margin: 0 0 18px; opacity: .92; font-size: 14px; }
 
 .primary-btn {
-  border: none;
-  border-radius: 14px;
-  padding: 13px 30px;
-  background: linear-gradient(var(--accent-light), var(--accent) 60%, var(--accent-dark));
-  box-shadow: 0 4px 0 var(--accent-dark);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 800;
+  border: none; border-radius: 16px;
+  padding: 14px 32px;
+  background: linear-gradient(var(--gold-1), var(--gold-2) 60%, var(--gold-3));
+  box-shadow: 0 5px 0 #b87700;
+  color: #6b3d00; font-size: 16px; font-weight: 900;
   cursor: pointer;
 }
-.primary-btn:active { transform: translateY(3px); box-shadow: none; }
+.primary-btn:active { transform: translateY(5px); box-shadow: none; }
 
-/* ------------------------------ Tarjima toast ------------------------------ */
-
-#toast {
-  position: fixed;
-  left: 50%;
-  top: 22%;
-  transform: translate(-50%, -12px);
-  z-index: 60;
-  padding: 12px 22px;
-  border-radius: 16px;
-  background: rgba(30,12,5,.94);
-  border: 2px solid var(--tray-edge);
-  box-shadow: 0 10px 26px rgba(0,0,0,.5);
+/* Lampa bosilganda chiqadigan pufak */
+#bubble {
+  position: fixed; z-index: 80;
+  padding: 9px 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
   text-align: center;
   pointer-events: none;
-  opacity: 0;
+  opacity: 0; transform: translate(-50%, 4px) scale(.9);
+  transition: opacity .16s, transform .16s;
+  max-width: 76vw;
+}
+#bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+#bubble[hidden] { display: none; }
+#bubble b { display: block; font-size: 13px; color: var(--coral-2); letter-spacing: 1px; }
+#bubble span { font-size: 15px; font-weight: 700; }
+#bubble::after {
+  content: ""; position: absolute;
+  bottom: -7px; left: 50%; margin-left: -8px;
+  border: 8px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+
+/* Qisqa bildirishnoma */
+#toast {
+  position: fixed; left: 50%; top: 18%;
+  transform: translate(-50%, -10px);
+  z-index: 70;
+  padding: 11px 22px; border-radius: 16px;
+  background: rgba(10,26,66,.92);
+  border: 2px solid rgba(255,255,255,.55);
+  font-size: 15px; font-weight: 800;
+  pointer-events: none; opacity: 0;
   transition: opacity .18s, transform .18s;
+  white-space: nowrap;
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast[hidden] { display: none; }
-#toast-word { font-size: 19px; font-weight: 800; color: var(--tile); letter-spacing: 2px; }
-#toast-uz   { font-size: 15px; margin-top: 3px; color: #ffe9c9; }
-#toast.bonus { border-color: var(--gold); }
 
-/* Kichik ekranlar */
 @media (max-height: 680px) {
-  :root { --tile-size: 40px; }
+  :root { --tile-size: 40px; --node: 52px; }
   .cell { width: 26px; height: 26px; font-size: 14px; }
   #wheel { width: min(70vw, 250px); }
   #current-word span { font-size: 22px; }

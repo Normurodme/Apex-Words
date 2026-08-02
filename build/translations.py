@@ -384,6 +384,39 @@ UZ = {
 "YELP": "vangillamoq", "YOKE": "bo'yinturuq",
 "ALBUM": "albom", "BUM": "daydi", "LAMB": "qo'zichoq", "BALM": "malham",
 "SOW": "ekmoq; urg'ochi cho'chqa",
+
+# --- Olmoshlar bonusga o'tgach qo'shilgan yechim so'zlari ---
+"ALLOW": "ruxsat bermoq", "ALLOY": "qotishma", "APT": "mos; moyil", "ATTIC": "chordoq",
+"BARN": "omborxona", "CROP": "hosil", "DOLL": "qo'g'irchoq", "DROWN": "cho'kmoq",
+"DULL": "zerikarli; xira", "EAST": "sharq", "FACT": "dalil", "FIX": "tuzatmoq",
+"FLUX": "oqim", "FUN": "qiziqarli", "GOLD": "oltin", "HAPPEN": "sodir bo'lmoq",
+"HARM": "zarar", "HATCH": "lyuk; tuxumdan chiqmoq", "HEAP": "uyum",
+"HOLLOW": "kavak, ichi bo'sh", "HONEY": "asal", "HOP": "sakramoq", "HOPE": "umid",
+"HOUSE": "uy", "INFLUX": "kirib kelish oqimi", "LIME": "laym", "LOUDLY": "baland ovozda",
+"LOYAL": "sodiq", "MANOR": "qo'rg'on", "MILE": "mil", "MUD": "loy", "NORM": "me'yor",
+"OBEY": "itoat qilmoq", "OFFEND": "xafa qilmoq", "OPTION": "variant", "PHONE": "telefon",
+"RETIRE": "nafaqaga chiqmoq", "RITE": "marosim", "SAVE": "saqlamoq", "SEAT": "o'rindiq",
+"SHAKE": "silkitmoq", "SHAVE": "soqol olmoq", "SHINY": "yaltiroq", "SOBER": "hushyor",
+"SODIUM": "natriy", "STATE": "davlat; holat", "STATIC": "o'zgarmas", "STINT": "muddat",
+"TAP": "jo'mrak; ohista urmoq", "TASTE": "ta'm", "THIRST": "chanqoq", "TIER": "qavat",
+"TIRE": "charchamoq; shina", "TRENCH": "xandaq", "WAIST": "bel", "WAIT": "kutmoq",
+"WEAPON": "qurol", "WOOL": "jun", "WORD": "so'z", "YOUTH": "yoshlik",
+
+# --- Yangi bonus so'zlar ---
+"ANEW": "qaytadan", "BRAN": "kepak", "DULY": "tegishlicha", "FEND": "himoyalanmoq",
+"HONE": "charxlamoq", "HUE": "rang tusi", "LIMP": "oqsamoq", "MORN": "tong",
+"NEWT": "suvsar (salamandra)", "PANE": "oyna bo'lagi", "PAW": "panja",
+"PAWN": "piyoda (shaxmat)", "PEP": "g'ayrat", "POTION": "sehrli ichimlik",
+"SLIMY": "shilimshiq", "SOB": "yig'lamoq", "SWAT": "shapatilab urmoq",
+"TINT": "rang tusi", "VASE": "vaza",
+
+# --- Olmoshlar (endi faqat bonus, lekin tarjimasi kerak) ---
+"ITS": "uning", "HIS": "uning (erkak)", "HIM": "unga (erkak)", "HER": "uning (ayol)",
+"HERS": "uniki (ayol)", "SHE": "u (ayol)", "THEY": "ular", "THEM": "ularga",
+"THEIR": "ularning", "OUR": "bizning", "OURS": "bizniki", "YOU": "sen",
+"YOUR": "sening", "YOURS": "seniki", "WHO": "kim", "WHOM": "kimga",
+"WHOSE": "kimning", "THE": "aniq artikl", "MINE": "meniki", "MYSELF": "o'zim",
+"BATH": "vanna", "CARRY": "olib yurmoq", "FAITH": "ishonch, e'tiqod",
 }
 
 

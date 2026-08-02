@@ -1,21 +1,18 @@
-/* Apex Words — Mini App o'yin mantig'i.
+/* Apex Words — Mini App.
 
-   Asosiy oqim:
-     1. data/index.json dan bosqichlar ro'yxati o'qiladi
-     2. data/stage_NN.json dan puzzle'lar yuklanadi
-     3. O'yinchi g'ildirakdagi harflarni tortib so'z yasaydi
-     4. So'z yechimlar ro'yxatida bo'lsa -> to'rga tushadi
-        Ro'yxatda yo'q, lekin bonus ro'yxatida bo'lsa -> +1 ochko
-     5. Progress /api/state orqali serverga saqlanadi (bo'lmasa localStorage)
+   Ikki ekran:
+     #map-screen   — kirganda birinchi shu ochiladi: darajalar xaritasi.
+                     Tugunlar ilon izi yo'l bo'ylab pastdan yuqoriga joylashadi,
+                     ro'yxat qo'l bilan tortib aylantiriladi.
+     #game-screen   — daraja tanlangach ochiladi: harflar g'ildiragi va to'r.
 
-   Bonus so'zlar oldindan generatsiya qilingani uchun tekshiruv brauzerda
-   ketadi — server so'rovi kerak emas, o'yin darhol javob beradi. */
+   Tarjima DARHOL ko'rsatilmaydi. Topilgan har so'z yonida lampa (💡) chiqadi;
+   o'yinchi uni bosgandagina tarjima bir necha soniyaga ko'rinadi. Shunda o'yinchi
+   avval o'zi eslashga urinadi. */
 
 'use strict';
 
 const TG = window.Telegram && window.Telegram.WebApp;
-
-/* ------------------------------ Yordamchilar ------------------------------ */
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -38,17 +35,19 @@ function haptic(type) {
 /* --------------------------------- Holat ---------------------------------- */
 
 const State = {
-  index: null,          // bosqichlar ro'yxati
-  stages: {},           // yuklangan bosqich fayllari keshi
-  dict: {},             // SO'Z -> o'zbekcha tarjima
-  progress: null,       // o'yinchi progressi
-  puzzle: null,         // hozirgi puzzle
-  found: new Set(),     // shu puzzle'da topilgan yechim so'zlari
-  foundBonus: new Set() // shu puzzle'da topilgan bonus so'zlari
+  index: null,
+  stages: {},
+  dict: {},
+  progress: null,
+  levels: [],           // barcha darajalar tekis ro'yxat sifatida
+  puzzle: null,
+  found: new Set(),
+  foundBonus: new Set()
 };
 
 const HINT_COST = 5;
 const START_COINS = 50;
+const BUBBLE_MS = 3500;      // tarjima necha soniya ko'rinadi
 
 function blankProgress() {
   return { coins: START_COINS, cur: { stage: 1, level: 1, puzzle: 0 }, solved: {}, learned: {} };
@@ -70,8 +69,7 @@ const Store = {
         });
         if (r.ok) {
           const d = await r.json();
-          if (d && d.progress) return d.progress;
-          return blankProgress();
+          return (d && d.progress) || blankProgress();
         }
       } catch (_) {}
     }
@@ -83,7 +81,6 @@ const Store = {
     return blankProgress();
   },
 
-  // Har harakatdan keyin emas, 1.2 soniyada bir marta saqlaymiz.
   save() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this._flush(), 1200);
@@ -106,8 +103,18 @@ const Store = {
 /* ------------------------ Ma'lumotlarni yuklash --------------------------- */
 
 async function loadIndex() {
-  const r = await fetch('data/index.json');
-  State.index = await r.json();
+  State.index = await (await fetch('data/index.json')).json();
+  // Barcha darajalarni bitta tekis ro'yxatga yig'amiz — xarita shu bo'yicha quriladi
+  State.levels = [];
+  State.index.stages.forEach((s) => {
+    s.levels.forEach((l) => {
+      State.levels.push({
+        stage: s.stage, stageName: s.name,
+        level: l.level, name: l.name, puzzles: l.puzzles,
+        first: l.level === 1
+      });
+    });
+  });
 }
 
 async function loadDict() {
@@ -120,35 +127,164 @@ async function loadDict() {
 async function loadStage(n) {
   if (State.stages[n]) return State.stages[n];
   const info = State.index.stages.find((s) => s.stage === n);
-  const r = await fetch('data/' + info.file);
-  State.stages[n] = await r.json();
+  State.stages[n] = await (await fetch('data/' + info.file)).json();
   return State.stages[n];
 }
 
-function levelKey(stage, level) { return stage + '-' + level; }
+const key = (stage, level) => stage + '-' + level;
+const solvedIn = (stage, level) => State.progress.solved[key(stage, level)] || 0;
 
-function levelInfo(stage, level) {
-  const s = State.index.stages.find((x) => x.stage === stage);
-  return s && s.levels.find((l) => l.level === level);
+function isUnlocked(i) {
+  if (i === 0) return true;
+  const prev = State.levels[i - 1];
+  return solvedIn(prev.stage, prev.level) >= prev.puzzles;
 }
 
-/* Daraja ochilganmi? Birinchisi doim ochiq; qolgani oldingisi tugagach ochiladi. */
-function isUnlocked(stage, level) {
-  if (stage === 1 && level === 1) return true;
-  let ps = stage, pl = level - 1;
-  if (pl < 1) { ps = stage - 1; pl = 5; }
-  const info = levelInfo(ps, pl);
-  if (!info) return true;
-  return (State.progress.solved[levelKey(ps, pl)] || 0) >= info.puzzles;
+/* ============================ XARITA EKRANI ============================== */
+
+const NODE_GAP = 132;      // tugunlar orasidagi masofa
+const EDGE_PAD = 118;      // pastki va yuqori bo'sh joy
+
+function renderMap() {
+  const scroll = $('map-scroll');
+  const inner = $('map-inner');
+  const nodes = $('map-nodes');
+  const svg = $('map-path');
+
+  const n = State.levels.length;
+  // Ekran hali joylashmagan bo'lsa clientWidth 0 bo'ladi va hamma tugun bitta
+  // nuqtaga (x=0) yig'ilib qolardi. Oxirgi chora sifatida 360px olamiz,
+  // haqiqiy o'lcham kelganda ResizeObserver xaritani qayta chizadi.
+  const w = scroll.clientWidth || window.innerWidth || 360;
+  const h = EDGE_PAD * 2 + (n - 1) * NODE_GAP;
+  inner.style.height = h + 'px';
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  // 1-daraja PASTDA, keyingilari yuqoriga qarab ketadi
+  const pts = State.levels.map((_, i) => ({
+    x: w / 2 + Math.sin(i * 0.95) * Math.min(w * 0.27, 110),
+    y: h - EDGE_PAD - i * NODE_GAP
+  }));
+
+  // Tugunlarni tutashtiruvchi uzuq chiziq
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const my = (a.y + b.y) / 2;
+    d += ` C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`;
+  }
+  svg.innerHTML =
+    `<path d="${d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="6"
+           stroke-linecap="round" stroke-dasharray="2 18"/>`;
+
+  nodes.innerHTML = '';
+  let curIndex = 0;
+
+  State.levels.forEach((lv, i) => {
+    const done = solvedIn(lv.stage, lv.level);
+    const unlocked = isUnlocked(i);
+    const complete = done >= lv.puzzles;
+    if (unlocked && !complete && !curIndex) curIndex = i;
+
+    // Bosqich nomi — har bosqichning birinchi darajasi tepasida
+    if (lv.first) {
+      const b = el('div', 'stage-banner', lv.stage + '-BOSQICH · ' + lv.stageName);
+      b.style.top = (pts[i].y - NODE_GAP * 0.58) + 'px';
+      nodes.appendChild(b);
+    }
+
+    const btn = el('button', 'node ' + (complete ? 'done' : unlocked ? 'current' : 'locked'));
+    btn.style.left = pts[i].x + 'px';
+    btn.style.top = pts[i].y + 'px';
+
+    // Yechilgan puzzle ulushini halqa bilan ko'rsatamiz
+    if (unlocked && done > 0 && !complete) {
+      const R = 32, C = 2 * Math.PI * R;
+      btn.insertAdjacentHTML('beforeend',
+        `<svg class="ring" viewBox="0 0 ${R * 2 + 8} ${R * 2 + 8}">
+           <circle class="bg" cx="${R + 4}" cy="${R + 4}" r="${R}"/>
+           <circle class="fg" cx="${R + 4}" cy="${R + 4}" r="${R}"
+                   stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - done / lv.puzzles)}"/>
+         </svg>`);
+    }
+
+    if (complete) {
+      const st = el('div', 'stars');
+      const got = starsFor(done, lv.puzzles);
+      for (let k = 0; k < 3; k++) st.appendChild(el('i', k < got ? 'on' : '', '★'));
+      btn.appendChild(st);
+    }
+
+    btn.appendChild(el('span', 'num', String(i + 1)));
+    btn.appendChild(el('span', 'name', lv.name));
+
+    if (unlocked) {
+      btn.onclick = () => {
+        haptic('tap');
+        openLevel(i);
+      };
+    }
+    nodes.appendChild(btn);
+  });
+
+  $('map-coins').textContent = State.progress.coins;
+
+  // Hozirgi darajani ko'rinadigan joyga surib qo'yamiz
+  const centerOn = () => {
+    const vh = scroll.clientHeight || window.innerHeight || 640;
+    scroll.scrollTop = Math.max(0, pts[curIndex].y - vh * 0.55);
+  };
+  centerOn();
+  requestAnimationFrame(centerOn);
 }
 
-/* ------------------------------ Puzzle ochish ----------------------------- */
+/* Telegram oynasi ochilganda balandlik/kenglik animatsiya bilan o'zgaradi.
+   'resize' hodisasi har doim ham kelmaydi, shuning uchun konteynerni kuzatamiz:
+   o'lcham o'zgarsa xarita qayta chiziladi (aks holda tugunlar joyida qolmaydi). */
+let mapW = 0, mapH = 0;
+function watchMapSize() {
+  const scroll = $('map-scroll');
+  if (!window.ResizeObserver) return;
+  new ResizeObserver(() => {
+    if (!$('map-screen').classList.contains('active')) return;
+    const w = scroll.clientWidth, h = scroll.clientHeight;
+    if (w === mapW && h === mapH) return;      // haqiqiy o'zgarish bo'lsagina
+    mapW = w; mapH = h;
+    renderMap();
+  }).observe(scroll);
+}
+
+function starsFor(done, total) {
+  if (done >= total) return 3;
+  if (done >= total * 0.6) return 2;
+  return done > 0 ? 1 : 0;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function openMap() {
+  showScreen('map-screen');
+  renderMap();
+  Store.save();
+}
+
+/* ============================= O'YIN EKRANI ============================== */
+
+async function openLevel(i) {
+  const lv = State.levels[i];
+  const done = solvedIn(lv.stage, lv.level);
+  showScreen('game-screen');
+  await openPuzzle(lv.stage, lv.level, done >= lv.puzzles ? 0 : done);
+}
 
 async function openPuzzle(stage, level, idx) {
   const data = await loadStage(stage);
   const lvl = data.levels.find((l) => l.level === level);
   if (!lvl) return;
-
   if (idx >= lvl.puzzles.length) { finishLevel(stage, level); return; }
 
   State.puzzle = lvl.puzzles[idx];
@@ -163,8 +299,6 @@ async function openPuzzle(stage, level, idx) {
   updateBookCount();
   Store.save();
 }
-
-/* --------------------------------- To'r ----------------------------------- */
 
 function renderGrid() {
   const grid = $('grid');
@@ -184,13 +318,56 @@ function renderGrid() {
 function fillWord(word) {
   const g = $('grid').querySelector('.word-group[data-word="' + word + '"]');
   if (!g) return;
-  [...g.children].forEach((c, i) => {
+  const cells = [...g.querySelectorAll('.cell')];
+  cells.forEach((c, i) => {
     setTimeout(() => {
       c.classList.remove('hinted');
       c.classList.add('filled');
       c.textContent = c.dataset.ch;
     }, i * 55);
   });
+  // So'z to'lgach yoniga lampa qo'yamiz — tarjima faqat bosilganda chiqadi
+  setTimeout(() => g.appendChild(makeLamp(word)), cells.length * 55 + 80);
+}
+
+function makeLamp(word) {
+  const b = el('button', 'lamp', '💡');
+  b.title = 'Tarjimasi';
+  b.onclick = (e) => {
+    e.stopPropagation();
+    b.classList.add('used');
+    showBubble(word, b);
+    haptic('tap');
+  };
+  return b;
+}
+
+/* Tarjima pufagi — lampa ustida bir necha soniya turadi */
+let bubbleTimer = null;
+function showBubble(word, anchor) {
+  const bub = $('bubble');
+  $('bubble-word').textContent = word;
+  $('bubble-uz').textContent = State.dict[word] || 'tarjima topilmadi';
+
+  bub.hidden = false;
+  bub.classList.remove('show');
+
+  const r = anchor.getBoundingClientRect();
+  // Avval ko'rsatib o'lchaymiz, keyin joylashtiramiz
+  bub.style.left = '-9999px';
+  bub.style.top = '0px';
+  const bw = bub.offsetWidth, bh = bub.offsetHeight;
+  let x = r.left + r.width / 2;
+  x = Math.min(Math.max(x, bw / 2 + 8), window.innerWidth - bw / 2 - 8);
+  bub.style.left = x + 'px';
+  bub.style.top = Math.max(8, r.top - bh - 12) + 'px';
+
+  requestAnimationFrame(() => bub.classList.add('show'));
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => {
+    bub.classList.remove('show');
+    setTimeout(() => { bub.hidden = true; }, 200);
+  }, BUBBLE_MS);
 }
 
 /* ------------------------------ G'ildirak --------------------------------- */
@@ -204,37 +381,29 @@ function renderWheel() {
   letterEls = [];
 
   const letters = State.puzzle.letters.split('');
-  const n = letters.length;
-
   letters.forEach((ch, i) => {
     const b = el('div', 'letter', ch);
-    b.dataset.i = i;
-    // Doira bo'ylab teng oraliqda, birinchi harf tepada
-    const ang = (-Math.PI / 2) + (i * 2 * Math.PI / n);
+    const ang = (-Math.PI / 2) + (i * 2 * Math.PI / letters.length);
     b.style.left = (50 + 37 * Math.cos(ang)) + '%';
     b.style.top = (50 + 37 * Math.sin(ang)) + '%';
     box.appendChild(b);
     letterEls.push(b);
   });
 
-  // measure() ni DARHOL chaqiramiz: getBoundingClientRect layout'ni majburlaydi,
-  // shuning uchun o'lchamlar shu yerda tayyor bo'ladi. requestAnimationFrame
-  // yolg'iz yetmaydi — sahifa ko'rinmayotgan bo'lsa (fondagi tab, Telegram hali
-  // oynani ko'rsatmagan payt) rAF umuman ishga tushmaydi va g'ildirak
-  // o'lchanmay qoladi: barmoq tortilganda hech qanday harf ushlanmaydi.
+  // measure() ni DARHOL chaqiramiz: getBoundingClientRect layout'ni majburlaydi.
+  // requestAnimationFrame yolg'iz yetmaydi — sahifa ko'rinmayotgan bo'lsa rAF
+  // umuman ishga tushmaydi va g'ildirak o'lchanmay qoladi.
   measure();
-  requestAnimationFrame(measure);   // shrift/animatsiya joylashgach aniqlashtirish
+  requestAnimationFrame(measure);
 }
 
 function measure() {
-  const wheel = $('wheel');
-  const wr = wheel.getBoundingClientRect();
-  if (!wr.width || !letterEls.length) return;   // hali joylashmagan
+  const wr = $('wheel').getBoundingClientRect();
+  if (!wr.width || !letterEls.length) return;
   centers = letterEls.map((b) => {
     const r = b.getBoundingClientRect();
     return { x: r.left - wr.left + r.width / 2, y: r.top - wr.top + r.height / 2, r: r.width / 2 };
   });
-
   const cv = $('line');
   const dpr = window.devicePixelRatio || 1;
   cv.width = wr.width * dpr;
@@ -243,19 +412,16 @@ function measure() {
   drawLine();
 }
 
-window.addEventListener('resize', () => { if (State.puzzle) measure(); });
-
-// Telegram oynani ochganda balandlik animatsiya bilan o'zgaradi — 'resize'
-// hodisasi har doim ham kelmaydi, shuning uchun konteynerni kuzatamiz.
-if (window.ResizeObserver) {
-  new ResizeObserver(() => { if (State.puzzle) measure(); }).observe(document.getElementById('wheel'));
-}
+window.addEventListener('resize', () => {
+  if (State.puzzle) measure();
+  if ($('map-screen').classList.contains('active')) renderMap();
+});
 
 /* --------------------------- Tortish (drag) ------------------------------- */
 
-let path = [];          // tanlangan harf indekslari
+let path = [];
 let dragging = false;
-let ptr = null;         // sichqoncha/barmoq joylashuvi
+let ptr = null;
 
 function localPoint(e) {
   const wr = $('wheel').getBoundingClientRect();
@@ -273,7 +439,7 @@ function hitTest(p) {
 
 function onDown(e) {
   if (!State.puzzle) return;
-  if (!centers.length) measure();       // oxirgi himoya: o'lchanmagan bo'lsa hozir o'lchaymiz
+  if (!centers.length) measure();
   const p = localPoint(e);
   const i = hitTest(p);
   if (i < 0) return;
@@ -292,13 +458,10 @@ function onMove(e) {
   e.preventDefault();
   ptr = localPoint(e);
   const i = hitTest(ptr);
-
   if (i >= 0) {
     const back = path.length >= 2 && i === path[path.length - 2];
     if (back) {
-      // Orqaga qaytish — oxirgi harfni olib tashlaymiz
-      const last = path.pop();
-      letterEls[last].classList.remove('active');
+      letterEls[path.pop()].classList.remove('active');
       haptic('tap');
       updateCurrent();
     } else if (!path.includes(i)) {
@@ -341,15 +504,12 @@ function drawLine() {
   const cv = $('line');
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
-  if (path.length === 0) return;
-
-  ctx.strokeStyle = getComputedStyle(document.documentElement)
-    .getPropertyValue('--line').trim() || '#ff5722';
+  if (!path.length) return;
+  ctx.strokeStyle = '#ff4f6f';
   ctx.lineWidth = 9;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.globalAlpha = 0.9;
-
+  ctx.globalAlpha = .92;
   ctx.beginPath();
   ctx.moveTo(centers[path[0]].x, centers[path[0]].y);
   for (let k = 1; k < path.length; k++) ctx.lineTo(centers[path[k]].x, centers[path[k]].y);
@@ -357,41 +517,42 @@ function drawLine() {
   ctx.stroke();
 }
 
-/* ------------------------------ So'zni tekshirish -------------------------- */
+/* ---------------------------- So'zni tekshirish ---------------------------- */
 
 function submit(word) {
   const p = State.puzzle;
 
   if (p.words.includes(word)) {
-    if (State.found.has(word)) return showCurrent(word, 'repeat');
+    if (State.found.has(word)) return flash(word, 'repeat');
     State.found.add(word);
     fillWord(word);
     addCoins(3);
     learn(word);
     haptic('ok');
-    showCurrent(word, 'hit');
-    toast(word, false);
-    setTimeout(() => showCurrent('', null), 700);
-    if (State.found.size === p.words.length) setTimeout(puzzleSolved, 900);
+    flash(word, 'hit', 700);
+    if (State.found.size === p.words.length) setTimeout(puzzleSolved, 1100);
     return;
   }
 
   if (p.bonus.includes(word)) {
-    if (State.foundBonus.has(word)) return showCurrent(word, 'repeat');
+    if (State.foundBonus.has(word)) return flash(word, 'repeat');
     State.foundBonus.add(word);
     addCoins(1);
     learn(word);
     updateBookCount();
     haptic('ok');
-    showCurrent(word, 'hit');
-    toast(word, true);
-    setTimeout(() => showCurrent('', null), 700);
+    flash(word, 'hit', 700);
+    toast('+1 bonus · ' + word);
     return;
   }
 
   haptic('err');
-  showCurrent(word, 'miss');
-  setTimeout(() => showCurrent('', null), 500);
+  flash(word, 'miss', 500);
+}
+
+function flash(word, cls, ms) {
+  showCurrent(word, cls);
+  if (ms) setTimeout(() => showCurrent('', null), ms);
 }
 
 function learn(word) {
@@ -404,59 +565,56 @@ function addCoins(n) {
   Store.save();
 }
 
-function updateCoins() { $('coin-count').textContent = State.progress.coins; }
-
-function updateBookCount() {
-  const n = State.foundBonus.size;
-  $('book-count').textContent = n;
-  $('btn-book').style.opacity = State.puzzle && State.puzzle.bonus.length ? 1 : .45;
+function updateCoins() {
+  $('coin-count').textContent = State.progress.coins;
+  $('map-coins').textContent = State.progress.coins;
 }
 
-function toast(word, isBonus) {
+function updateBookCount() {
+  $('book-count').textContent = State.foundBonus.size;
+  $('btn-book').style.opacity = (State.puzzle && State.puzzle.bonus.length) ? 1 : .5;
+}
+
+let toastTimer = null;
+function toast(text) {
   const t = $('toast');
-  $('toast-word').textContent = word;
-  const uz = State.dict[word];
-  $('toast-uz').textContent = isBonus
-    ? (uz ? uz + '  ·  +1 bonus' : '+1 bonus so\'z')
-    : (uz || '');
-  t.classList.toggle('bonus', !!isBonus);
+  t.textContent = text;
   t.hidden = false;
   requestAnimationFrame(() => t.classList.add('show'));
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => {
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
     t.classList.remove('show');
     setTimeout(() => { t.hidden = true; }, 200);
-  }, 1500);
+  }, 1400);
 }
 
 /* -------------------------- Puzzle / daraja tugashi ------------------------ */
 
 function puzzleSolved() {
   const { stage, level, puzzle } = State.progress.cur;
-  const key = levelKey(stage, level);
-  State.progress.solved[key] = Math.max(State.progress.solved[key] || 0, puzzle + 1);
+  const k = key(stage, level);
+  State.progress.solved[k] = Math.max(State.progress.solved[k] || 0, puzzle + 1);
   addCoins(5);
 
-  const info = levelInfo(stage, level);
-  if (puzzle + 1 >= info.puzzles) finishLevel(stage, level);
+  const lv = State.levels.find((l) => l.stage === stage && l.level === level);
+  if (puzzle + 1 >= lv.puzzles) finishLevel(stage, level);
   else openPuzzle(stage, level, puzzle + 1);
 }
 
 function finishLevel(stage, level) {
-  const next = level < 5 ? { stage, level: level + 1 } : { stage: stage + 1, level: 1 };
-  const hasNext = !!levelInfo(next.stage, next.level);
+  const i = State.levels.findIndex((l) => l.stage === stage && l.level === level);
+  const next = State.levels[i + 1];
 
   $('done-title').textContent = 'Daraja tugadi!';
-  $('done-sub').textContent = hasNext
-    ? 'Keyingi daraja ochildi.'
+  $('done-sub').textContent = next
+    ? '"' + next.name + '" darajasi ochildi.'
     : 'Barcha mavjud darajalar tugadi. Yangi bosqichlar tez orada!';
-  $('btn-next').textContent = hasNext ? 'Davom etish' : 'Menyu';
+  $('btn-next').textContent = next ? 'Xaritaga qaytish' : 'Xaritaga qaytish';
   $('done-overlay').hidden = false;
 
   $('btn-next').onclick = () => {
     $('done-overlay').hidden = true;
-    if (hasNext) openPuzzle(next.stage, next.level, 0);
-    else openMenu();
+    openMap();
   };
   Store.save();
 }
@@ -466,17 +624,14 @@ function finishLevel(stage, level) {
 function useHint() {
   if (!State.puzzle) return;
   if (State.progress.coins < HINT_COST) {
-    showCurrent('Ochko yetarli emas', 'miss');
-    setTimeout(() => showCurrent('', null), 900);
+    toast('Ochko yetarli emas');
     haptic('err');
     return;
   }
-  // Topilmagan so'zning ochilmagan birinchi katagini ochamiz
-  const groups = [...$('grid').children]
-    .filter((g) => !State.found.has(g.dataset.word));
+  const groups = [...$('grid').children].filter((g) => !State.found.has(g.dataset.word));
   for (const g of groups) {
-    const cell = [...g.children].find((c) => !c.classList.contains('filled') &&
-                                             !c.classList.contains('hinted'));
+    const cell = [...g.querySelectorAll('.cell')]
+      .find((c) => !c.classList.contains('filled') && !c.classList.contains('hinted'));
     if (cell) {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
@@ -487,42 +642,28 @@ function useHint() {
   }
 }
 
-/* --------------------------------- Menyu ---------------------------------- */
+/* --------------------------- So'z ro'yxatlari ----------------------------- */
 
-function openMenu() {
-  const body = $('menu-body');
-  body.innerHTML = '';
+/* Tarjima yashirin turadi, lampa bosilganda ochiladi — grid'dagi bilan bir xil qoida */
+function wordRow(word) {
+  const row = el('div', 'book-word');
+  row.appendChild(el('b', null, word));
+  const uz = el('span', 'uz hidden', '• • •');
+  row.appendChild(uz);
+  const lamp = makeLampFor(word, uz);
+  row.appendChild(lamp);
+  return row;
+}
 
-  State.index.stages.forEach((s) => {
-    const block = el('div', 'stage-block');
-    block.appendChild(el('h3', null, s.stage + '-BOSQICH · ' + s.name));
-
-    s.levels.forEach((l) => {
-      const done = State.progress.solved[levelKey(s.stage, l.level)] || 0;
-      const unlocked = isUnlocked(s.stage, l.level);
-
-      const row = el('button', 'level-row' + (unlocked ? '' : ' locked'));
-      row.appendChild(el('span', null, (unlocked ? '' : '🔒 ') + l.name));
-
-      const bar = el('div', 'bar');
-      const fill = el('i');
-      fill.style.width = Math.round(100 * done / l.puzzles) + '%';
-      bar.appendChild(fill);
-      row.appendChild(bar);
-      row.appendChild(el('span', 'num', done + '/' + l.puzzles));
-
-      if (unlocked) {
-        row.onclick = () => {
-          $('menu-overlay').hidden = true;
-          openPuzzle(s.stage, l.level, done >= l.puzzles ? 0 : done);
-        };
-      }
-      block.appendChild(row);
-    });
-    body.appendChild(block);
-  });
-
-  $('menu-overlay').hidden = false;
+function makeLampFor(word, uzEl) {
+  const b = el('button', 'lamp', '💡');
+  b.onclick = () => {
+    b.classList.add('used');
+    uzEl.classList.remove('hidden');
+    uzEl.textContent = State.dict[word] || 'tarjima topilmadi';
+    haptic('tap');
+  };
+  return b;
 }
 
 function openBook() {
@@ -531,16 +672,25 @@ function openBook() {
   const words = [...State.foundBonus].sort();
   if (!words.length) {
     body.appendChild(el('div', 'book-empty',
-      'Hali qo\'shimcha so\'z topilmadi.\nRo\'yxatda yo\'q, lekin haqiqiy ingliz so\'zini toping — har biri +1 ochko.'));
+      'Hali qo\'shimcha so\'z topilmadi.\n\nRo\'yxatda yo\'q, lekin haqiqiy ingliz so\'zini toping — har biri +1 ochko.'));
   } else {
-    words.forEach((w) => {
-      const row = el('div', 'book-word');
-      row.appendChild(el('b', null, w));
-      row.appendChild(el('span', null, State.dict[w] || ''));
-      body.appendChild(row);
-    });
+    words.forEach((w) => body.appendChild(wordRow(w)));
   }
   $('book-overlay').hidden = false;
+}
+
+function openLearned() {
+  const body = $('learned-body');
+  body.innerHTML = '';
+  const words = Object.keys(State.progress.learned || {}).sort();
+  if (!words.length) {
+    body.appendChild(el('div', 'book-empty',
+      'Hali so\'z topilmadi.\n\nO\'ynashni boshlang — topgan har bir so\'zingiz shu yerga yig\'iladi.'));
+  } else {
+    body.appendChild(el('div', 'book-empty', words.length + ' ta so\'z o\'rgandingiz'));
+    words.forEach((w) => body.appendChild(wordRow(w)));
+  }
+  $('learned-overlay').hidden = false;
 }
 
 /* ------------------------------ Ishga tushirish ---------------------------- */
@@ -549,7 +699,7 @@ async function boot() {
   if (TG) {
     TG.ready();
     TG.expand();
-    try { TG.setHeaderColor('#4b1d14'); TG.setBackgroundColor('#4b1d14'); } catch (_) {}
+    try { TG.setHeaderColor('#5fd8ff'); TG.setBackgroundColor('#2f9bf7'); } catch (_) {}
     try { TG.disableVerticalSwipes(); } catch (_) {}
   }
 
@@ -562,7 +712,7 @@ async function boot() {
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
 
-  $('btn-menu').onclick = openMenu;
+  $('btn-back').onclick = () => { haptic('tap'); openMap(); };
   $('btn-book').onclick = openBook;
   $('btn-hint').onclick = useHint;
   $('hint-price').textContent = HINT_COST;
@@ -577,15 +727,22 @@ async function boot() {
     haptic('tap');
   };
 
+  $('tab-learned').onclick = openLearned;
+  $('tab-info').onclick = () => { $('info-overlay').hidden = false; };
+  $('tab-play').onclick = () => {};
+
   document.querySelectorAll('[data-close]').forEach((b) => {
     b.onclick = () => { $(b.dataset.close).hidden = true; };
   });
 
-  const c = State.progress.cur;
-  await openPuzzle(c.stage || 1, c.level || 1, c.puzzle || 0);
+  watchMapSize();
+
+  // Kirgan zahoti o'yin emas, XARITA ochiladi
+  openMap();
 }
 
 boot().catch((e) => {
-  document.getElementById('level-title').textContent = 'Xato: ' + e.message;
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="padding:20px;font:14px sans-serif;color:#fff">Xato: ' + e.message + '</div>');
   console.error(e);
 });

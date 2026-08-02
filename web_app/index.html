@@ -4,30 +4,60 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Apex Words</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
-<div id="app">
+<!-- ====================== 1. DARAJALAR XARITASI ====================== -->
+<section id="map-screen" class="screen active">
 
-  <header id="topbar">
-    <button id="btn-menu" class="round-btn" aria-label="Menyu">
-      <span class="icon-lines"><i></i><i></i><i></i></span>
-    </button>
-    <div id="level-title">Yuklanmoqda…</div>
-    <div id="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
+  <div class="sky">
+    <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+    <i class="cloud c4"></i><i class="cloud c5"></i>
+  </div>
+
+  <header id="map-top">
+    <div class="brand">Apex&nbsp;Words</div>
+    <div class="coins"><span class="coin">★</span><span id="map-coins">0</span></div>
   </header>
 
-  <!-- Topilgan so'zlar taxtasi -->
-  <section id="tray">
-    <div id="grid"></div>
-  </section>
+  <!-- Qo'l bilan tortib yuriladigan yo'l -->
+  <div id="map-scroll">
+    <div id="map-inner">
+      <svg id="map-path" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="map-nodes"></div>
+    </div>
+  </div>
 
-  <!-- Hozir yig'ilayotgan so'z -->
+  <footer id="map-bottom">
+    <button class="tab" id="tab-learned">
+      <span class="tab-ico">📖</span><span>So'zlarim</span>
+    </button>
+    <button class="tab active" id="tab-play">
+      <span class="tab-ico">🗺️</span><span>Sayohat</span>
+    </button>
+    <button class="tab" id="tab-info">
+      <span class="tab-ico">ℹ️</span><span>Qoida</span>
+    </button>
+  </footer>
+</section>
+
+
+<!-- ========================== 2. O'YIN ========================== -->
+<section id="game-screen" class="screen">
+
+  <header id="topbar">
+    <button id="btn-back" class="round-btn" aria-label="Orqaga"><span class="glyph">‹</span></button>
+    <div id="level-title">…</div>
+    <div class="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
+  </header>
+
+  <section id="tray"><div id="grid"></div></section>
+
   <div id="current-word"><span></span></div>
 
-  <!-- Harflar g'ildiragi -->
   <section id="stage-area">
     <button id="btn-shuffle" class="round-btn side-btn" aria-label="Aralashtirish">
       <span class="glyph">⇄</span>
@@ -49,21 +79,11 @@
       <span class="book-count" id="book-count">0</span>
     </button>
   </section>
+</section>
 
-</div>
 
-<!-- Bosqich / daraja menyusi -->
-<div id="menu-overlay" class="overlay" hidden>
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>Bosqichlar</h2>
-      <button class="close-btn" data-close="menu-overlay">✕</button>
-    </div>
-    <div id="menu-body" class="sheet-body"></div>
-  </div>
-</div>
+<!-- =========================== OYNALAR =========================== -->
 
-<!-- Qo'shimcha (bonus) so'zlar kitobchasi -->
 <div id="book-overlay" class="overlay" hidden>
   <div class="sheet">
     <div class="sheet-head">
@@ -74,22 +94,47 @@
   </div>
 </div>
 
-<!-- Daraja tugadi -->
+<div id="learned-overlay" class="overlay" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>O'rgangan so'zlarim</h2>
+      <button class="close-btn" data-close="learned-overlay">✕</button>
+    </div>
+    <div id="learned-body" class="sheet-body"></div>
+  </div>
+</div>
+
+<div id="info-overlay" class="overlay" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Qanday o'ynaladi</h2>
+      <button class="close-btn" data-close="info-overlay">✕</button>
+    </div>
+    <div class="sheet-body rules">
+      <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
+      <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi va <b>+3</b> ochko olasiz.</p>
+      <p><b>3.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>+1 bonus</b>. Ular "Qo'shimcha so'zlar" kitobchasiga yig'iladi.</p>
+      <p><b>4.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
+      <p><b>5.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi (5 ochko).</p>
+    </div>
+  </div>
+</div>
+
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
-    <div class="done-star">★</div>
+    <div class="done-stars"><span>★</span><span>★</span><span>★</span></div>
     <h2 id="done-title">Daraja tugadi!</h2>
     <p id="done-sub"></p>
     <button id="btn-next" class="primary-btn">Davom etish</button>
   </div>
 </div>
 
-<!-- So'z topilganda chiqadigan tarjima -->
-<div id="toast" hidden>
-  <div id="toast-word"></div>
-  <div id="toast-uz"></div>
-</div>
+<!-- Lampa bosilganda chiqadigan tarjima -->
+<div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 
-<script src="app.js?v=1"></script>
+<!-- Qisqa bildirishnoma (bonus, xatolik) -->
+<div id="toast" hidden></div>
+
+<script src="app.js?v=2"></script>
 </body>
 </html>
