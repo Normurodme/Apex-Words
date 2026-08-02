@@ -150,6 +150,16 @@ class DB:
             await db.commit()
         if self.path.startswith("/data"):
             log.info("📁 Baza DOIMIY diskda: %s", self.path)
+        elif Path("/data").is_dir():
+            # Volume ulangan, lekin baza boshqa joyga yozilyapti. Deyarli har doim
+            # bu DB_PATH ga nisbiy yo'l qo'yilgani uchun bo'ladi.
+            log.error("❌ Volume /data ga ULANGAN, lekin baza boshqa joyda: %s\n"
+                      "   Sabab: DB_PATH o'zgaruvchisi shu yo'lni ko'rsatyapti.\n"
+                      "   Yechim: Railway Variables dan DB_PATH ni O'CHIRING "
+                      "(kod /data ni o'zi topadi), yoki uni /data/apex_words.db "
+                      "qilib yozing.\n"
+                      "   Hozircha har deployda o'yinchilar progressi o'chadi.",
+                      self.path)
         else:
             log.warning("⚠️  Baza VAQTINCHALIK diskda: %s — qayta deploy qilinganda "
                         "o'yinchilar progressi o'chadi. Railway'da servisga Volume "
