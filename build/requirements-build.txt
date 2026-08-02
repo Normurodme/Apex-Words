@@ -1,0 +1,4 @@
+# Faqat puzzle/lug'at generatsiyasi uchun. Serverda (Railway) kerak emas.
+nltk==3.9.2
+wordfreq>=3.1.1
+deep-translator>=1.11.4

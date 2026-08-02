@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+__pycache__/
+*.pyc
+build/nltk_data/
+build/
+*.db
+*.db-wal
+*.db-shm
+README.md
+.venv/
+venv/

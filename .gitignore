@@ -1,0 +1,33 @@
+# --- Sirlar: hech qachon GitHub'ga tushmasin ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# --- Ma'lumotlar bazasi ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/apex_words.db
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- Build oraliq fayllari ---
+build/cache/
+build/nltk_data/
+*.log
+
+# --- OS / muharrir ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

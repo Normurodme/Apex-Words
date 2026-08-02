@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Apex Words</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="topbar">
+    <button id="btn-menu" class="round-btn" aria-label="Menyu">
+      <span class="icon-lines"><i></i><i></i><i></i></span>
+    </button>
+    <div id="level-title">Yuklanmoqda…</div>
+    <div id="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
+  </header>
+
+  <!-- Topilgan so'zlar taxtasi -->
+  <section id="tray">
+    <div id="grid"></div>
+  </section>
+
+  <!-- Hozir yig'ilayotgan so'z -->
+  <div id="current-word"><span></span></div>
+
+  <!-- Harflar g'ildiragi -->
+  <section id="stage-area">
+    <button id="btn-shuffle" class="round-btn side-btn" aria-label="Aralashtirish">
+      <span class="glyph">⇄</span>
+    </button>
+
+    <div id="wheel">
+      <div id="plate"></div>
+      <canvas id="line"></canvas>
+      <div id="letters"></div>
+    </div>
+
+    <button id="btn-hint" class="round-btn side-btn" aria-label="Maslahat">
+      <span class="glyph">?</span>
+      <span class="price" id="hint-price">5</span>
+    </button>
+
+    <button id="btn-book" aria-label="Qo'shimcha so'zlar">
+      <span class="book-label">Qo'shimcha<br>so'zlar</span>
+      <span class="book-count" id="book-count">0</span>
+    </button>
+  </section>
+
+</div>
+
+<!-- Bosqich / daraja menyusi -->
+<div id="menu-overlay" class="overlay" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Bosqichlar</h2>
+      <button class="close-btn" data-close="menu-overlay">✕</button>
+    </div>
+    <div id="menu-body" class="sheet-body"></div>
+  </div>
+</div>
+
+<!-- Qo'shimcha (bonus) so'zlar kitobchasi -->
+<div id="book-overlay" class="overlay" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Qo'shimcha so'zlar</h2>
+      <button class="close-btn" data-close="book-overlay">✕</button>
+    </div>
+    <div id="book-body" class="sheet-body"></div>
+  </div>
+</div>
+
+<!-- Daraja tugadi -->
+<div id="done-overlay" class="overlay" hidden>
+  <div class="sheet done-sheet">
+    <div class="done-star">★</div>
+    <h2 id="done-title">Daraja tugadi!</h2>
+    <p id="done-sub"></p>
+    <button id="btn-next" class="primary-btn">Davom etish</button>
+  </div>
+</div>
+
+<!-- So'z topilganda chiqadigan tarjima -->
+<div id="toast" hidden>
+  <div id="toast-word"></div>
+  <div id="toast-uz"></div>
+</div>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>

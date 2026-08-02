@@ -1,0 +1,68 @@
+{
+ "stages": [
+  {
+   "stage": 1,
+   "name": "Countries",
+   "file": "stage_01.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "England",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Japan",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Brazil",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Egypt",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Canada",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 2,
+   "name": "Cities",
+   "file": "stage_02.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Paris",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Tokyo",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Dubai",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Rome",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "London",
+     "puzzles": 50
+    }
+   ]
+  }
+ ]
+}

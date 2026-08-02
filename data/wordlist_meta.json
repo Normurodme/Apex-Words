@@ -1,0 +1,9 @@
+{
+  "core_count": 5600,
+  "full_count": 9378,
+  "core_zipf": 3.55,
+  "full_zipf": 3.05,
+  "inflected_excluded": true,
+  "min_len": 3,
+  "max_len": 9
+}
