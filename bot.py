@@ -44,8 +44,26 @@ load_dotenv(ROOT / ".env")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip().rstrip("/")
 PORT = int(os.getenv("PORT", "8080"))
-DB_PATH = os.getenv("DB_PATH", str(ROOT / "data" / "apex_words.db"))
 WEB_DIR = ROOT / "web_app"
+
+
+def default_db_path() -> str:
+    """
+    Bazani qayerga yozishni tanlaydi.
+
+    Railway konteynerining diski vaqtinchalik: qayta deploy qilinganda hamma narsa
+    o'chadi. Doimiy saqlash uchun servisga Volume ulanadi va u odatda /data ga
+    joylashtiriladi. Agar shunday katalog bo'lsa va unga yozish mumkin bo'lsa,
+    bazani o'sha yerga yozamiz — DB_PATH o'zgaruvchisini qo'lda qo'yish
+    esdan chiqsa ham o'yinchilar progressi saqlanib qoladi.
+    """
+    vol = Path("/data")
+    if vol.is_dir() and os.access(vol, os.W_OK):
+        return str(vol / "apex_words.db")
+    return str(ROOT / "data" / "apex_words.db")
+
+
+DB_PATH = os.getenv("DB_PATH", "").strip() or default_db_path()
 
 # initData shu muddatdan eski bo'lsa qabul qilinmaydi (takroriy hujumga qarshi)
 INIT_DATA_TTL = 24 * 3600
@@ -125,7 +143,12 @@ class DB:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.executescript(SCHEMA)
             await db.commit()
-        log.info("Ma'lumotlar bazasi: %s", self.path)
+        if self.path.startswith("/data"):
+            log.info("📁 Baza DOIMIY diskda: %s", self.path)
+        else:
+            log.warning("⚠️  Baza VAQTINCHALIK diskda: %s — qayta deploy qilinganda "
+                        "o'yinchilar progressi o'chadi. Railway'da servisga Volume "
+                        "ulab, uni /data ga joylashtiring.", self.path)
 
     async def get_progress(self, user: dict) -> dict:
         uid = user["id"]

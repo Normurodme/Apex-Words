@@ -86,9 +86,12 @@ bormi, berilgan harflardan tuziladimi, harf to'plami takrorlanmaganmi.
 Bitta servis yetarli — aiohttp ham Mini App'ni, ham API'ni beradi (CORS muammosi yo'q).
 
 1. Reponi Railway'ga ulang, `Dockerfile` avtomatik topiladi
-2. O'zgaruvchilar: `BOT_TOKEN`, `WEBAPP_URL` (servisning o'z https manzili), `DB_PATH=/data/apex_words.db`
+2. O'zgaruvchilar: `BOT_TOKEN`, `WEBAPP_URL` (servisning o'z https manzili)
 3. **Volume'ni `/data` ga ulang** — busiz konteyner qayta ishga tushganda
-   o'yinchilar progressi yo'qoladi
+   o'yinchilar progressi yo'qoladi. `DB_PATH` ni qo'lda qo'yish shart emas:
+   `/data` mavjud bo'lsa, baza avtomatik o'sha yerga yoziladi. Ishga tushish
+   loglarida qaysi disk ishlatilayotgani ko'rinadi:
+   `📁 Baza DOIMIY diskda` yoki `⚠️ Baza VAQTINCHALIK diskda`
 4. BotFather'da `/newapp` orqali Main Mini App yarating (ixtiyoriy, qidiruvda
    "Open" tugmasi chiqishi uchun)
 
