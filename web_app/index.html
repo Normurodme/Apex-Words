@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -20,6 +20,8 @@
 
   <header id="map-top">
     <div class="brand">Apex&nbsp;Words</div>
+    <button id="btn-sound" class="mini-btn" aria-label="Ovoz">🔊</button>
+    <button id="btn-info" class="mini-btn" aria-label="Qoidalar">?</button>
     <div class="coins"><span class="coin">★</span><span id="map-coins">0</span></div>
   </header>
 
@@ -38,8 +40,8 @@
     <button class="tab active" id="tab-play">
       <span class="tab-ico">🗺️</span><span>Sayohat</span>
     </button>
-    <button class="tab" id="tab-info">
-      <span class="tab-ico">ℹ️</span><span>Qoida</span>
+    <button class="tab" id="tab-top">
+      <span class="tab-ico">🏆</span><span>Top</span>
     </button>
   </footer>
 </section>
@@ -49,8 +51,10 @@
 <section id="game-screen" class="screen">
 
   <header id="topbar">
-    <button id="btn-back" class="round-btn" aria-label="Orqaga"><span class="glyph">‹</span></button>
+    <button id="btn-back" class="round-btn" aria-label="Xaritaga"><span class="glyph">🗺</span></button>
+    <button id="btn-prev-level" class="nav-btn" aria-label="Oldingi daraja">‹</button>
     <div id="level-title">…</div>
+    <button id="btn-next-level" class="nav-btn" aria-label="Keyingi daraja">›</button>
     <div class="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
   </header>
 
@@ -120,12 +124,26 @@
   </div>
 </div>
 
+<div id="top-overlay" class="overlay" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>🏆 Top 100</h2>
+      <button class="close-btn" data-close="top-overlay">✕</button>
+    </div>
+    <div id="top-body" class="sheet-body"></div>
+    <div id="my-rank" hidden></div>
+  </div>
+</div>
+
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
     <div class="done-stars"><span>★</span><span>★</span><span>★</span></div>
     <h2 id="done-title">Daraja tugadi!</h2>
     <p id="done-sub"></p>
-    <button id="btn-next" class="primary-btn">Davom etish</button>
+    <div class="done-actions">
+      <button id="btn-next" class="primary-btn">Keyingi daraja ▶</button>
+      <button id="btn-stay" class="ghost-btn">Xaritaga qaytish</button>
+    </div>
   </div>
 </div>
 
@@ -135,6 +153,6 @@
 <!-- Qisqa bildirishnoma (bonus, xatolik) -->
 <div id="toast" hidden></div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

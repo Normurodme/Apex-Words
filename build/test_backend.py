@@ -31,6 +31,11 @@ async def main():
     tok = B.BOT_TOKEN
     ok = []
 
+    # Har safar toza bazadan boshlaymiz — aks holda oldingi ishga tushirishdan
+    # qolgan yozuvlar "yangi o'yinchi" testini yiqitadi.
+    for suffix in ("", "-wal", "-shm"):
+        Path(os.environ["DB_PATH"] + suffix).unlink(missing_ok=True)
+
     # --- imzo tekshiruvi ---
     good = make_init_data(555001, tok)
     u = B.verify_init_data(good)
@@ -83,6 +88,54 @@ async def main():
     r = await client.post("/api/save", json={"initData": good,
                                              "progress": {"x": "y" * 300000}})
     ok.append(("juda katta progress rad etildi", r.status == 413))
+
+    # --- Reyting ---
+    r = await client.post("/api/top", json={"initData": "soxta"})
+    ok.append(("imzosiz /api/top 401", r.status == 401))
+
+    # Ikkinchi o'yinchi, ko'proq ball bilan
+    other = make_init_data(555003, tok)
+    await client.post("/api/state", json={"initData": other})
+    await client.post("/api/save", json={
+        "initData": other,
+        "progress": {"coins": 500, "solved": {}, "learned": {}},
+    })
+
+    r = await client.post("/api/top", json={"initData": good})
+    top = await r.json()
+    names = [p["rank"] for p in top["top"]]
+    ok.append(("/api/top 200", r.status == 200))
+    ok.append(("reyting ball bo'yicha saralangan",
+               [p["score"] for p in top["top"]] == sorted(
+                   (p["score"] for p in top["top"]), reverse=True)))
+    ok.append(("o'rinlar 1 dan boshlanadi", names[:2] == [1, 2]))
+    ok.append(("ball progressdagi coins bilan bir xil",
+               top["top"][0]["score"] == 500))
+    ok.append(("so'rovchi o'zini 'me' bayrog'i bilan ko'radi",
+               any(p["me"] for p in top["top"])))
+    ok.append(("o'z o'rnim hisoblandi", top["me"]["rank"] == 2 and top["me"]["score"] == 77))
+    ok.append(("user_id tashqariga chiqmaydi",
+               all("user_id" not in p for p in top["top"])))
+
+    # --- Eski sxemadagi baza migratsiya qilinadimi ---
+    old_db = ROOT / "data" / "test_old.db"
+    old_db.unlink(missing_ok=True)
+    import aiosqlite
+    async with aiosqlite.connect(old_db) as d:
+        await d.execute(
+            "CREATE TABLE players (user_id INTEGER PRIMARY KEY, username TEXT,"
+            " first_name TEXT, progress TEXT NOT NULL DEFAULT '{}',"
+            " created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
+        await d.execute("INSERT INTO players VALUES (1,'a','A','{}',0,0)")
+        await d.commit()
+    old = B.DB(str(old_db))
+    await old.init()
+    async with aiosqlite.connect(old_db) as d:
+        async with d.execute("PRAGMA table_info(players)") as cur:
+            cols = {row[1] for row in await cur.fetchall()}
+    ok.append(("eski bazaga score/photo_url ustunlari qo'shildi",
+               {"score", "photo_url"} <= cols))
+    old_db.unlink(missing_ok=True)
 
     await client.close()
     Path(os.environ["DB_PATH"]).unlink(missing_ok=True)

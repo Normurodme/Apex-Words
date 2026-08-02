@@ -40,9 +40,69 @@ const State = {
   dict: {},
   progress: null,
   levels: [],           // barcha darajalar tekis ro'yxat sifatida
+  levelIndex: 0,        // hozir o'ynalayotgan darajaning tartib raqami
   puzzle: null,
   found: new Set(),
   foundBonus: new Set()
+};
+
+/* --------------------------------- Ovoz ----------------------------------- */
+/* Tashqi audio fayl ishlatilmaydi — ohanglar Web Audio bilan joyida
+   sintezlanadi. Shu sababli hech narsa yuklanmaydi va kechikish bo'lmaydi. */
+
+const Sound = {
+  ctx: null,
+
+  ready() {
+    if (!State.progress || State.progress.muted) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!this.ctx) {
+      try { this.ctx = new AC(); } catch (_) { return null; }
+    }
+    // Brauzer audio kontekstni foydalanuvchi bosgunicha to'xtatib turadi
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    return this.ctx;
+  },
+
+  /* seq: [chastota, boshlanish (s), davomiyligi (s), balandlik] */
+  play(seq, type) {
+    const ctx = this.ready();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + 0.02;
+    seq.forEach(([f, at, dur, vol]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type || 'triangle';
+      osc.frequency.value = f;
+      // Yumshoq kirish va chiqish — "chirt" etgan ovoz bo'lmasligi uchun
+      g.gain.setValueAtTime(0.0001, t0 + at);
+      g.gain.exponentialRampToValueAtTime(vol || 0.22, t0 + at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+      osc.connect(g).connect(ctx.destination);
+      osc.start(t0 + at);
+      osc.stop(t0 + at + dur + 0.05);
+    });
+  },
+
+  /* Puzzle yechilganda — qisqa quvnoq jaranglash */
+  chime() {
+    this.play([[784, 0, .16], [988, .08, .16], [1319, .17, .28]]);
+  },
+
+  /* Daraja tugaganda — bayramona ohang */
+  fanfare() {
+    this.play([
+      [523, 0,    .18], [659, .12,  .18], [784, .24,  .18],
+      [1047, .36, .34, .26],
+      [988, .58,  .14], [1047, .70, .14], [1319, .82, .5, .28]
+    ]);
+  },
+
+  /* Bonus so'z topilganda — mayin "ding" */
+  ding() {
+    this.play([[1175, 0, .12, .16], [1568, .07, .2, .14]], 'sine');
+  }
 };
 
 const HINT_COST = 5;
@@ -50,7 +110,10 @@ const START_COINS = 50;
 const BUBBLE_MS = 3500;      // tarjima necha soniya ko'rinadi
 
 function blankProgress() {
-  return { coins: START_COINS, cur: { stage: 1, level: 1, puzzle: 0 }, solved: {}, learned: {} };
+  return {
+    coins: START_COINS, cur: { stage: 1, level: 1, puzzle: 0 },
+    solved: {}, learned: {}, muted: false
+  };
 }
 
 /* ------------------------------- Saqlash ---------------------------------- */
@@ -275,10 +338,22 @@ function openMap() {
 /* ============================= O'YIN EKRANI ============================== */
 
 async function openLevel(i) {
+  if (i < 0 || i >= State.levels.length || !isUnlocked(i)) return;
   const lv = State.levels[i];
   const done = solvedIn(lv.stage, lv.level);
+  State.levelIndex = i;
   showScreen('game-screen');
+  // Tugagan daraja qaytadan ochilsa boshidan boshlanadi
   await openPuzzle(lv.stage, lv.level, done >= lv.puzzles ? 0 : done);
+  updateLevelNav();
+}
+
+/* Sarlavha yonidagi ‹ › tugmalari: qo'shni darajalarga o'tish.
+   ‹ oldingi darajaga qaytaradi (o'tilgan darajani qayta o'ynash uchun). */
+function updateLevelNav() {
+  const i = State.levelIndex;
+  $('btn-prev-level').disabled = i <= 0;
+  $('btn-next-level').disabled = !(i + 1 < State.levels.length && isUnlocked(i + 1));
 }
 
 async function openPuzzle(stage, level, idx) {
@@ -530,7 +605,10 @@ function submit(word) {
     learn(word);
     haptic('ok');
     flash(word, 'hit', 700);
-    if (State.found.size === p.words.length) setTimeout(puzzleSolved, 1100);
+    if (State.found.size === p.words.length) {
+      Sound.chime();
+      setTimeout(puzzleSolved, 1100);
+    }
     return;
   }
 
@@ -541,6 +619,7 @@ function submit(word) {
     learn(word);
     updateBookCount();
     haptic('ok');
+    Sound.ding();
     flash(word, 'hit', 700);
     toast('+1 bonus · ' + word);
     return;
@@ -605,14 +684,24 @@ function finishLevel(stage, level) {
   const i = State.levels.findIndex((l) => l.stage === stage && l.level === level);
   const next = State.levels[i + 1];
 
+  Sound.fanfare();
+  haptic('ok');
+
   $('done-title').textContent = 'Daraja tugadi!';
   $('done-sub').textContent = next
-    ? '"' + next.name + '" darajasi ochildi.'
+    ? '"' + next.name + '" darajasi ochildi. Hozir o\'tasizmi?'
     : 'Barcha mavjud darajalar tugadi. Yangi bosqichlar tez orada!';
-  $('btn-next').textContent = next ? 'Xaritaga qaytish' : 'Xaritaga qaytish';
+
+  // Keyingi daraja bo'lmasa faqat xaritaga qaytish qoladi
+  $('btn-next').hidden = !next;
+  if (next) $('btn-next').textContent = next.name + ' ▶';
   $('done-overlay').hidden = false;
 
   $('btn-next').onclick = () => {
+    $('done-overlay').hidden = true;
+    openLevel(i + 1);
+  };
+  $('btn-stay').onclick = () => {
     $('done-overlay').hidden = true;
     openMap();
   };
@@ -693,6 +782,94 @@ function openLearned() {
   $('learned-overlay').hidden = false;
 }
 
+/* ------------------------------- Reyting ---------------------------------- */
+
+function avatar(name, photo) {
+  const a = el('div', 'avatar');
+  if (photo) {
+    const img = document.createElement('img');
+    img.src = photo;
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    // Rasm ochilmasa (eski havola, tarmoq) ism harfi qoladi
+    img.onerror = () => { img.remove(); a.textContent = initial(name); };
+    a.appendChild(img);
+  } else {
+    a.textContent = initial(name);
+  }
+  return a;
+}
+
+function updateSoundBtn() {
+  const b = $('btn-sound');
+  const off = !!(State.progress && State.progress.muted);
+  b.textContent = off ? '🔇' : '🔊';
+  b.classList.toggle('off', off);
+}
+
+function initial(name) {
+  const s = (name || '?').trim();
+  return s ? s[0].toUpperCase() : '?';
+}
+
+async function openTop() {
+  const body = $('top-body');
+  const mine = $('my-rank');
+  body.innerHTML = '';
+  mine.hidden = true;
+  body.appendChild(el('div', 'book-empty', 'Yuklanmoqda…'));
+  $('top-overlay').hidden = false;
+
+  if (!(TG && TG.initData)) {
+    body.innerHTML = '';
+    body.appendChild(el('div', 'book-empty',
+      'Reyting faqat Telegram ichida ishlaydi.\n\nBotni oching va "O\'ynash" tugmasini bosing.'));
+    return;
+  }
+
+  let data;
+  try {
+    const r = await fetch('/api/top', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: TG.initData })
+    });
+    if (!r.ok) throw new Error('status ' + r.status);
+    data = await r.json();
+  } catch (e) {
+    body.innerHTML = '';
+    body.appendChild(el('div', 'book-empty', 'Reyting yuklanmadi. Keyinroq urinib ko\'ring.'));
+    return;
+  }
+
+  body.innerHTML = '';
+  if (!data.top || !data.top.length) {
+    body.appendChild(el('div', 'book-empty',
+      'Reyting hali bo\'sh.\n\nBirinchi bo\'lib ochko to\'plang!'));
+  } else {
+    const medal = ['gold', 'silver', 'bronze'];
+    data.top.forEach((p) => {
+      const row = el('div', 'rank-row' + (p.me ? ' me' : '') +
+                              (p.rank <= 3 ? ' ' + medal[p.rank - 1] : ''));
+      row.appendChild(el('div', 'rank-no', p.rank <= 3 ? ['🥇', '🥈', '🥉'][p.rank - 1] : String(p.rank)));
+      row.appendChild(avatar(p.name, p.photo));
+      row.appendChild(el('div', 'rank-name', p.name));
+      const sc = el('div', 'rank-score');
+      sc.appendChild(el('span', 'coin-dot', '★'));
+      sc.appendChild(el('span', null, String(p.score)));
+      row.appendChild(sc);
+      body.appendChild(row);
+    });
+  }
+
+  if (data.me) {
+    mine.innerHTML = '';
+    mine.appendChild(el('span', null, 'Sizning o\'rningiz: ' + data.me.rank + '-o\'rin'));
+    mine.appendChild(el('span', null, '★ ' + data.me.score));
+    mine.hidden = false;
+  }
+}
+
 /* ------------------------------ Ishga tushirish ---------------------------- */
 
 async function boot() {
@@ -727,9 +904,21 @@ async function boot() {
     haptic('tap');
   };
 
+  $('btn-prev-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex - 1); };
+  $('btn-next-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex + 1); };
+
   $('tab-learned').onclick = openLearned;
-  $('tab-info').onclick = () => { $('info-overlay').hidden = false; };
+  $('tab-top').onclick = openTop;
   $('tab-play').onclick = () => {};
+  $('btn-info').onclick = () => { $('info-overlay').hidden = false; };
+
+  $('btn-sound').onclick = () => {
+    State.progress.muted = !State.progress.muted;
+    updateSoundBtn();
+    if (!State.progress.muted) Sound.chime();   // yoqilganini eshittiramiz
+    Store.save();
+  };
+  updateSoundBtn();
 
   document.querySelectorAll('[data-close]').forEach((b) => {
     b.onclick = () => { $(b.dataset.close).hidden = true; };

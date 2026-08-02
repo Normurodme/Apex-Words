@@ -131,11 +131,22 @@ CREATE TABLE IF NOT EXISTS players (
     user_id    INTEGER PRIMARY KEY,
     username   TEXT,
     first_name TEXT,
+    photo_url  TEXT,
+    score      INTEGER NOT NULL DEFAULT 0,
     progress   TEXT NOT NULL DEFAULT '{}',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
 """
+
+# Indeks ALOHIDA turadi va migratsiyadan KEYIN yaratiladi.
+# SCHEMA ichida qoldirilsa, eski (score ustunisiz) bazada
+# "no such column: score" xatosi chiqadi va bot umuman ishga tushmaydi —
+# ya'ni haqiqiy o'yinchilari bor baza buziladi.
+INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_players_score ON players(score DESC)"
+
+# Reytingda ko'rsatiladigan o'yinchilar soni
+TOP_LIMIT = 100
 
 
 class DB:
@@ -147,6 +158,8 @@ class DB:
         async with aiosqlite.connect(self.path) as db:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.executescript(SCHEMA)
+            await self._migrate(db)      # yetishmayotgan ustunlarni qo'shadi
+            await db.execute(INDEX_SQL)  # keyin indeks — ustun endi mavjud
             await db.commit()
         if self.path.startswith("/data"):
             log.info("📁 Baza DOIMIY diskda: %s", self.path)
@@ -165,6 +178,24 @@ class DB:
                         "o'yinchilar progressi o'chadi. Railway'da servisga Volume "
                         "ulab, uni /data ga joylashtiring.", self.path)
 
+    @staticmethod
+    async def _migrate(db):
+        """
+        Eski bazaga yangi ustunlarni qo'shadi.
+
+        CREATE TABLE IF NOT EXISTS mavjud jadvalni o'zgartirmaydi, shuning uchun
+        reyting qo'shilgandan keyin ishga tushgan eski bazalarda photo_url va
+        score ustunlari bo'lmaydi va har so'rov xato beradi.
+        """
+        async with db.execute("PRAGMA table_info(players)") as cur:
+            cols = {row[1] for row in await cur.fetchall()}
+        if "photo_url" not in cols:
+            await db.execute("ALTER TABLE players ADD COLUMN photo_url TEXT")
+            log.info("Bazaga photo_url ustuni qo'shildi")
+        if "score" not in cols:
+            await db.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
+            log.info("Bazaga score ustuni qo'shildi")
+
     async def get_progress(self, user: dict) -> dict:
         uid = user["id"]
         now = int(time.time())
@@ -174,10 +205,13 @@ class DB:
             ) as cur:
                 row = await cur.fetchone()
             if row:
+                # Ism va rasm har kirishda yangilanadi — Telegram'da o'zgargan
+                # bo'lishi mumkin, reyting esa eski ma'lumot bilan qolmasin.
                 await db.execute(
-                    "UPDATE players SET username=?, first_name=?, updated_at=? "
-                    "WHERE user_id=?",
-                    (user.get("username"), user.get("first_name"), now, uid),
+                    "UPDATE players SET username=?, first_name=?, photo_url=?, "
+                    "updated_at=? WHERE user_id=?",
+                    (user.get("username"), user.get("first_name"),
+                     user.get("photo_url"), now, uid),
                 )
                 await db.commit()
                 try:
@@ -186,20 +220,65 @@ class DB:
                     return {}
 
             await db.execute(
-                "INSERT INTO players (user_id, username, first_name, progress, "
-                "created_at, updated_at) VALUES (?,?,?,?,?,?)",
-                (uid, user.get("username"), user.get("first_name"), "{}", now, now),
+                "INSERT INTO players (user_id, username, first_name, photo_url, "
+                "progress, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
+                (uid, user.get("username"), user.get("first_name"),
+                 user.get("photo_url"), "{}", now, now),
             )
             await db.commit()
             return {}
 
     async def save_progress(self, uid: int, progress: dict):
+        # Ball alohida ustunda saqlanadi: reytingni JSON ichidan qidirib emas,
+        # indeks bo'yicha saralab olish uchun.
+        try:
+            score = max(0, int(progress.get("coins", 0)))
+        except (TypeError, ValueError):
+            score = 0
         async with aiosqlite.connect(self.path) as db:
             await db.execute(
-                "UPDATE players SET progress=?, updated_at=? WHERE user_id=?",
-                (json.dumps(progress, ensure_ascii=False), int(time.time()), uid),
+                "UPDATE players SET progress=?, score=?, updated_at=? WHERE user_id=?",
+                (json.dumps(progress, ensure_ascii=False), score, int(time.time()), uid),
             )
             await db.commit()
+
+    async def leaderboard(self, uid: int) -> dict:
+        """
+        Eng yuqori ballli TOP_LIMIT o'yinchi va so'rovchining o'z o'rni.
+
+        Tashqariga faqat ism, rasm va ball chiqadi — user_id va username emas.
+        """
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute(
+                "SELECT first_name, photo_url, score, user_id FROM players "
+                "WHERE score > 0 ORDER BY score DESC, updated_at ASC LIMIT ?",
+                (TOP_LIMIT,),
+            ) as cur:
+                rows = await cur.fetchall()
+
+            async with db.execute(
+                "SELECT score FROM players WHERE user_id=?", (uid,)
+            ) as cur:
+                r = await cur.fetchone()
+            my_score = r[0] if r else 0
+
+            # O'z o'rnim: mendan ko'p ballga ega o'yinchilar soni + 1
+            async with db.execute(
+                "SELECT COUNT(*) FROM players WHERE score > ?", (my_score,)
+            ) as cur:
+                my_rank = (await cur.fetchone())[0] + 1
+
+        top = [
+            {
+                "rank": i + 1,
+                "name": (name or "O'yinchi")[:32],
+                "photo": photo or "",
+                "score": score,
+                "me": row_uid == uid,
+            }
+            for i, (name, photo, score, row_uid) in enumerate(rows)
+        ]
+        return {"top": top, "me": {"rank": my_rank, "score": my_score}}
 
     async def stats(self) -> tuple[int, int]:
         async with aiosqlite.connect(self.path) as db:
@@ -256,6 +335,20 @@ async def api_save(request: web.Request) -> web.Response:
     return web.json_response({"ok": True})
 
 
+async def api_top(request: web.Request) -> web.Response:
+    """TOP 100 o'yinchi va so'rovchining o'z o'rni."""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+
+    return web.json_response(await db.leaderboard(user["id"]))
+
+
 async def health(_: web.Request) -> web.Response:
     return web.json_response({"ok": True})
 
@@ -269,6 +362,7 @@ def make_app() -> web.Application:
     app.router.add_get("/health", health)
     app.router.add_post("/api/state", api_state)
     app.router.add_post("/api/save", api_save)
+    app.router.add_post("/api/top", api_top)
     app.router.add_get("/", index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
