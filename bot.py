@@ -196,6 +196,33 @@ class DB:
             await db.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
             log.info("Bazaga score ustuni qo'shildi")
 
+        # Ustun 0 bilan qo'shiladi, eski o'yinchilarning ballari esa progress
+        # JSON ichida turibdi. Ko'chirilmasa, ular keyingi safar o'ynab
+        # saqlamaguncha reytingda umuman ko'rinmaydi.
+        try:
+            cur = await db.execute(
+                "UPDATE players "
+                "SET score = CAST(COALESCE(json_extract(progress, '$.coins'), 0) AS INTEGER) "
+                "WHERE score = 0 AND progress IS NOT NULL AND progress != '{}'"
+            )
+            if cur.rowcount > 0:
+                log.info("Reyting ballari progressdan ko'chirildi: %d o'yinchi", cur.rowcount)
+        except Exception as e:
+            # JSON1 kengaytmasi bo'lmasa qo'lda o'qib chiqamiz
+            log.warning("json_extract ishlamadi (%s), qo'lda ko'chirilmoqda", e)
+            async with db.execute(
+                "SELECT user_id, progress FROM players WHERE score = 0"
+            ) as c:
+                rows = await c.fetchall()
+            for uid, raw in rows:
+                try:
+                    coins = int(json.loads(raw or "{}").get("coins", 0))
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    continue
+                if coins > 0:
+                    await db.execute("UPDATE players SET score=? WHERE user_id=?",
+                                     (coins, uid))
+
     async def get_progress(self, user: dict) -> dict:
         uid = user["id"]
         now = int(time.time())

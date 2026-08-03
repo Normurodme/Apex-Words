@@ -443,9 +443,25 @@ function starsFor(done, total) {
   return done > 0 ? 1 : 0;
 }
 
+/*
+  Ekran almashtirish.
+
+  O'yin ekrani qobiqdan TASHQARIDA turadi: o'ynayotganda pastki menyu
+  kerak emas. Qolgan uchtasi qobiq ichida — menyu ular uchun umumiy va
+  bo'lim almashganda joyida qoladi.
+*/
+const SHELL_SCREENS = ['map-screen', 'learned-screen', 'top-screen'];
+const TAB_OF = { 'map-screen': 'tab-play', 'learned-screen': 'tab-learned',
+                 'top-screen': 'tab-top' };
+
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
-  $(id).classList.add('active');
+  const inShell = SHELL_SCREENS.includes(id);
+  $('shell').hidden = !inShell;
+  $('game-screen').classList.toggle('active', id === 'game-screen');
+
+  SHELL_SCREENS.forEach((s) => $(s).classList.toggle('active', s === id));
+  document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+  if (inShell) $(TAB_OF[id]).classList.add('active');
 }
 
 function openMap() {
@@ -764,8 +780,10 @@ function addCoins(n) {
 }
 
 function updateCoins() {
-  $('coin-count').textContent = State.progress.coins;
-  $('map-coins').textContent = State.progress.coins;
+  const n = State.progress.coins;
+  $('coin-count').textContent = n;
+  $('map-coins').textContent = n;
+  $('learned-coins').textContent = n;
 }
 
 function updateBookCount() {
@@ -888,6 +906,7 @@ function openBook() {
 }
 
 function openLearned() {
+  showScreen('learned-screen');
   const body = $('learned-body');
   body.innerHTML = '';
   const words = Object.keys(State.progress.learned || {}).sort();
@@ -898,7 +917,6 @@ function openLearned() {
     body.appendChild(el('div', 'book-empty', words.length + ' ta so\'z o\'rgandingiz'));
     words.forEach((w) => body.appendChild(wordRow(w)));
   }
-  $('learned-overlay').hidden = false;
 }
 
 /* ------------------------------- Reyting ---------------------------------- */
@@ -932,12 +950,12 @@ function initial(name) {
 }
 
 async function openTop() {
+  showScreen('top-screen');
   const body = $('top-body');
   const mine = $('my-rank');
   body.innerHTML = '';
   mine.hidden = true;
   body.appendChild(el('div', 'book-empty', 'Yuklanmoqda…'));
-  $('top-overlay').hidden = false;
 
   if (!(TG && TG.initData)) {
     body.innerHTML = '';
@@ -1026,9 +1044,10 @@ async function boot() {
   $('btn-prev-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex - 1); };
   $('btn-next-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex + 1); };
 
-  $('tab-learned').onclick = openLearned;
-  $('tab-top').onclick = openTop;
-  $('tab-play').onclick = () => {};
+  $('tab-learned').onclick = () => { haptic('tap'); openLearned(); };
+  $('tab-top').onclick = () => { haptic('tap'); openTop(); };
+  $('tab-play').onclick = () => { haptic('tap'); openMap(); };
+  $('btn-top-refresh').onclick = openTop;
   $('btn-info').onclick = () => { $('info-overlay').hidden = false; };
 
   $('btn-sound').onclick = () => {

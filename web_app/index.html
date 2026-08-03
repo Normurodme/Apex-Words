@@ -6,34 +6,60 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
-<!-- ====================== 1. DARAJALAR XARITASI ====================== -->
-<section id="map-screen" class="screen active">
+<!-- Uchta bo'lim bitta qobiq ichida: pastki menyu ular uchun umumiy va
+     bo'lim almashganda joyida qoladi. -->
+<div id="shell">
 
-  <div class="sky">
-    <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
-    <i class="cloud c4"></i><i class="cloud c5"></i>
+  <div id="screens">
+
+    <!-- ==================== SAYOHAT (darajalar xaritasi) ==================== -->
+    <section id="map-screen" class="screen active">
+      <div class="sky">
+        <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+        <i class="cloud c4"></i><i class="cloud c5"></i>
+      </div>
+
+      <header class="sec-top">
+        <div class="brand">Apex&nbsp;Words</div>
+        <button id="btn-sound" class="mini-btn" aria-label="Ovoz">🔊</button>
+        <button id="btn-info" class="mini-btn" aria-label="Qoidalar">?</button>
+        <div class="coins"><span class="coin">★</span><span id="map-coins">0</span></div>
+      </header>
+
+      <div id="map-scroll">
+        <div id="map-inner">
+          <svg id="map-path" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="map-nodes"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= SO'ZLARIM ========================= -->
+    <section id="learned-screen" class="screen">
+      <header class="sec-top">
+        <div class="brand">O'rgangan so'zlarim</div>
+        <div class="coins"><span class="coin">★</span><span id="learned-coins">0</span></div>
+      </header>
+      <div id="learned-body" class="sec-body"></div>
+    </section>
+
+    <!-- =========================== TOP =========================== -->
+    <section id="top-screen" class="screen">
+      <header class="sec-top">
+        <div class="brand">🏆 Top 100</div>
+        <button id="btn-top-refresh" class="mini-btn" aria-label="Yangilash">⟳</button>
+      </header>
+      <div id="top-body" class="sec-body"></div>
+      <div id="my-rank" hidden></div>
+    </section>
+
   </div>
 
-  <header id="map-top">
-    <div class="brand">Apex&nbsp;Words</div>
-    <button id="btn-sound" class="mini-btn" aria-label="Ovoz">🔊</button>
-    <button id="btn-info" class="mini-btn" aria-label="Qoidalar">?</button>
-    <div class="coins"><span class="coin">★</span><span id="map-coins">0</span></div>
-  </header>
-
-  <!-- Qo'l bilan tortib yuriladigan yo'l -->
-  <div id="map-scroll">
-    <div id="map-inner">
-      <svg id="map-path" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div id="map-nodes"></div>
-    </div>
-  </div>
-
-  <footer id="map-bottom">
+  <footer id="tabbar">
     <button class="tab" id="tab-learned">
       <span class="tab-ico">📖</span><span>So'zlarim</span>
     </button>
@@ -44,10 +70,10 @@
       <span class="tab-ico">🏆</span><span>Top</span>
     </button>
   </footer>
-</section>
+</div>
 
 
-<!-- ========================== 2. O'YIN ========================== -->
+<!-- ============================== O'YIN ============================== -->
 <section id="game-screen" class="screen">
 
   <header id="topbar">
@@ -86,7 +112,7 @@
 </section>
 
 
-<!-- =========================== OYNALAR =========================== -->
+<!-- ===================== Vaqtinchalik oynalar ===================== -->
 
 <div id="book-overlay" class="overlay full" hidden>
   <div class="sheet">
@@ -95,16 +121,6 @@
       <button class="close-btn" data-close="book-overlay">✕</button>
     </div>
     <div id="book-body" class="sheet-body"></div>
-  </div>
-</div>
-
-<div id="learned-overlay" class="overlay full" hidden>
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>O'rgangan so'zlarim</h2>
-      <button class="close-btn" data-close="learned-overlay">✕</button>
-    </div>
-    <div id="learned-body" class="sheet-body"></div>
   </div>
 </div>
 
@@ -124,17 +140,6 @@
   </div>
 </div>
 
-<div id="top-overlay" class="overlay full" hidden>
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>🏆 Top 100</h2>
-      <button class="close-btn" data-close="top-overlay">✕</button>
-    </div>
-    <div id="top-body" class="sheet-body"></div>
-    <div id="my-rank" hidden></div>
-  </div>
-</div>
-
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
     <div class="done-stars"><span>★</span><span>★</span><span>★</span></div>
@@ -147,12 +152,9 @@
   </div>
 </div>
 
-<!-- Lampa bosilganda chiqadigan tarjima -->
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
-
-<!-- Qisqa bildirishnoma (bonus, xatolik) -->
 <div id="toast" hidden></div>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

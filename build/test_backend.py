@@ -127,14 +127,27 @@ async def main():
             " first_name TEXT, progress TEXT NOT NULL DEFAULT '{}',"
             " created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)")
         await d.execute("INSERT INTO players VALUES (1,'a','A','{}',0,0)")
+        # Ballari progress ichida turgan eski o'yinchilar
+        await d.execute("INSERT INTO players VALUES (2,'b','B',?,0,0)",
+                        (json.dumps({"coins": 340, "solved": {"1-1": 7}}),))
+        await d.execute("INSERT INTO players VALUES (3,'c','C','buzilgan json',0,0)")
         await d.commit()
     old = B.DB(str(old_db))
     await old.init()
     async with aiosqlite.connect(old_db) as d:
         async with d.execute("PRAGMA table_info(players)") as cur:
             cols = {row[1] for row in await cur.fetchall()}
+        async with d.execute("SELECT user_id, score FROM players ORDER BY user_id") as cur:
+            scores = dict(await cur.fetchall())
     ok.append(("eski bazaga score/photo_url ustunlari qo'shildi",
                {"score", "photo_url"} <= cols))
+    ok.append(("eski o'yinchining bali progressdan ko'chirildi", scores.get(2) == 340))
+    ok.append(("bo'sh progress 0 bo'lib qoldi", scores.get(1) == 0))
+    ok.append(("buzilgan json migratsiyani yiqitmadi", scores.get(3) == 0))
+
+    # Migratsiya ikkinchi marta ishlaganda ham xato bermasligi kerak
+    await B.DB(str(old_db)).init()
+    ok.append(("migratsiya takroran ishlayveradi", True))
     old_db.unlink(missing_ok=True)
 
     await client.close()
