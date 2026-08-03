@@ -118,39 +118,119 @@ function blankProgress() {
 
 /* ------------------------------- Saqlash ---------------------------------- */
 
+/* Kelgan progressni to'liq shaklga keltiradi — eski yoki chala yozuvlar
+   sababli State.progress.solved kabi maydonlar yo'q bo'lib qolmasin. */
+function normalize(p) {
+  const b = blankProgress();
+  if (!p || typeof p !== 'object') return b;
+  return {
+    coins: Number.isFinite(p.coins) ? p.coins : b.coins,
+    cur: (p.cur && typeof p.cur === 'object') ? p.cur : b.cur,
+    solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
+    learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
+    muted: !!p.muted
+  };
+}
+
+/*
+  Ikki qurilmadagi progressni birlashtiradi.
+
+  Telefon va kompyuterda bir vaqtda o'ynalsa, oddiy "oxirgi yozgan yutadi"
+  qoidasi bir qurilmadagi yutuqni o'chirib yuboradi. Shuning uchun har maydon
+  bo'yicha eng KATTA qiymat olinadi: hech qayerda yutuq yo'qolmaydi.
+*/
+function mergeProgress(a, b) {
+  a = normalize(a);
+  b = normalize(b);
+  const out = {
+    coins: Math.max(a.coins, b.coins),
+    solved: Object.assign({}, a.solved),
+    learned: Object.assign({}, a.learned),
+    muted: b.muted            // ovoz — shu qurilmaning sozlamasi
+  };
+  for (const k in b.solved) {
+    out.solved[k] = Math.max(out.solved[k] || 0, b.solved[k] || 0);
+  }
+  for (const w in b.learned) {
+    out.learned[w] = Math.max(out.learned[w] || 0, b.learned[w] || 0);
+  }
+  // Qaysi tomonda ko'proq puzzle yechilgan bo'lsa, o'sha joydan davom etamiz
+  const total = (p) => Object.values(p.solved).reduce((s, n) => s + n, 0);
+  out.cur = total(a) >= total(b) ? a.cur : b.cur;
+  return out;
+}
+
 const Store = {
   online: true,
   timer: null,
+  pending: false,
 
-  async load() {
-    if (TG && TG.initData) {
-      try {
-        const r = await fetch('/api/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: TG.initData })
-        });
-        if (r.ok) {
-          const d = await r.json();
-          return (d && d.progress) || blankProgress();
-        }
-      } catch (_) {}
+  async fetchServer() {
+    if (!(TG && TG.initData)) return null;
+    try {
+      const r = await fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: TG.initData })
+      });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+      return d ? d.progress : null;
+    } catch (_) {
+      this.online = false;
+      return null;
     }
-    this.online = false;
+  },
+
+  local() {
     try {
       const raw = localStorage.getItem('apexwords');
       if (raw) return JSON.parse(raw);
     } catch (_) {}
-    return blankProgress();
+    return null;
+  },
+
+  async load() {
+    const local = this.local();
+    if (TG && TG.initData) {
+      const server = await this.fetchServer();
+      if (this.online) {
+        // Ikkalasi ham bo'lsa birlashtiramiz — qurilmalar bir-birini o'chirmasin
+        return mergeProgress(server, local);
+      }
+    } else {
+      this.online = false;
+    }
+    return normalize(local);
+  },
+
+  /* Boshqa qurilmada o'ynalgan bo'lsa, qaytib kelganda yangilanadi */
+  async resync() {
+    if (!this.online || !(TG && TG.initData)) return false;
+    const server = await this.fetchServer();
+    if (!server) return false;
+    const merged = mergeProgress(server, State.progress);
+    const changed = JSON.stringify(merged) !== JSON.stringify(State.progress);
+    State.progress = merged;
+    if (changed) this.saveNow();
+    return changed;
   },
 
   save() {
+    this.pending = true;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this._flush(), 1200);
   },
 
+  /* Kechiktirmasdan darhol yozadi */
+  saveNow() {
+    clearTimeout(this.timer);
+    this._flush();
+  },
+
   async _flush() {
     const p = State.progress;
+    this.pending = false;
     try { localStorage.setItem('apexwords', JSON.stringify(p)); } catch (_) {}
     if (!this.online || !(TG && TG.initData)) return;
     try {
@@ -160,6 +240,34 @@ const Store = {
         body: JSON.stringify({ initData: TG.initData, progress: p })
       });
     } catch (_) { this.online = false; }
+  },
+
+  /*
+    Ilova yopilayotganda oddiy fetch ulgurmaydi — brauzer sahifani
+    to'xtatganda so'rovni bekor qiladi. sendBeacon esa fon rejimida ham
+    yuborilishi kafolatlangan.
+  */
+  flushOnExit() {
+    const p = State.progress;
+    try { localStorage.setItem('apexwords', JSON.stringify(p)); } catch (_) {}
+    if (!this.online || !(TG && TG.initData)) return;
+    const body = JSON.stringify({ initData: TG.initData, progress: p });
+    let sent = false;
+    if (navigator.sendBeacon) {
+      try {
+        sent = navigator.sendBeacon('/api/save',
+          new Blob([body], { type: 'application/json' }));
+      } catch (_) {}
+    }
+    if (!sent) {
+      try {
+        fetch('/api/save', {
+          method: 'POST', body, keepalive: true,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (_) {}
+    }
+    this.pending = false;
   }
 };
 
@@ -206,7 +314,9 @@ function isUnlocked(i) {
 /* ============================ XARITA EKRANI ============================== */
 
 const NODE_GAP = 132;      // tugunlar orasidagi masofa
-const EDGE_PAD = 118;      // pastki va yuqori bo'sh joy
+const EDGE_PAD = 118;      // yuqoridagi bo'sh joy
+const BOTTOM_PAD = 150;    // pastda ko'proq: 1-bosqich nomi shu yerga sig'adi
+const BANNER_GAP = 58;     // bosqich nomi uchun qo'shimcha oraliq
 
 function renderMap() {
   const scroll = $('map-scroll');
@@ -219,16 +329,22 @@ function renderMap() {
   // nuqtaga (x=0) yig'ilib qolardi. Oxirgi chora sifatida 360px olamiz,
   // haqiqiy o'lcham kelganda ResizeObserver xaritani qayta chizadi.
   const w = scroll.clientWidth || window.innerWidth || 360;
-  const h = EDGE_PAD * 2 + (n - 1) * NODE_GAP;
+
+  // Har yangi bosqich oldida qo'shimcha oraliq qoldiramiz — bosqich nomi
+  // o'sha bo'shliqqa tushadi va tugun yozuvlariga tegmaydi.
+  const extra = State.levels.filter((lv, i) => lv.first && i > 0).length;
+  const h = EDGE_PAD + BOTTOM_PAD + (n - 1) * NODE_GAP + extra * BANNER_GAP;
   inner.style.height = h + 'px';
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('preserveAspectRatio', 'none');
 
   // 1-daraja PASTDA, keyingilari yuqoriga qarab ketadi
-  const pts = State.levels.map((_, i) => ({
-    x: w / 2 + Math.sin(i * 0.95) * Math.min(w * 0.27, 110),
-    y: h - EDGE_PAD - i * NODE_GAP
-  }));
+  const pts = [];
+  let y = h - BOTTOM_PAD;
+  State.levels.forEach((lv, i) => {
+    if (i > 0) y -= NODE_GAP + (lv.first ? BANNER_GAP : 0);
+    pts.push({ x: w / 2 + Math.sin(i * 0.95) * Math.min(w * 0.27, 110), y });
+  });
 
   // Tugunlarni tutashtiruvchi uzuq chiziq
   let d = `M ${pts[0].x} ${pts[0].y}`;
@@ -250,10 +366,13 @@ function renderMap() {
     const complete = done >= lv.puzzles;
     if (unlocked && !complete && !curIndex) curIndex = i;
 
-    // Bosqich nomi — har bosqichning birinchi darajasi tepasida
+    // Bosqich nomi — birinchi darajasidan PASTDA, o'sha bosqichga kirish
+    // joyida. Oldingi tugun bilan orasida BANNER_GAP bo'shlig'i bor, shuning
+    // uchun yuqoridagi tugunning nomiga tegmaydi.
     if (lv.first) {
       const b = el('div', 'stage-banner', lv.stage + '-BOSQICH · ' + lv.stageName);
-      b.style.top = (pts[i].y - NODE_GAP * 0.58) + 'px';
+      b.style.top = (pts[i].y + (i === 0 ? BOTTOM_PAD * 0.5
+                                         : NODE_GAP * 0.5 + BANNER_GAP * 0.5)) + 'px';
       nodes.appendChild(b);
     }
 
@@ -925,6 +1044,21 @@ async function boot() {
   });
 
   watchMapSize();
+
+  /* Progressni qurilmalar orasida bir xil ushlab turish.
+     Ilova yashirilganda kutmasdan yoziladi (aks holda kechiktirilgan saqlash
+     yo'qoladi), qaytib ochilganda esa serverdan yangilanadi — boshqa
+     qurilmada o'ynalgan bo'lsa shu yerda ham ko'rinadi. */
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) {
+      Store.flushOnExit();
+    } else if (await Store.resync()) {
+      updateCoins();
+      if ($('map-screen').classList.contains('active')) renderMap();
+      else updateLevelNav();
+    }
+  });
+  window.addEventListener('pagehide', () => Store.flushOnExit());
 
   // Kirgan zahoti o'yin emas, XARITA ochiladi
   openMap();

@@ -458,7 +458,38 @@ body {
   box-shadow: 0 16px 40px rgba(0,0,0,.4);
   overflow: hidden;
 }
+
+/* To'liq ekranli bo'limlar (Top, So'zlarim, Qo'shimcha so'zlar, Qoida).
+   Kichik modal oyna emas — o'yin ekranlari bilan bir xil darajadagi sahifa. */
+.overlay.full {
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  display: block;
+  animation: slideUp .22s ease-out;
+}
+.overlay.full .sheet {
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  border: none; border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(160deg, #6ddcff 0%, var(--sky-2) 45%, var(--sky-3) 100%);
+}
+.overlay.full .sheet-head {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  background: rgba(10,26,66,.22);
+}
+.overlay.full .sheet-head h2 { font-size: 19px; }
+.overlay.full .sheet-body {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+@keyframes slideUp {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 .sheet-head {
+  flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   padding: 13px 16px;
   border-bottom: 2px solid rgba(255,255,255,.28);
