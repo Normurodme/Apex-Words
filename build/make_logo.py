@@ -122,11 +122,12 @@ def tile(img: Image.Image, cx: int, cy: int, size: int, ch: str, angle: float = 
     d.rounded_rectangle([x0, y0, x1, y1], r, outline=(255, 255, 255, 255),
                         width=max(2, size // 16))
 
-    f = font("seguibl.ttf", int(size * 0.62))
-    tb = d.textbbox((0, 0), ch, font=f)
-    d.text((x0 + size / 2 - (tb[2] - tb[0]) / 2 - tb[0],
-            y0 + size / 2 - (tb[3] - tb[1]) / 2 - tb[1]),
-           ch, font=f, fill=GOLD_INK + (255,))
+    if ch:
+        f = font("seguibl.ttf", int(size * 0.62))
+        tb = d.textbbox((0, 0), ch, font=f)
+        d.text((x0 + size / 2 - (tb[2] - tb[0]) / 2 - tb[0],
+                y0 + size / 2 - (tb[3] - tb[1]) / 2 - tb[1]),
+               ch, font=f, fill=GOLD_INK + (255,))
 
     if angle:
         box = box.rotate(angle, resample=Image.BICUBIC, expand=False)
@@ -164,7 +165,34 @@ def wheel(img: Image.Image, cx: int, cy: int, radius: int, word: str):
         tile(img, x, y, int(radius * 0.42), ch)
 
 
+def save(img: Image.Image, name: str):
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    final = img.convert("RGB").resize((W, H), Image.LANCZOS)
+    path = OUT_DIR / name
+    final.save(path, "PNG", optimize=True)
+    print(f"  {name}  ({final.width}x{final.height}, "
+          f"{path.stat().st_size / 1024:.0f} KB)")
+
+
+def plain(word: str, name: str):
+    """
+    Mini App uchun sof rasm: faqat fon va o'yin g'ildiragi.
+    Sarlavha, shior va boshqa yozuvlar yo'q — BotFather shuni so'raydi.
+    """
+    img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    sky_gradient(img)
+    clouds(img)
+    wheel(img, cx=CW // 2, cy=CH // 2, radius=int(132 * S), word=word)
+    save(img, name)
+
+
 def main():
+    print("Yozildi:")
+    # Matnsiz variantlar
+    plain("WORDS", "webapp_640x360.png")
+    plain("     ", "webapp_640x360_blank.png")   # plitkalar ham bo'sh
+
+    # Yozuvli muqova (bot tavsifi uchun) — pastda
     img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
     sky_gradient(img)
     clouds(img)
@@ -215,12 +243,7 @@ def main():
                fill=WHITE + (255,), anchor="lm")
         dx += w + int(24 * S) + int(12 * S)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    final = img.convert("RGB").resize((W, H), Image.LANCZOS)
-    path = OUT_DIR / "logo_640x360.png"
-    final.save(path, "PNG", optimize=True)
-    print(f"Yozildi: {path}  ({final.width}x{final.height}, "
-          f"{path.stat().st_size / 1024:.0f} KB)")
+    save(img, "cover_640x360.png")
 
 
 if __name__ == "__main__":
