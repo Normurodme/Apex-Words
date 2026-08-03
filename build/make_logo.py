@@ -242,9 +242,108 @@ def style_tiles(name: str):
     save(img, name)
 
 
+def dark_bg(img, top=(26, 38, 104), bot=(58, 30, 122), glow=True):
+    d = ImageDraw.Draw(img)
+    for y in range(CH):
+        d.line([(0, y), (CW, y)], fill=lerp(top, bot, y / (CH - 1)))
+    if glow:
+        overlay(img, lambda dd: dd.ellipse(
+            [CW * 0.18, CH * 0.04, CW * 0.82, CH * 0.96],
+            fill=(120, 150, 255, 66)), blur=40 * S)
+
+
+def empty_cell(img, cx, cy, size, angle=0):
+    """O'yin to'ridagi bo'sh katak — to'ldirilmagan joy."""
+    pad = size // 2
+    box = Image.new("RGBA", (size + pad * 2, size + pad * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(box)
+    d.rounded_rectangle([pad, pad, pad + size, pad + size], size * 0.28,
+                        fill=(10, 24, 66, 105), outline=(255, 255, 255, 120),
+                        width=max(2, size // 18))
+    if angle:
+        box = box.rotate(angle, resample=Image.BICUBIC, expand=False)
+    img.alpha_composite(box, (cx - box.width // 2, cy - box.height // 2))
+
+
+def style_cross(name):
+    """1-uslub: chalkash so'z (crossword) shakli — bo'sh va to'la kataklar."""
+    img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    dark_bg(img)
+
+    s = int(58 * S)
+    step = int(67 * S)
+    cx, cy = CW // 2, CH // 2
+
+    overlay(img, lambda d: d.rounded_rectangle(
+        [cx - step * 2.7, cy - step * 2.0, cx + step * 2.7, cy + step * 2.0],
+        44 * S, fill=(0, 0, 0, 74)), blur=26 * S)
+
+    # Gorizontal qator — oltin
+    for i in range(-2, 3):
+        tile(img, cx + i * step, cy, s, "", palette=GOLD_SET)
+    # Vertikal ustun — kumush (markaz allaqachon chizilgan)
+    for j in (-1, 1):
+        tile(img, cx, cy + j * step, s, "", palette=CREAM_SET)
+    # Atrofda bo'sh kataklar — to'r davom etayotgandek
+    for dx, dy in ((-2, -1), (2, 1), (-1, 1), (1, -1)):
+        empty_cell(img, cx + dx * step, cy + dy * step, s)
+
+    save(img, name)
+
+
+def style_path(name):
+    """2-uslub: barmoq izi — plitkalar to'lqin bo'ylab chiziq bilan bog'langan."""
+    img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    sky_gradient(img)
+    clouds(img)
+
+    s = int(62 * S)
+    pts = [(int(x * S), int(y * S)) for x, y in
+           ((128, 232), (232, 128), (352, 216), (472, 112), (556, 236))]
+
+    overlay(img, lambda d: d.line(pts, fill=(0, 0, 0, 80),
+                                  width=12 * S, joint="curve"), blur=8 * S)
+    overlay(img, lambda d: d.line(pts, fill=CORAL + (240,),
+                                  width=11 * S, joint="curve"))
+
+    for i, (x, y) in enumerate(pts):
+        tile(img, x, y, s, "", angle=3 if i % 2 else -3,
+             palette=GOLD_SET if i % 2 == 0 else CREAM_SET)
+
+    save(img, name)
+
+
+def style_grid(name):
+    """3-uslub: tartibli plitkalar to'ri — sokin, belgiga o'xshash."""
+    img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    dark_bg(img, top=(18, 30, 88), bot=(76, 36, 128))
+
+    s = int(70 * S)
+    gap = int(12 * S)
+    cols, rows = 4, 2
+    tw = cols * s + (cols - 1) * gap
+    th = rows * s + (rows - 1) * gap
+    x0 = CW // 2 - tw // 2 + s // 2
+    y0 = CH // 2 - th // 2 + s // 2
+
+    overlay(img, lambda d: d.rounded_rectangle(
+        [CW // 2 - tw * 0.62, CH // 2 - th * 0.78,
+         CW // 2 + tw * 0.62, CH // 2 + th * 0.82],
+        40 * S, fill=(0, 0, 0, 76)), blur=24 * S)
+
+    for r in range(rows):
+        for c in range(cols):
+            pal = GOLD_SET if (r + c) % 2 == 0 else CREAM_SET
+            tile(img, x0 + c * (s + gap), y0 + r * (s + gap), s, "", palette=pal)
+
+    save(img, name)
+
+
 def main():
     print("Yozildi:")
-    style_tiles("tiles_640x360.png")
+    style_cross("plain_1_cross.png")
+    style_path("plain_2_path.png")
+    style_grid("plain_3_grid.png")
     # Matnsiz variantlar
     plain("WORDS", "webapp_640x360.png")
     plain("     ", "webapp_640x360_blank.png")   # plitkalar ham bo'sh
