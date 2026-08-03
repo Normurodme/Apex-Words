@@ -48,14 +48,15 @@ def lerp(a, b, t):
 
 def sky_gradient(img: Image.Image):
     """Diagonalga yaqin uch bosqichli gradient."""
+    w, h = img.size
     d = ImageDraw.Draw(img)
-    for y in range(CH):
-        t = y / (CH - 1)
+    for y in range(h):
+        t = y / (h - 1)
         if t < 0.45:
             c = lerp(SKY_1, SKY_2, t / 0.45)
         else:
             c = lerp(SKY_2, SKY_3, (t - 0.45) / 0.55)
-        d.line([(0, y), (CW, y)], fill=c)
+        d.line([(0, y), (w, y)], fill=c)
 
 
 def clouds(img: Image.Image):
@@ -90,7 +91,7 @@ def overlay(img: Image.Image, draw_fn, blur: int = 0):
     oq bo'lib qoladi. Shuning uchun har bir shaffof element alohida
     qatlamga chizilib, alpha_composite bilan qo'shiladi.
     """
-    layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw_fn(ImageDraw.Draw(layer))
     if blur:
         layer = layer.filter(ImageFilter.GaussianBlur(blur))
@@ -172,13 +173,68 @@ def wheel(img: Image.Image, cx: int, cy: int, radius: int, word: str):
         tile(img, x, y, int(radius * 0.42), ch)
 
 
-def save(img: Image.Image, name: str):
+def save(img: Image.Image, name: str, out=(W, H)):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    final = img.convert("RGB").resize((W, H), Image.LANCZOS)
+    final = img.convert("RGB").resize(out, Image.LANCZOS)
     path = OUT_DIR / name
     final.save(path, "PNG", optimize=True)
     print(f"  {name}  ({final.width}x{final.height}, "
           f"{path.stat().st_size / 1024:.0f} KB)")
+
+
+# --------------------------- Kvadrat avatar ---------------------------------
+# Telegram bot rasmini DOIRA qilib kesadi, shuning uchun barcha muhim narsa
+# markazdagi doira ichida turishi kerak — burchaklar ko'rinmaydi.
+AV = 512
+AVC = AV * S
+
+
+def avatar_letter(name: str):
+    """Bitta yirik plitka. Kichik o'lchamda eng yaxshi o'qiladi."""
+    img = Image.new("RGBA", (AVC, AVC), (0, 0, 0, 0))
+    sky_gradient(img)
+    c = AVC // 2
+    overlay(img, lambda d: d.ellipse(
+        [c - AVC * 0.34, c - AVC * 0.30, c + AVC * 0.34, c + AVC * 0.38],
+        fill=(0, 0, 0, 90)), blur=int(0.05 * AVC))
+    tile(img, c, c, int(AVC * 0.56), "A", angle=-4)
+    save(img, name, out=(AV, AV))
+
+
+def avatar_cross(name: str):
+    """Chalkash so'z shakli — kvadratga siqilgan."""
+    img = Image.new("RGBA", (AVC, AVC), (0, 0, 0, 0))
+    dark_bg(img)
+    c = AVC // 2
+    s = int(AVC * 0.235)
+    step = int(AVC * 0.265)
+    overlay(img, lambda d: d.ellipse(
+        [c - AVC * 0.40, c - AVC * 0.36, c + AVC * 0.40, c + AVC * 0.42],
+        fill=(0, 0, 0, 80)), blur=int(0.05 * AVC))
+    for i in (-1, 0, 1):
+        tile(img, c + i * step, c, s, "", palette=GOLD_SET)
+    for j in (-1, 1):
+        tile(img, c, c + j * step, s, "", palette=CREAM_SET)
+    save(img, name, out=(AV, AV))
+
+
+def avatar_path(name: str):
+    """Barmoq izi: uchta plitka va ularni bog'lovchi chiziq."""
+    img = Image.new("RGBA", (AVC, AVC), (0, 0, 0, 0))
+    sky_gradient(img)
+    s = int(AVC * 0.26)
+    pts = [(int(AVC * 0.30), int(AVC * 0.66)),
+           (int(AVC * 0.50), int(AVC * 0.33)),
+           (int(AVC * 0.71), int(AVC * 0.63))]
+    overlay(img, lambda d: d.line(pts, fill=(0, 0, 0, 85),
+                                  width=int(AVC * 0.045), joint="curve"),
+            blur=int(0.02 * AVC))
+    overlay(img, lambda d: d.line(pts, fill=CORAL + (245,),
+                                  width=int(AVC * 0.042), joint="curve"))
+    for i, (x, y) in enumerate(pts):
+        tile(img, x, y, s, "", angle=4 if i % 2 else -4,
+             palette=GOLD_SET if i != 1 else CREAM_SET)
+    save(img, name, out=(AV, AV))
 
 
 def plain(word: str, name: str):
@@ -243,13 +299,14 @@ def style_tiles(name: str):
 
 
 def dark_bg(img, top=(26, 38, 104), bot=(58, 30, 122), glow=True):
+    w, h = img.size
     d = ImageDraw.Draw(img)
-    for y in range(CH):
-        d.line([(0, y), (CW, y)], fill=lerp(top, bot, y / (CH - 1)))
+    for y in range(h):
+        d.line([(0, y), (w, y)], fill=lerp(top, bot, y / (h - 1)))
     if glow:
         overlay(img, lambda dd: dd.ellipse(
-            [CW * 0.18, CH * 0.04, CW * 0.82, CH * 0.96],
-            fill=(120, 150, 255, 66)), blur=40 * S)
+            [w * 0.18, h * 0.04, w * 0.82, h * 0.96],
+            fill=(120, 150, 255, 66)), blur=int(0.06 * w))
 
 
 def empty_cell(img, cx, cy, size, angle=0):
@@ -344,6 +401,9 @@ def main():
     style_cross("plain_1_cross.png")
     style_path("plain_2_path.png")
     style_grid("plain_3_grid.png")
+    avatar_letter("avatar_1_letter.png")
+    avatar_cross("avatar_2_cross.png")
+    avatar_path("avatar_3_path.png")
     # Matnsiz variantlar
     plain("WORDS", "webapp_640x360.png")
     plain("     ", "webapp_640x360_blank.png")   # plitkalar ham bo'sh
