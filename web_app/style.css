@@ -190,12 +190,24 @@ body {
 
 .node .name {
   position: absolute;
-  bottom: -19px;
-  font-size: 11px; font-weight: 700;
+  bottom: -26px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(13,42,94,.45);
+  border: 1.5px solid rgba(255,255,255,.35);
+  backdrop-filter: blur(4px);
+  font-size: 13px; font-weight: 800;
   white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0,0,0,.45);
-  opacity: .95;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  color: #fff;
 }
+.node .name-ico {
+  font-size: 15px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.4));
+}
+.node.locked .name { opacity: .75; }
 
 .node.locked {
   background: radial-gradient(circle at 35% 28%, var(--lock-1), var(--lock-2));
@@ -654,6 +666,27 @@ body {
 .ghost-btn:active { transform: scale(.97); }
 
 .done-sheet { align-items: center; text-align: center; padding: 26px 20px 22px; }
+
+/* Butun bosqich tugaganda — darajadan kattaroq voqea, shunga yarasha oyna */
+.stage-sheet {
+  background: linear-gradient(160deg, #ffb648, #ff5c7a 55%, #a855f7);
+  border-color: rgba(255,255,255,.8);
+}
+.stage-badge {
+  width: 86px; height: 86px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6cf, var(--gold-2) 60%, var(--gold-3));
+  box-shadow: 0 6px 0 #b87700, 0 0 0 8px rgba(255,255,255,.35), 0 10px 26px rgba(0,0,0,.3);
+  font-size: 42px;
+  margin-bottom: 14px;
+  animation: badgePop .45s cubic-bezier(.2,1.4,.5,1) backwards;
+}
+@keyframes badgePop {
+  from { transform: scale(.3) rotate(-25deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0);       opacity: 1; }
+}
+.stage-sheet h2 { font-size: 20px; letter-spacing: .5px; }
 .done-stars { display: flex; gap: 6px; font-size: 40px; color: var(--gold-2); }
 .done-stars span { animation: pop .4s ease-out backwards; text-shadow: 0 3px 0 #b87700; }
 .done-stars span:nth-child(2) { animation-delay: .12s; font-size: 52px; margin-top: -8px; }

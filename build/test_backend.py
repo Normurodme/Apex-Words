@@ -89,6 +89,18 @@ async def main():
                                              "progress": {"x": "y" * 300000}})
     ok.append(("juda katta progress rad etildi", r.status == 413))
 
+    # --- Baza yo'li: nisbiy DB_PATH volume'ni bosib ketmasligi kerak ---
+    import tempfile
+    with tempfile.TemporaryDirectory() as vol:
+        ok.append(("nisbiy DB_PATH volume foydasiga bekor qilinadi",
+                   B.resolve_db_path("data/apex_words.db", vol)
+                   == str(Path(vol) / "apex_words.db")))
+        ok.append(("mutlaq DB_PATH hurmat qilinadi",
+                   B.resolve_db_path("/mnt/boshqa/x.db", vol) == "/mnt/boshqa/x.db"))
+    yoq = Path(tempfile.gettempdir()) / "apex_yoq_katalog_12345"
+    ok.append(("volume bo'lmasa nisbiy yo'l o'zgarmaydi",
+               B.resolve_db_path("data/x.db", str(yoq)) == "data/x.db"))
+
     # --- Keshlash sarlavhalari ---
     # Bular bo'lmasa Telegram WebView eski nusxani ushlab qoladi va yangi
     # deploy o'yinchiga umuman yetib bormaydi.

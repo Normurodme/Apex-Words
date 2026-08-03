@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -67,10 +67,11 @@
         </div>
         <div class="sheet-body rules">
           <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
-          <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi va <b>+3</b> ochko olasiz.</p>
-          <p><b>3.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>+1 bonus</b>. Ular "Qo'shimcha so'zlar" kitobchasiga yig'iladi.</p>
-          <p><b>4.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
-          <p><b>5.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi (5 ochko).</p>
+          <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi.</p>
+          <p><b>3.</b> Barcha kataklar to'lganda puzzle yechiladi va <b>+5 ★</b> olasiz.</p>
+          <p><b>4.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>🎁 BONUS +1 ★</b>.</p>
+          <p><b>5.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
+          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi — <b>5 ★</b> turadi.</p>
         </div>
       </div>
     </div>
@@ -121,26 +122,11 @@
       <span class="glyph">?</span>
       <span class="price" id="hint-price">5</span>
     </button>
-
-    <button id="btn-book" aria-label="Qo'shimcha so'zlar">
-      <span class="book-label">Qo'shimcha<br>so'zlar</span>
-      <span class="book-count" id="book-count">0</span>
-    </button>
   </section>
 </section>
 
 
 <!-- ===================== Vaqtinchalik oynalar ===================== -->
-
-<div id="book-overlay" class="overlay" hidden>
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>Qo'shimcha so'zlar</h2>
-      <button class="close-btn" data-close="book-overlay">✕</button>
-    </div>
-    <div id="book-body" class="sheet-body"></div>
-  </div>
-</div>
 
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
@@ -154,9 +140,22 @@
   </div>
 </div>
 
+<!-- Butun bosqich tugaganda alohida chiqadi -->
+<div id="stage-overlay" class="overlay" hidden>
+  <div class="sheet done-sheet stage-sheet">
+    <div class="stage-badge" id="stage-badge">🏆</div>
+    <h2 id="stage-title">Bosqich tugadi!</h2>
+    <p id="stage-sub"></p>
+    <div class="done-actions">
+      <button id="btn-stage-next" class="primary-btn">Keyingi bosqich ▶</button>
+      <button id="btn-stage-stay" class="ghost-btn">Xaritaga qaytish</button>
+    </div>
+  </div>
+</div>
+
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

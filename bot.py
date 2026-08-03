@@ -42,6 +42,9 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("apexwords")
+
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip().rstrip("/")
 PORT = int(os.getenv("PORT", "8080"))
@@ -64,13 +67,42 @@ def default_db_path() -> str:
     return str(ROOT / "data" / "apex_words.db")
 
 
-DB_PATH = os.getenv("DB_PATH", "").strip() or default_db_path()
+def resolve_db_path(raw: str | None = None, volume: str = "/data") -> str:
+    """
+    Bazaning yakuniy joyini tanlaydi.
+
+    DB_PATH o'zgaruvchisi hurmat qilinadi, LEKIN bitta istisno bilan:
+    agar u NISBIY yo'l bo'lsa (masalan "data/apex_words.db") va shu bilan
+    birga /data volume ulangan bo'lsa, o'zgaruvchi e'tiborsiz qoldiriladi.
+
+    Sababi: konteyner ichidagi nisbiy yo'l har deployda tozalanadigan diskka
+    tushadi. Ya'ni o'yinchilarning darajasi va ochkolari har yangilanishda
+    nolga qaytadi. Bu deyarli har doim xato — .env.example dan ko'chirilgan
+    qiymat esdan chiqib qolgan bo'ladi. Volume ulangan turib ma'lumotni
+    yo'qotishdan ko'ra, o'zgaruvchini bekor qilib ogohlantirgan afzal.
+    """
+    if raw is None:
+        raw = os.getenv("DB_PATH", "")
+    raw = raw.strip()
+    if not raw:
+        return default_db_path()
+
+    vol = Path(volume)
+    if not os.path.isabs(raw) and vol.is_dir() and os.access(vol, os.W_OK):
+        fixed = str(vol / Path(raw).name)
+        log.warning(
+            "DB_PATH nisbiy yo'l ko'rsatyapti (%r) — bu konteyner ichi, "
+            "har deployda o'chadi. /data volume ulangan, shuning uchun baza "
+            "%s ga yozildi. Railway Variables dan DB_PATH ni butunlay "
+            "o'chirsangiz bu ogohlantirish yo'qoladi.", raw, fixed)
+        return fixed
+    return raw
+
+
+DB_PATH = resolve_db_path()
 
 # initData shu muddatdan eski bo'lsa qabul qilinmaydi (takroriy hujumga qarshi)
 INIT_DATA_TTL = 24 * 3600
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger("apexwords")
 
 if not BOT_TOKEN:
     raise SystemExit(

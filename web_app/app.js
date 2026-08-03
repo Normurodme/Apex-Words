@@ -105,6 +105,80 @@ const Sound = {
   }
 };
 
+/*
+  Fon musiqasi — o'yin davomida sekin, bir tekis takrorlanuvchi ohang.
+
+  Tayyor audio fayl yuklanmaydi: 16 qadamli naqsh Web Audio bilan joyida
+  chalinadi. Notalar oldindan (lookahead bilan) rejalashtiriladi, chunki
+  setInterval aniq vaqt bermaydi va ritm "oqsab" qolardi.
+
+  Ovoz ataylab juda past (0.04) — o'yin ovozlarini bosib ketmasligi va
+  uzoq o'ynaganda charchatmasligi kerak.
+*/
+const Music = {
+  BPM: 84,
+  GAIN: 0.04,
+
+  // To'rt akkord, har birida to'rtta nota (pentatonikaga yaqin, yumshoq)
+  PATTERN: [
+    261.63, 329.63, 392.00, 329.63,   // C
+    220.00, 261.63, 329.63, 261.63,   // Am
+    174.61, 220.00, 261.63, 220.00,   // F
+    196.00, 246.94, 293.66, 246.94    // G
+  ],
+  BASS: [130.81, 110.00, 87.31, 98.00],
+
+  timer: null, step: 0, nextTime: 0, on: false,
+
+  start() {
+    if (this.on) return;
+    const ctx = Sound.ready();
+    if (!ctx) return;                 // ovoz o'chirilgan bo'lsa boshlanmaydi
+    this.on = true;
+    this.step = 0;
+    this.nextTime = ctx.currentTime + 0.1;
+    this.timer = setInterval(() => this.schedule(), 90);
+    this.schedule();
+  },
+
+  stop() {
+    this.on = false;
+    clearInterval(this.timer);
+    this.timer = null;
+  },
+
+  schedule() {
+    const ctx = Sound.ready();
+    if (!ctx || !this.on) { this.stop(); return; }
+    const spb = 60 / this.BPM / 2;               // sakkizlik nota davomiyligi
+
+    // 0.4 soniya oldinga rejalashtiramiz — brauzer sekinlashsa ham ritm buzilmaydi
+    while (this.nextTime < ctx.currentTime + 0.4) {
+      const i = this.step % this.PATTERN.length;
+      this.note(ctx, this.PATTERN[i], this.nextTime, spb * 1.7, this.GAIN, 'sine');
+      if (i % 4 === 0) {
+        this.note(ctx, this.BASS[(i / 4) | 0], this.nextTime, spb * 3.4,
+                  this.GAIN * 1.3, 'triangle');
+      }
+      this.nextTime += spb;
+      this.step++;
+    }
+  },
+
+  note(ctx, freq, at, dur, vol, type) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(vol, at + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.05);
+  }
+};
+
 const HINT_COST = 5;
 const START_COINS = 50;
 const BUBBLE_MS = 3500;      // tarjima necha soniya ko'rinadi
@@ -313,10 +387,40 @@ function isUnlocked(i) {
 
 /* ============================ XARITA EKRANI ============================== */
 
+/* Har daraja uchun mavzuga mos belgi. Daraja nomlari o'zgarmas bo'lgani
+   uchun oddiy jadval yetarli — puzzle fayllarini qayta yaratish shart emas.
+   12 bosqichning hammasi oldindan yozib qo'yilgan. */
+const LEVEL_ICON = {
+  // 1. Countries
+  England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Japan: '🇯🇵', Brazil: '🇧🇷', Egypt: '🇪🇬', Canada: '🇨🇦',
+  // 2. Cities
+  Paris: '🗼', Tokyo: '🏯', Dubai: '🕌', Rome: '🏛️', London: '🎡',
+  // 3. Foods
+  Pizza: '🍕', Sushi: '🍣', Burger: '🍔', Pasta: '🍝', Tacos: '🌮',
+  // 4. Animals
+  Lion: '🦁', Panda: '🐼', Eagle: '🦅', Shark: '🦈', Tiger: '🐯',
+  // 5. Sports
+  Soccer: '⚽', Football: '⚽', Tennis: '🎾', Boxing: '🥊', Cricket: '🏏', Hockey: '🏒',
+  // 6. Fruits
+  Apple: '🍎', Mango: '🥭', Banana: '🍌', Cherry: '🍒', Orange: '🍊',
+  // 7. Towers
+  Eiffel: '🗼', Pisa: '🏛️', 'Big Ben': '🕰️', Petronas: '🏙️', 'Burj Khalifa': '🌇',
+  // 8. Cars
+  Tesla: '⚡', Toyota: '🚗', Ferrari: '🏎️', Bugatti: '🏁', Mercedes: '🚙',
+  // 9. Mythical
+  Dragon: '🐉', Phoenix: '🔥', Unicorn: '🦄', Kraken: '🐙', Griffin: '🦅',
+  // 10. Gems
+  Diamond: '💎', Ruby: '❤️', Emerald: '💚', Pearl: '🤍', Sapphire: '💙',
+  // 11. Legends
+  Sherlock: '🕵️', Dracula: '🧛', Aladdin: '🧞', Hercules: '💪', 'Robin Hood': '🏹',
+  // 12. Wonders
+  Pyramid: '🔺', Colosseum: '🏟️', Petra: '🏜️', Stonehenge: '🗿', 'Taj Mahal': '🕌'
+};
+
 const NODE_GAP = 132;      // tugunlar orasidagi masofa
 const EDGE_PAD = 118;      // yuqoridagi bo'sh joy
 const BOTTOM_PAD = 150;    // pastda ko'proq: 1-bosqich nomi shu yerga sig'adi
-const BANNER_GAP = 58;     // bosqich nomi uchun qo'shimcha oraliq
+const BANNER_GAP = 76;     // bosqich nomi uchun qo'shimcha oraliq
 
 function renderMap() {
   const scroll = $('map-scroll');
@@ -402,7 +506,13 @@ function renderMap() {
     }
 
     btn.appendChild(el('span', 'num', String(i + 1)));
-    btn.appendChild(el('span', 'name', lv.name));
+
+    // Nom + mavzuga mos belgi (Japan yonida bayroq, Pizza yonida pitsa...)
+    const nm = el('span', 'name');
+    const icon = LEVEL_ICON[lv.name];
+    if (icon) nm.appendChild(el('span', 'name-ico', icon));
+    nm.appendChild(el('span', null, lv.name));
+    btn.appendChild(nm);
 
     if (unlocked) {
       btn.onclick = () => {
@@ -471,8 +581,11 @@ function showScreen(id) {
   // Ekran almashganda ochiq oynalar yopiladi — aks holda yangi bo'lim
   // ustida osilib qoladi va foydalanuvchi "faqat qoida qoldi" deb o'ylaydi.
   $('info-overlay').hidden = true;
-  $('book-overlay').hidden = true;
   hideBubble();
+
+  // Fon musiqasi faqat o'yin davomida chalinadi
+  if (id === 'game-screen') Music.start();
+  else Music.stop();
 }
 
 function openMap() {
@@ -521,7 +634,6 @@ async function openPuzzle(stage, level, idx) {
   renderGrid();
   renderWheel();
   updateCoins();
-  updateBookCount();
   Store.save();
 }
 
@@ -773,7 +885,8 @@ function submit(word) {
     if (State.found.has(word)) return flash(word, 'repeat');
     State.found.add(word);
     fillWord(word);
-    addCoins(3);
+    // Ochko ALOHIDA so'z uchun berilmaydi — butun puzzle yechilganda beriladi.
+    // Aks holda ball juda tez o'sib ketardi va maslahat narxi ma'nosiz bo'lardi.
     learn(word);
     haptic('ok');
     flash(word, 'hit', 700);
@@ -793,11 +906,10 @@ function submit(word) {
     State.foundBonus.add(word);
     addCoins(1);
     learn(word);
-    updateBookCount();
     haptic('ok');
     Sound.ding();
     flash(word, 'hit', 700);
-    toast('+1 bonus · ' + word);
+    toast('🎁 BONUS · ' + word + '  +1');
     return;
   }
 
@@ -831,10 +943,6 @@ function updateCoins() {
   $('learned-coins').textContent = n;
 }
 
-function updateBookCount() {
-  $('book-count').textContent = State.foundBonus.size;
-  $('btn-book').style.opacity = (State.puzzle && State.puzzle.bonus.length) ? 1 : .5;
-}
 
 /* Ikkita taymer: biri yashirishni boshlaydi, ikkinchisi hidden qo'yadi.
    Ikkalasi ham tozalanishi shart — aks holda oldingi bildirishnomaning
@@ -865,12 +973,27 @@ function puzzleSolved(stage, level, puzzle) {
   else openPuzzle(stage, level, puzzle + 1);
 }
 
+/* Shu bosqichning hamma darajalari tugadimi */
+function stageComplete(stage) {
+  return State.levels
+    .filter((l) => l.stage === stage)
+    .every((l) => solvedIn(l.stage, l.level) >= l.puzzles);
+}
+
 function finishLevel(stage, level) {
   const i = State.levels.findIndex((l) => l.stage === stage && l.level === level);
   const next = State.levels[i + 1];
 
+  Music.stop();
   Sound.fanfare();
   haptic('ok');
+  Store.save();
+
+  // Butun bosqich tugagan bo'lsa — alohida, kattaroq oyna
+  if (stageComplete(stage)) {
+    showStageDone(stage, next, i);
+    return;
+  }
 
   $('done-title').textContent = 'Daraja tugadi!';
   $('done-sub').textContent = next
@@ -890,7 +1013,35 @@ function finishLevel(stage, level) {
     $('done-overlay').hidden = true;
     openMap();
   };
-  Store.save();
+}
+
+/* Butun bosqich yakunlanganda: bu darajadan kattaroq voqea, shuning uchun
+   alohida oyna va keyingi BOSQICHga o'tish taklifi. */
+function showStageDone(stage, next, i) {
+  const info = State.index.stages.find((s) => s.stage === stage);
+  const stageName = info ? info.name : stage + '-bosqich';
+  const nextStage = next && next.stage !== stage ? next : null;
+
+  $('stage-badge').textContent = LEVEL_ICON[
+    (State.levels.find((l) => l.stage === stage + 1) || {}).name] || '🏆';
+  $('stage-title').textContent = stage + '-BOSQICH TUGADI!';
+  $('stage-sub').textContent = nextStage
+    ? '"' + stageName + '" to\'liq yakunlandi. Endi ' + (stage + 1) +
+      '-bosqich — "' + nextStage.stageName + '" ochildi. O\'tasizmi?'
+    : '"' + stageName + '" to\'liq yakunlandi! Yangi bosqichlar tez orada qo\'shiladi.';
+
+  $('btn-stage-next').hidden = !nextStage;
+  if (nextStage) $('btn-stage-next').textContent = nextStage.stageName + ' ▶';
+  $('stage-overlay').hidden = false;
+
+  $('btn-stage-next').onclick = () => {
+    $('stage-overlay').hidden = true;
+    openLevel(i + 1);
+  };
+  $('btn-stage-stay').onclick = () => {
+    $('stage-overlay').hidden = true;
+    openMap();
+  };
 }
 
 /* -------------------------------- Maslahat -------------------------------- */
@@ -940,19 +1091,6 @@ function makeLampFor(word, uzEl) {
   return b;
 }
 
-function openBook() {
-  const body = $('book-body');
-  body.innerHTML = '';
-  const words = [...State.foundBonus].sort();
-  if (!words.length) {
-    body.appendChild(el('div', 'book-empty',
-      'Hali qo\'shimcha so\'z topilmadi.\n\nRo\'yxatda yo\'q, lekin haqiqiy ingliz so\'zini toping — har biri +1 ochko.'));
-  } else {
-    words.forEach((w) => body.appendChild(wordRow(w)));
-  }
-  $('book-overlay').hidden = false;
-}
-
 function openLearned() {
   showScreen('learned-screen');
   const body = $('learned-body');
@@ -973,6 +1111,9 @@ function avatar(name, photo) {
   const a = el('div', 'avatar');
   if (photo) {
     const img = document.createElement('img');
+    // Ro'yxatni bloklamasin: ko'rinmaydigan rasmlar keyinroq yuklanadi
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.src = photo;
     img.alt = '';
     img.referrerPolicy = 'no-referrer';
@@ -997,13 +1138,28 @@ function initial(name) {
   return s ? s[0].toUpperCase() : '?';
 }
 
+/*
+  Reyting.
+
+  Bo'lim ochilganda ekran bo'sh turib qolmasligi kerak. Shuning uchun oxirgi
+  natija xotirada saqlanadi va DARHOL chiziladi, so'rov esa orqa fonda ketadi.
+  Yangi ma'lumot kelganda ro'yxat jimgina yangilanadi — ilgari har safar
+  "Yuklanmoqda…" chiqib, keyin sakrab almashardi.
+*/
+let topCache = null;
+
 async function openTop() {
   showScreen('top-screen');
   const body = $('top-body');
   const mine = $('my-rank');
-  body.innerHTML = '';
-  mine.hidden = true;
-  body.appendChild(el('div', 'book-empty', 'Yuklanmoqda…'));
+
+  if (topCache) {
+    renderTop(topCache);                      // keshdan darhol
+  } else {
+    body.innerHTML = '';
+    mine.hidden = true;
+    body.appendChild(el('div', 'book-empty', 'Yuklanmoqda…'));
+  }
 
   if (!(TG && TG.initData)) {
     body.innerHTML = '';
@@ -1022,11 +1178,22 @@ async function openTop() {
     if (!r.ok) throw new Error('status ' + r.status);
     data = await r.json();
   } catch (e) {
+    if (topCache) return;                     // keshdagisi turaveradi
     body.innerHTML = '';
     body.appendChild(el('div', 'book-empty', 'Reyting yuklanmadi. Keyinroq urinib ko\'ring.'));
     return;
   }
 
+  // O'zgarmagan bo'lsa qayta chizmaymiz — rasmlar bekorga qayta yuklanmasin
+  const fresh = JSON.stringify(data);
+  if (topCache && JSON.stringify(topCache) === fresh) return;
+  topCache = data;
+  renderTop(data);
+}
+
+function renderTop(data) {
+  const body = $('top-body');
+  const mine = $('my-rank');
   body.innerHTML = '';
   if (!data.top || !data.top.length) {
     body.appendChild(el('div', 'book-empty',
@@ -1075,7 +1242,6 @@ async function boot() {
   window.addEventListener('pointercancel', onUp);
 
   $('btn-back').onclick = () => { haptic('tap'); openMap(); };
-  $('btn-book').onclick = openBook;
   $('btn-hint').onclick = useHint;
   $('hint-price').textContent = HINT_COST;
   $('btn-shuffle').onclick = () => {
@@ -1102,7 +1268,12 @@ async function boot() {
   $('btn-sound').onclick = () => {
     State.progress.muted = !State.progress.muted;
     updateSoundBtn();
-    if (!State.progress.muted) Sound.chime();   // yoqilganini eshittiramiz
+    if (State.progress.muted) {
+      Music.stop();
+    } else {
+      Sound.chime();                             // yoqilganini eshittiramiz
+      if ($('game-screen').classList.contains('active')) Music.start();
+    }
     Store.save();
   };
   updateSoundBtn();
@@ -1119,8 +1290,12 @@ async function boot() {
      qurilmada o'ynalgan bo'lsa shu yerda ham ko'rinadi. */
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden) {
+      Music.stop();                    // fonda ovoz chalinib turmasin
       Store.flushOnExit();
-    } else if (await Store.resync()) {
+      return;
+    }
+    if ($('game-screen').classList.contains('active')) Music.start();
+    if (await Store.resync()) {
       updateCoins();
       if ($('map-screen').classList.contains('active')) renderMap();
       else updateLevelNav();
