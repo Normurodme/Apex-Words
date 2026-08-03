@@ -473,8 +473,6 @@ body {
   padding: 18px; z-index: 60;
   backdrop-filter: blur(4px);
 }
-.overlay[hidden] { display: none; }
-
 .sheet {
   width: 100%; max-width: 420px; max-height: 82vh;
   display: flex; flex-direction: column;
@@ -536,6 +534,23 @@ body {
   from { transform: translateY(14px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
+
+/*
+  YASHIRISH QOIDASI ENG OXIRIDA TURISHI SHART.
+
+  .overlay.inset va .overlay.full o'z display qiymatini beradi va ularning
+  kuchi .overlay[hidden] bilan TENG (ikkalasi ham 0-2-0). Teng bo'lganda
+  CSS'da keyingi qoida g'olib chiqadi — ya'ni yuqorida turgan [hidden]
+  bekor bo'lib, oyna hidden qo'yilgan holida ham ekranda qolaverardi.
+  Aynan shu sabab bo'lim almashganda qoidalar oynasi ustida osilib qolgan
+  va "hamma bo'lim bir xil" ko'ringan edi.
+
+  Quyidagi tanlagichlar aniqroq (0-3-0) va oxirida turibdi — endi
+  hidden har doim ustun keladi.
+*/
+.overlay[hidden],
+.overlay.full[hidden],
+.overlay.inset[hidden] { display: none; }
 
 .sheet-head {
   flex: 0 0 auto;
