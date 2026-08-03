@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -56,6 +56,24 @@
       <div id="top-body" class="sec-body"></div>
       <div id="my-rank" hidden></div>
     </section>
+
+    <!-- Qoidalar bo'limlar ustida ochiladi, lekin pastki menyuni YOPMAYDI —
+         shuning uchun #screens ichida turadi. -->
+    <div id="info-overlay" class="overlay inset" hidden>
+      <div class="sheet">
+        <div class="sheet-head">
+          <h2>Qanday o'ynaladi</h2>
+          <button class="close-btn" data-close="info-overlay">✕</button>
+        </div>
+        <div class="sheet-body rules">
+          <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
+          <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi va <b>+3</b> ochko olasiz.</p>
+          <p><b>3.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>+1 bonus</b>. Ular "Qo'shimcha so'zlar" kitobchasiga yig'iladi.</p>
+          <p><b>4.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
+          <p><b>5.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi (5 ochko).</p>
+        </div>
+      </div>
+    </div>
 
   </div>
 
@@ -124,22 +142,6 @@
   </div>
 </div>
 
-<div id="info-overlay" class="overlay full" hidden>
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>Qanday o'ynaladi</h2>
-      <button class="close-btn" data-close="info-overlay">✕</button>
-    </div>
-    <div class="sheet-body rules">
-      <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
-      <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi va <b>+3</b> ochko olasiz.</p>
-      <p><b>3.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>+1 bonus</b>. Ular "Qo'shimcha so'zlar" kitobchasiga yig'iladi.</p>
-      <p><b>4.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
-      <p><b>5.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi (5 ochko).</p>
-    </div>
-  </div>
-</div>
-
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
     <div class="done-stars"><span>★</span><span>★</span><span>★</span></div>
@@ -155,6 +157,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

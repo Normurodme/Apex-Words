@@ -358,13 +358,16 @@ function renderMap() {
            stroke-linecap="round" stroke-dasharray="2 18"/>`;
 
   nodes.innerHTML = '';
-  let curIndex = 0;
+  // -1 = hali topilmadi. Oldin 0 dan boshlanardi va "0 yolg'on qiymat"
+  // bo'lgani uchun 1-daraja joriy bo'lganda ham izlash to'xtamasdi;
+  // hamma daraja tugagan holatda esa xarita eng pastga surilib qolardi.
+  let curIndex = -1;
 
   State.levels.forEach((lv, i) => {
     const done = solvedIn(lv.stage, lv.level);
     const unlocked = isUnlocked(i);
     const complete = done >= lv.puzzles;
-    if (unlocked && !complete && !curIndex) curIndex = i;
+    if (unlocked && !complete && curIndex < 0) curIndex = i;
 
     // Bosqich nomi — birinchi darajasidan PASTDA, o'sha bosqichga kirish
     // joyida. Oldingi tugun bilan orasida BANNER_GAP bo'shlig'i bor, shuning
@@ -412,10 +415,12 @@ function renderMap() {
 
   $('map-coins').textContent = State.progress.coins;
 
-  // Hozirgi darajani ko'rinadigan joyga surib qo'yamiz
+  // Hozirgi darajani ko'rinadigan joyga surib qo'yamiz.
+  // Hammasi tugagan bo'lsa oxirgi darajaga suramiz, pastga emas.
+  const focus = curIndex < 0 ? State.levels.length - 1 : curIndex;
   const centerOn = () => {
     const vh = scroll.clientHeight || window.innerHeight || 640;
-    scroll.scrollTop = Math.max(0, pts[curIndex].y - vh * 0.55);
+    scroll.scrollTop = Math.max(0, pts[focus].y - vh * 0.55);
   };
   centerOn();
   requestAnimationFrame(centerOn);
@@ -462,6 +467,12 @@ function showScreen(id) {
   SHELL_SCREENS.forEach((s) => $(s).classList.toggle('active', s === id));
   document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
   if (inShell) $(TAB_OF[id]).classList.add('active');
+
+  // Ekran almashganda ochiq oynalar yopiladi — aks holda yangi bo'lim
+  // ustida osilib qoladi va foydalanuvchi "faqat qoida qoldi" deb o'ylaydi.
+  $('info-overlay').hidden = true;
+  $('book-overlay').hidden = true;
+  hideBubble();
 }
 
 function openMap() {
@@ -497,9 +508,13 @@ async function openPuzzle(stage, level, idx) {
   if (!lvl) return;
   if (idx >= lvl.puzzles.length) { finishLevel(stage, level); return; }
 
-  State.puzzle = lvl.puzzles[idx];
+  // NUSXA olamiz: "Aralashtirish" tugmasi letters ni o'zgartiradi, asl obyekt
+  // esa keshlangan bosqich faylida yotibdi. To'g'ridan-to'g'ri ishlatilsa,
+  // daraja qayta ochilganda harflar aralashgan holida qolib ketardi.
+  State.puzzle = Object.assign({}, lvl.puzzles[idx]);
   State.found = new Set();
   State.foundBonus = new Set();
+  hideBubble();
   State.progress.cur = { stage, level, puzzle: idx };
 
   $('level-title').textContent = lvl.name + ' · ' + (idx + 1) + '/' + lvl.puzzles.length;
@@ -553,7 +568,18 @@ function makeLamp(word) {
 }
 
 /* Tarjima pufagi — lampa ustida bir necha soniya turadi */
-let bubbleTimer = null;
+let bubbleTimer = null, bubbleHideTimer = null;
+
+/* Puzzle yoki ekran almashsa pufak osilib qolmasin: u lampaning joyiga
+   qarab qo'yilgan, lampa esa allaqachon yo'q bo'lishi mumkin. */
+function hideBubble() {
+  clearTimeout(bubbleTimer);
+  clearTimeout(bubbleHideTimer);
+  const bub = $('bubble');
+  bub.classList.remove('show');
+  bub.hidden = true;
+}
+
 function showBubble(word, anchor) {
   const bub = $('bubble');
   $('bubble-word').textContent = word;
@@ -574,9 +600,10 @@ function showBubble(word, anchor) {
 
   requestAnimationFrame(() => bub.classList.add('show'));
   clearTimeout(bubbleTimer);
+  clearTimeout(bubbleHideTimer);
   bubbleTimer = setTimeout(() => {
     bub.classList.remove('show');
-    setTimeout(() => { bub.hidden = true; }, 200);
+    bubbleHideTimer = setTimeout(() => { bub.hidden = true; }, 200);
   }, BUBBLE_MS);
 }
 
@@ -589,6 +616,14 @@ function renderWheel() {
   const box = $('letters');
   box.innerHTML = '';
   letterEls = [];
+  // Tortish holatini ham tozalaymiz. Aks holda puzzle o'z-o'zidan almashgan
+  // paytda (oxirgi so'z topilgach) barmoq hali g'ildirakda bo'lsa, path ichida
+  // ESKI harf indekslari qolib ketadi va ular yangi g'ildirakda mavjud
+  // bo'lmasligi mumkin — letterEls[i] undefined bo'lib xato beradi.
+  path = [];
+  dragging = false;
+  ptr = null;
+  showCurrent('', null);
 
   const letters = State.puzzle.letters.split('');
   letters.forEach((ch, i) => {
@@ -694,7 +729,8 @@ function onUp() {
 }
 
 function clearPath() {
-  path.forEach((i) => letterEls[i].classList.remove('active'));
+  // letterEls[i] yo'q bo'lishi mumkin: g'ildirak shu orada qayta chizilgan bo'lsa
+  path.forEach((i) => letterEls[i] && letterEls[i].classList.remove('active'));
   path = [];
   ptr = null;
   drawLine();
@@ -714,7 +750,8 @@ function drawLine() {
   const cv = $('line');
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
-  if (!path.length) return;
+  // Har bir indeks hozirgi g'ildirakda mavjudligiga ishonch hosil qilamiz
+  if (!path.length || path.some((i) => !centers[i])) return;
   ctx.strokeStyle = '#ff4f6f';
   ctx.lineWidth = 9;
   ctx.lineCap = 'round';
@@ -742,7 +779,11 @@ function submit(word) {
     flash(word, 'hit', 700);
     if (State.found.size === p.words.length) {
       Sound.chime();
-      setTimeout(puzzleSolved, 1100);
+      // Qaysi puzzle yechilganini HOZIR yozib olamiz. 1.1 soniya ichida
+      // boshqa qurilma bilan sinxronlash State.progress.cur ni o'zgartirib
+      // yuborishi mumkin — u holda noto'g'ri daraja belgilanardi.
+      const { stage, level, puzzle } = State.progress.cur;
+      setTimeout(() => puzzleSolved(stage, level, puzzle), 1100);
     }
     return;
   }
@@ -764,9 +805,13 @@ function submit(word) {
   flash(word, 'miss', 500);
 }
 
+/* Bir nechta flash ustma-ust tushsa, oldingisining taymeri keyingisining
+   yozuvini erta o'chirib yubormasligi uchun taymer saqlanadi. */
+let flashTimer = null;
 function flash(word, cls, ms) {
   showCurrent(word, cls);
-  if (ms) setTimeout(() => showCurrent('', null), ms);
+  clearTimeout(flashTimer);
+  if (ms) flashTimer = setTimeout(() => showCurrent('', null), ms);
 }
 
 function learn(word) {
@@ -791,23 +836,26 @@ function updateBookCount() {
   $('btn-book').style.opacity = (State.puzzle && State.puzzle.bonus.length) ? 1 : .5;
 }
 
-let toastTimer = null;
+/* Ikkita taymer: biri yashirishni boshlaydi, ikkinchisi hidden qo'yadi.
+   Ikkalasi ham tozalanishi shart — aks holda oldingi bildirishnomaning
+   "hidden" taymeri yangisini ko'rinmas qilib qo'yadi. */
+let toastTimer = null, toastHideTimer = null;
 function toast(text) {
   const t = $('toast');
   t.textContent = text;
   t.hidden = false;
-  requestAnimationFrame(() => t.classList.add('show'));
   clearTimeout(toastTimer);
+  clearTimeout(toastHideTimer);
+  requestAnimationFrame(() => t.classList.add('show'));
   toastTimer = setTimeout(() => {
     t.classList.remove('show');
-    setTimeout(() => { t.hidden = true; }, 200);
+    toastHideTimer = setTimeout(() => { t.hidden = true; }, 200);
   }, 1400);
 }
 
 /* -------------------------- Puzzle / daraja tugashi ------------------------ */
 
-function puzzleSolved() {
-  const { stage, level, puzzle } = State.progress.cur;
+function puzzleSolved(stage, level, puzzle) {
   const k = key(stage, level);
   State.progress.solved[k] = Math.max(State.progress.solved[k] || 0, puzzle + 1);
   addCoins(5);
@@ -1031,6 +1079,7 @@ async function boot() {
   $('btn-hint').onclick = useHint;
   $('hint-price').textContent = HINT_COST;
   $('btn-shuffle').onclick = () => {
+    if (!State.puzzle) return;
     const l = State.puzzle.letters.split('');
     for (let i = l.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

@@ -485,8 +485,31 @@ body {
   overflow: hidden;
 }
 
-/* To'liq ekranli bo'limlar (Top, So'zlarim, Qo'shimcha so'zlar, Qoida).
-   Kichik modal oyna emas — o'yin ekranlari bilan bir xil darajadagi sahifa. */
+/* Qoidalar: bo'limlar ustida ochiladi, lekin PASTKI MENYUNI yopmaydi —
+   #screens ichida turgani uchun faqat shu maydonni egallaydi. */
+.overlay.inset {
+  position: absolute;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  display: block;
+  z-index: 20;
+  animation: slideUp .22s ease-out;
+}
+.overlay.inset .sheet {
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  border: none; border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(160deg, #6ddcff 0%, var(--sky-2) 45%, var(--sky-3) 100%);
+}
+.overlay.inset .sheet-head {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  background: rgba(10,26,66,.22);
+}
+
+/* To'liq ekranli oyna (Qo'shimcha so'zlar — o'yin ichidan chaqiriladi,
+   u yerda pastki menyu yo'q). */
 .overlay.full {
   padding: 0;
   background: none;
