@@ -89,6 +89,21 @@ async def main():
                                              "progress": {"x": "y" * 300000}})
     ok.append(("juda katta progress rad etildi", r.status == 413))
 
+    # --- Keshlash sarlavhalari ---
+    # Bular bo'lmasa Telegram WebView eski nusxani ushlab qoladi va yangi
+    # deploy o'yinchiga umuman yetib bormaydi.
+    r = await client.get("/")
+    ok.append(("/ no-store bilan keladi",
+               "no-store" in (r.headers.get("Cache-Control") or "")))
+    r = await client.get("/index.html")
+    ok.append(("/index.html no-store bilan keladi",
+               "no-store" in (r.headers.get("Cache-Control") or "")))
+    for path in ("/app.js", "/style.css", "/data/index.json"):
+        r = await client.get(path)
+        cc = r.headers.get("Cache-Control") or ""
+        ok.append((f"{path} keshni tekshiradi",
+                   "no-cache" in cc or "no-store" in cc))
+
     # --- Reyting ---
     r = await client.post("/api/top", json={"initData": "soxta"})
     ok.append(("imzosiz /api/top 401", r.status == 401))

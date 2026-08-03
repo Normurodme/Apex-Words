@@ -384,8 +384,34 @@ async def index(_: web.Request) -> web.FileResponse:
     return web.FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
+@web.middleware
+async def no_cache(request: web.Request, handler):
+    """
+    Statik fayllarga keshlash qoidasini MAJBURAN qo'yadi.
+
+    aiohttp'ning add_static() faqat ETag va Last-Modified yuboradi,
+    Cache-Control esa umuman qo'yilmaydi. Bunday javobni brauzer va ayniqsa
+    Telegram WebView "evristik keshlash" bilan o'zicha, ba'zan bir necha
+    kunga saqlab qo'yadi va qayta so'ramaydi. Natijada yangi deploy
+    o'yinchiga umuman yetib bormaydi — ?v=N ni oshirish ham yordam bermaydi,
+    chunki eski index.html o'zi keshda qolib, eski ?v= ni ko'rsatib turaveradi.
+
+    Shuning uchun:
+      HTML          -> no-store  (hech qachon saqlanmasin)
+      qolgan fayllar-> no-cache  (saqlansa ham, har safar ETag bilan
+                                  tekshirilsin; o'zgarmagan bo'lsa 304 keladi)
+    """
+    resp = await handler(request)
+    path = request.path.lower()
+    if path.endswith(".html") or path in ("/", ""):
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    elif not path.startswith("/api/"):
+        resp.headers.setdefault("Cache-Control", "no-cache, must-revalidate")
+    return resp
+
+
 def make_app() -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[no_cache])
     app.router.add_get("/health", health)
     app.router.add_post("/api/state", api_state)
     app.router.add_post("/api/save", api_save)
