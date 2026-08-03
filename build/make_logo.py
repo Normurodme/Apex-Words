@@ -97,8 +97,15 @@ def overlay(img: Image.Image, draw_fn, blur: int = 0):
     img.alpha_composite(layer)
 
 
-def tile(img: Image.Image, cx: int, cy: int, size: int, ch: str, angle: float = 0):
-    """Oltin harf plitkasi — o'yin g'ildiragidagi bilan bir xil."""
+GOLD_SET = (GOLD_1, GOLD_2, GOLD_3, (201, 132, 0), GOLD_INK)
+CREAM_SET = ((255, 255, 255), (245, 249, 255), (219, 231, 247),
+             (168, 190, 219), (23, 36, 107))
+
+
+def tile(img: Image.Image, cx: int, cy: int, size: int, ch: str, angle: float = 0,
+         palette=GOLD_SET):
+    """Harf plitkasi. palette: (yuqori, o'rta, past, qalinlik, yozuv) ranglari."""
+    c_top, c_mid, c_bot, c_edge, c_ink = palette
     pad = size // 2
     box = Image.new("RGBA", (size + pad * 2, size + pad * 2), (0, 0, 0, 0))
     d = ImageDraw.Draw(box)
@@ -108,13 +115,13 @@ def tile(img: Image.Image, cx: int, cy: int, size: int, ch: str, angle: float = 
 
     # pastki qalinlik (3D his)
     d.rounded_rectangle([x0, y0 + size * 0.08, x1, y1 + size * 0.10], r,
-                        fill=(201, 132, 0, 255))
+                        fill=c_edge + (255,))
     # yuza gradienti — gorizontal chiziqlar bilan
     face = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     fd = ImageDraw.Draw(face)
     for i in range(size):
         t = i / max(1, size - 1)
-        c = lerp(GOLD_1, GOLD_2, t / 0.5) if t < 0.5 else lerp(GOLD_2, GOLD_3, (t - 0.5) / 0.5)
+        c = lerp(c_top, c_mid, t / 0.5) if t < 0.5 else lerp(c_mid, c_bot, (t - 0.5) / 0.5)
         fd.line([(0, i), (size, i)], fill=c + (255,))
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], r, fill=255)
@@ -127,7 +134,7 @@ def tile(img: Image.Image, cx: int, cy: int, size: int, ch: str, angle: float = 
         tb = d.textbbox((0, 0), ch, font=f)
         d.text((x0 + size / 2 - (tb[2] - tb[0]) / 2 - tb[0],
                 y0 + size / 2 - (tb[3] - tb[1]) / 2 - tb[1]),
-               ch, font=f, fill=GOLD_INK + (255,))
+               ch, font=f, fill=c_ink + (255,))
 
     if angle:
         box = box.rotate(angle, resample=Image.BICUBIC, expand=False)
@@ -186,8 +193,58 @@ def plain(word: str, name: str):
     save(img, name)
 
 
+def tile_word(img, word, cy, size, gap, palette, tilt=2.4):
+    """So'zni plitkalar qatori sifatida markazga joylashtiradi."""
+    n = len(word)
+    total = n * size + (n - 1) * gap
+    x = CW // 2 - total // 2 + size // 2
+    for i, ch in enumerate(word):
+        # Har plitka biroz qiyshiq — qo'lda terilgandek jonli ko'rinadi
+        angle = tilt if i % 2 == 0 else -tilt
+        tile(img, x + i * (size + gap), cy, size, ch, angle=angle, palette=palette)
+
+
+def style_tiles(name: str):
+    """
+    Ikkinchi uslub: g'ildirak yo'q, APEX va WORDS plitkalardan terilgan.
+    Fon to'q — oltin plitkalar yorqinroq ajralib turadi.
+    """
+    img = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+
+    # To'q diagonal fon
+    d0 = ImageDraw.Draw(img)
+    top, bot = (26, 38, 104), (58, 30, 122)
+    for y in range(CH):
+        d0.line([(0, y), (CW, y)], fill=lerp(top, bot, y / (CH - 1)))
+
+    # Markazdagi yumshoq yorug'lik
+    overlay(img, lambda d: d.ellipse(
+        [CW * 0.16, CH * 0.02, CW * 0.84, CH * 0.98],
+        fill=(120, 150, 255, 70)), blur=40 * S)
+
+    # Fon bezagi: sochilgan mayda plitkalar
+    for gx, gy, gs in ((52, 58, 30), (588, 96, 24), (78, 300, 22),
+                       (566, 292, 30), (306, 34, 18), (330, 330, 20)):
+        overlay(img, lambda d, a=gx, b=gy, c=gs: d.rounded_rectangle(
+            [(a - c // 2) * S, (b - c // 2) * S, (a + c // 2) * S, (b + c // 2) * S],
+            int(c * 0.3 * S), fill=(255, 255, 255, 26)))
+
+    size, gap = int(64 * S), int(9 * S)
+
+    # Plitkalar ostidagi umumiy soya
+    overlay(img, lambda d: d.rounded_rectangle(
+        [CW * 0.20, CH * 0.20, CW * 0.80, CH * 0.86], 40 * S,
+        fill=(0, 0, 0, 80)), blur=26 * S)
+
+    tile_word(img, "APEX", int(126 * S), size, gap, CREAM_SET)
+    tile_word(img, "WORDS", int(232 * S), size, gap, GOLD_SET)
+
+    save(img, name)
+
+
 def main():
     print("Yozildi:")
+    style_tiles("tiles_640x360.png")
     # Matnsiz variantlar
     plain("WORDS", "webapp_640x360.png")
     plain("     ", "webapp_640x360_blank.png")   # plitkalar ham bo'sh
