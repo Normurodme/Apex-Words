@@ -21,6 +21,7 @@ import logging
 import os
 import sys
 import time
+from datetime import date
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -166,10 +167,19 @@ CREATE TABLE IF NOT EXISTS players (
     photo_url  TEXT,
     score      INTEGER NOT NULL DEFAULT 0,
     progress   TEXT NOT NULL DEFAULT '{}',
+    last_daily TEXT,
+    streak_day INTEGER NOT NULL DEFAULT 0,
+    channel_ok INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
 """
+
+# Kunlik mukofot: 1-3 kun 1 kalit, 4-6 kun 2 kalit, 7-kun 3 kalit.
+# Sakkizinchi kuni sikl yangidan boshlanadi.
+DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
+CHANNEL_KEYS = 5
+CHANNEL = os.getenv("CHANNEL_USERNAME", "@apexwords").strip()
 
 # Indeks ALOHIDA turadi va migratsiyadan KEYIN yaratiladi.
 # SCHEMA ichida qoldirilsa, eski (score ustunisiz) bazada
@@ -227,6 +237,15 @@ class DB:
         if "score" not in cols:
             await db.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
             log.info("Bazaga score ustuni qo'shildi")
+
+        for name, ddl in (
+            ("last_daily", "ALTER TABLE players ADD COLUMN last_daily TEXT"),
+            ("streak_day", "ALTER TABLE players ADD COLUMN streak_day INTEGER NOT NULL DEFAULT 0"),
+            ("channel_ok", "ALTER TABLE players ADD COLUMN channel_ok INTEGER NOT NULL DEFAULT 0"),
+        ):
+            if name not in cols:
+                await db.execute(ddl)
+                log.info("Bazaga %s ustuni qo'shildi", name)
 
         # Ustun 0 bilan qo'shiladi, eski o'yinchilarning ballari esa progress
         # JSON ichida turibdi. Ko'chirilmasa, ular keyingi safar o'ynab
@@ -300,6 +319,82 @@ class DB:
                 (json.dumps(progress, ensure_ascii=False), score, int(time.time()), uid),
             )
             await db.commit()
+
+    async def task_state(self, uid: int) -> dict:
+        """Vazifalar bo'limi uchun holat."""
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute(
+                "SELECT last_daily, streak_day, channel_ok FROM players WHERE user_id=?",
+                (uid,),
+            ) as cur:
+                row = await cur.fetchone()
+        last, streak, ch = row if row else (None, 0, 0)
+        today = date.today().isoformat()
+        return {
+            "streak": streak or 0,
+            "claimed_today": last == today,
+            "next_keys": DAILY_KEYS[min(streak or 0, 6)] if last != today
+                         else DAILY_KEYS[min((streak or 1) - 1, 6)],
+            "channel_done": bool(ch),
+            "channel_keys": CHANNEL_KEYS,
+            "plan": DAILY_KEYS,
+        }
+
+    async def claim_daily(self, uid: int) -> dict:
+        """
+        Kunlik mukofotni beradi.
+
+        Kun chegarasi SERVER vaqti bo'yicha hisoblanadi — telefon soatini
+        o'zgartirib bir kunda bir necha marta olishning oldi olinadi.
+        """
+        today = date.today()
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute(
+                "SELECT last_daily, streak_day FROM players WHERE user_id=?", (uid,)
+            ) as cur:
+                row = await cur.fetchone()
+            if not row:
+                return {"error": "no player"}
+
+            last_s, streak = row[0], row[1] or 0
+            if last_s == today.isoformat():
+                return {"already": True, "streak": streak}
+
+            # Kecha olingan bo'lsa zanjir davom etadi, aks holda uziladi
+            last = None
+            if last_s:
+                try:
+                    last = date.fromisoformat(last_s)
+                except ValueError:
+                    last = None
+            if last and (today - last).days == 1 and streak < 7:
+                streak += 1
+            else:
+                streak = 1          # uzilgan yoki 7 kun tugagan -> yangidan
+
+            keys = DAILY_KEYS[min(streak - 1, 6)]
+            await db.execute(
+                "UPDATE players SET last_daily=?, streak_day=?, updated_at=? WHERE user_id=?",
+                (today.isoformat(), streak, int(time.time()), uid),
+            )
+            await db.commit()
+        return {"ok": True, "streak": streak, "keys": keys}
+
+    async def claim_channel(self, uid: int) -> bool:
+        """Kanal mukofotini bir marta belgilaydi. True — endi berildi."""
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute(
+                "SELECT channel_ok FROM players WHERE user_id=?", (uid,)
+            ) as cur:
+                row = await cur.fetchone()
+            if not row or row[0]:
+                return False
+            await db.execute(
+                "UPDATE players SET channel_ok=1, updated_at=? WHERE user_id=?",
+                (int(time.time()), uid),
+            )
+            await db.commit()
+        return True
 
     async def leaderboard(self, uid: int) -> dict:
         """
@@ -408,6 +503,64 @@ async def api_top(request: web.Request) -> web.Response:
     return web.json_response(await db.leaderboard(user["id"]))
 
 
+async def api_tasks(request: web.Request) -> web.Response:
+    """Vazifalar bo'limining holati."""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    return web.json_response(await db.task_state(user["id"]))
+
+
+async def api_claim_daily(request: web.Request) -> web.Response:
+    """Kunlik kalitlarni beradi."""
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    return web.json_response(await db.claim_daily(user["id"]))
+
+
+async def api_claim_channel(request: web.Request) -> web.Response:
+    """
+    Kanalga a'zolikni tekshiradi va bir marta kalit beradi.
+
+    A'zolik Telegram'dan SO'RALADI — mijozga ishonib bo'lmaydi, aks holda
+    kanalga qo'shilmasdan ham mukofot olinardi.
+    """
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+
+    bot = request.app["bot"]
+    if bot is None:
+        return web.json_response({"error": "check_failed"}, status=503)
+    try:
+        member = await bot.get_chat_member(CHANNEL, user["id"])
+        joined = member.status in ("creator", "administrator", "member")
+    except Exception as e:
+        # Bot kanalda admin bo'lmasa tekshirib bo'lmaydi — sababni logga yozamiz
+        log.warning("Kanal a'zoligini tekshirib bo'lmadi (%s): %s", CHANNEL, e)
+        return web.json_response({"error": "check_failed"}, status=503)
+
+    if not joined:
+        return web.json_response({"joined": False})
+
+    granted = await db.claim_channel(user["id"])
+    return web.json_response({"joined": True, "granted": granted,
+                              "keys": CHANNEL_KEYS if granted else 0})
+
+
 async def health(_: web.Request) -> web.Response:
     return web.json_response({"ok": True})
 
@@ -442,12 +595,17 @@ async def no_cache(request: web.Request, handler):
     return resp
 
 
-def make_app() -> web.Application:
+def make_app(bot=None) -> web.Application:
     app = web.Application(middlewares=[no_cache])
+    # Kanal a'zoligini tekshirish uchun API'ga bot kerak
+    app["bot"] = bot
     app.router.add_get("/health", health)
     app.router.add_post("/api/state", api_state)
     app.router.add_post("/api/save", api_save)
     app.router.add_post("/api/top", api_top)
+    app.router.add_post("/api/tasks", api_tasks)
+    app.router.add_post("/api/claim-daily", api_claim_daily)
+    app.router.add_post("/api/claim-channel", api_claim_channel)
     app.router.add_get("/", index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
@@ -549,7 +707,7 @@ async def main():
             + "=" * 64
         )
 
-    runner = web.AppRunner(make_app())
+    runner = web.AppRunner(make_app(bot))
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     log.info("Web server: http://0.0.0.0:%d", PORT)

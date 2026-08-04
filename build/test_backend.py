@@ -89,6 +89,67 @@ async def main():
                                              "progress": {"x": "y" * 300000}})
     ok.append(("juda katta progress rad etildi", r.status == 413))
 
+    # --- Kunlik zanjir ---
+    r = await client.post("/api/tasks", json={"initData": good})
+    t0 = await r.json()
+    ok.append(("/api/tasks 200", r.status == 200))
+    ok.append(("boshida zanjir 0 va bugun olinmagan",
+               t0["streak"] == 0 and not t0["claimed_today"]))
+
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    d1 = await r.json()
+    ok.append(("1-kun 1 kalit beradi", d1.get("streak") == 1 and d1.get("keys") == 1))
+
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    d2 = await r.json()
+    ok.append(("bir kunda ikki marta olib bo'lmaydi", d2.get("already") is True))
+
+    # Zanjir mantig'ini to'g'ridan-to'g'ri bazada sinaymiz
+    from datetime import date, timedelta
+    import aiosqlite as _sq
+
+    async def set_daily(day_offset, streak):
+        async with _sq.connect(os.environ["DB_PATH"]) as d:
+            await d.execute("UPDATE players SET last_daily=?, streak_day=? WHERE user_id=?",
+                            ((date.today() + timedelta(days=day_offset)).isoformat(),
+                             streak, 555001))
+            await d.commit()
+
+    await set_daily(-1, 3)                      # kecha 3-kun olingan
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    d4 = await r.json()
+    ok.append(("kecha olingan bo'lsa zanjir davom etadi (4-kun, 2 kalit)",
+               d4.get("streak") == 4 and d4.get("keys") == 2))
+
+    await set_daily(-1, 6)
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    d7 = await r.json()
+    ok.append(("7-kun 3 kalit beradi", d7.get("streak") == 7 and d7.get("keys") == 3))
+
+    await set_daily(-1, 7)                      # 7 kun to'ldi -> yangidan
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    d8 = await r.json()
+    ok.append(("8-kuni zanjir 1 dan boshlanadi",
+               d8.get("streak") == 1 and d8.get("keys") == 1))
+
+    await set_daily(-3, 5)                      # uch kun kelinmadi -> uziladi
+    r = await client.post("/api/claim-daily", json={"initData": good})
+    dbreak = await r.json()
+    ok.append(("zanjir uzilsa 1 dan boshlanadi", dbreak.get("streak") == 1))
+
+    r = await client.post("/api/tasks", json={"initData": good})
+    tf = await r.json()
+    ok.append(("olingandan keyin claimed_today true", tf["claimed_today"] is True))
+
+    # --- Kanal vazifasi ---
+    r = await client.post("/api/claim-channel", json={"initData": "soxta"})
+    ok.append(("imzosiz /api/claim-channel 401", r.status == 401))
+    r = await client.post("/api/claim-channel", json={"initData": good})
+    ok.append(("bot yo'q bo'lsa kanal tekshiruvi 503", r.status == 503))
+    ok.append(("kanal mukofoti bir marta beriladi",
+               await B.db.claim_channel(555001) is True
+               and await B.db.claim_channel(555001) is False))
+
     # --- Baza yo'li: nisbiy DB_PATH volume'ni bosib ketmasligi kerak ---
     import tempfile
     with tempfile.TemporaryDirectory() as vol:

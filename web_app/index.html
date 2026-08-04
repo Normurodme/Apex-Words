@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
@@ -27,7 +27,8 @@
         <div class="brand">Apex&nbsp;Words</div>
         <button id="btn-sound" class="mini-btn" aria-label="Ovoz">🔊</button>
         <button id="btn-info" class="mini-btn" aria-label="Qoidalar">?</button>
-        <div class="coins"><span class="coin">★</span><span id="map-coins">0</span></div>
+        <div class="keys"><span class="key-chip">🗝️</span><span id="map-keys">0</span></div>
+        <div class="coins"><span class="coin">💎</span><span id="map-coins">0</span></div>
       </header>
 
       <div id="map-scroll">
@@ -38,13 +39,41 @@
       </div>
     </section>
 
-    <!-- ========================= SO'ZLARIM ========================= -->
-    <section id="learned-screen" class="screen">
+    <!-- ========================= VAZIFALAR ========================= -->
+    <section id="task-screen" class="screen">
       <header class="sec-top">
-        <div class="brand">O'rgangan so'zlarim</div>
-        <div class="coins"><span class="coin">★</span><span id="learned-coins">0</span></div>
+        <div class="brand">Vazifalar</div>
+        <div class="keys"><span class="key-chip">🗝️</span><span id="task-keys">0</span></div>
       </header>
-      <div id="learned-body" class="sec-body"></div>
+      <div id="task-body" class="sec-body">
+
+        <div class="card streak-card">
+          <div class="card-head">
+            <span class="card-ico">🔥</span>
+            <div>
+              <h3>Kunlik zanjir</h3>
+              <p id="streak-note">Har kuni kirib kalit oling</p>
+            </div>
+          </div>
+          <div id="streak-days"></div>
+          <button id="btn-claim-daily" class="claim-btn">Olish</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-ico">📣</span>
+            <div>
+              <h3>Join ApexWords channel</h3>
+              <p>Kanalga qo'shiling va <b>5 🗝️</b> oling</p>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button id="btn-open-channel" class="ghost-btn small">Kanalni ochish</button>
+            <button id="btn-claim-channel" class="claim-btn">Tekshirish</button>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <!-- =========================== TOP =========================== -->
@@ -68,10 +97,11 @@
         <div class="sheet-body rules">
           <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
           <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi.</p>
-          <p><b>3.</b> Barcha kataklar to'lganda puzzle yechiladi va <b>+5 ★</b> olasiz.</p>
-          <p><b>4.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>🎁 BONUS +1 ★</b>.</p>
+          <p><b>3.</b> Barcha kataklar to'lganda puzzle yechiladi va <b>+5 💎</b> olasiz.</p>
+          <p><b>4.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>🎁 BONUS: +1 💎 va +1 🗝️</b>.</p>
           <p><b>5.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
-          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi. <b>🔑 kalit</b> bitta harfni ochadi — <b>5 ★</b> turadi.</p>
+          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi. <b>🗝️ kalit</b> bitta harfni ochadi — <b>1 kalit</b> sarflaydi.</p>
+          <p><b>7.</b> Kalitlarni <b>🎁 Vazifa</b> bo'limidan har kuni bepul olasiz.</p>
         </div>
       </div>
     </div>
@@ -79,8 +109,9 @@
   </div>
 
   <footer id="tabbar">
-    <button class="tab" id="tab-learned">
-      <span class="tab-ico">📖</span><span>So'zlarim</span>
+    <button class="tab" id="tab-task">
+      <span class="tab-ico">🎁</span><span>Vazifa</span>
+      <span id="task-dot" class="tab-dot" hidden></span>
     </button>
     <button class="tab active" id="tab-play">
       <span class="tab-ico">🗺️</span><span>Sayohat</span>
@@ -103,7 +134,8 @@
       <span class="glyph">‹</span>
     </button>
     <div class="brand" id="pack-title">…</div>
-    <div class="coins"><span class="coin">★</span><span id="pack-coins">0</span></div>
+    <div class="keys"><span class="key-chip">🗝️</span><span id="pack-keys">0</span></div>
+    <div class="coins"><span class="coin">💎</span><span id="pack-coins">0</span></div>
   </header>
 
   <div class="pack-sub"><span id="pack-progress">0 / 50</span></div>
@@ -127,10 +159,10 @@
     <button id="btn-back" class="round-btn" aria-label="Ro'yxatga"><span class="glyph">‹</span></button>
     <div id="level-title">…</div>
     <button id="btn-hint" class="key-btn" aria-label="Kalit — bitta harfni ochadi">
-      <span class="key-ico">🔑</span>
-      <span class="price" id="hint-price">5</span>
+      <span class="key-ico">🗝️</span>
+      <span class="key-n" id="key-count">0</span>
     </button>
-    <div class="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
+    <div class="coins"><span class="coin">💎</span><span id="coin-count">0</span></div>
   </header>
 
   <section id="tray"><div id="grid"></div></section>
@@ -199,6 +231,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

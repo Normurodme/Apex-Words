@@ -3,22 +3,25 @@
    ochiq havorang, quyoshli oltin va marjon ranglar. */
 
 :root {
-  --sky-1:   #5fd8ff;
-  --sky-2:   #2f9bf7;
-  --sky-3:   #6a5cf5;
+  /* Yorqinroq va toza palitra: ko'k biroz ochildi, oltin quyoshliroq,
+     marjon va yashil to'yingan. Matn kontrasti oshdi. */
+  --sky-1:   #6fe3ff;
+  --sky-2:   #22a6ff;
+  --sky-3:   #7b5cff;
   --deep:    #17246b;
-  --ink:     #0d2a5e;
+  --ink:     #0b2557;
 
-  --gold-1:  #ffe17a;
-  --gold-2:  #ffc93c;
-  --gold-3:  #f5a105;
+  --gold-1:  #ffe98f;
+  --gold-2:  #ffc82e;
+  --gold-3:  #ff9d00;
 
-  --coral-1: #ff8fa6;
-  --coral-2: #ff4f6f;
-  --coral-3: #d62a4d;
+  --coral-1: #ff9db2;
+  --coral-2: #ff4066;
+  --coral-3: #d81b48;
 
-  --mint:    #2fe3a8;
-  --violet:  #a78bfa;
+  --mint:    #17e39b;
+  --mint-2:  #00c483;
+  --violet:  #b28dff;
   --white:   #ffffff;
 
   --lock-1:  #8fa3c4;
@@ -76,9 +79,102 @@ body {
   padding: 4px 14px 16px;
 }
 
-#learned-screen, #top-screen {
-  background: linear-gradient(160deg, #6ddcff 0%, var(--sky-2) 45%, var(--sky-3) 100%);
+#task-screen, #top-screen {
+  background: linear-gradient(160deg, #7fe9ff 0%, var(--sky-2) 45%, var(--sky-3) 100%);
 }
+
+/* ============================== VAZIFALAR ============================== */
+
+.card {
+  background: rgba(255,255,255,.22);
+  border: 2px solid rgba(255,255,255,.55);
+  border-radius: 20px;
+  padding: 15px 16px 16px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.14);
+}
+.card-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.card-ico {
+  flex: 0 0 auto;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: 14px;
+  background: rgba(255,255,255,.3);
+  border: 2px solid rgba(255,255,255,.5);
+  font-size: 22px;
+}
+.card-head h3 { margin: 0 0 3px; font-size: 16px; }
+.card-head p  { margin: 0; font-size: 13px; opacity: .92; line-height: 1.35; }
+
+.streak-card {
+  background: linear-gradient(150deg, rgba(255,190,80,.35), rgba(255,80,120,.28));
+  border-color: rgba(255,255,255,.7);
+}
+
+#streak-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.day {
+  border-radius: 13px;
+  padding: 8px 2px 7px;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.3);
+  display: grid; place-items: center; gap: 3px;
+  text-align: center;
+}
+.day-n { font-size: 12px; font-weight: 800; opacity: .9; }
+.day-k { font-size: 9px; line-height: 1; letter-spacing: -2px; }
+
+/* Olingan kun */
+.day.got {
+  background: linear-gradient(#8dffcb, var(--mint) 60%, var(--mint-2));
+  border-color: #fff;
+  color: #04422f;
+}
+/* Navbatdagi kun */
+.day.next {
+  background: radial-gradient(circle at 40% 25%, #ffe28f, var(--gold-2) 60%, var(--gold-3));
+  border-color: #fff;
+  color: #6b3d00;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.45), 0 0 14px rgba(255,200,46,.6);
+  animation: bob 1.7s ease-in-out infinite;
+}
+
+.claim-btn {
+  width: 100%;
+  border: none; border-radius: 16px;
+  padding: 13px 20px;
+  background: linear-gradient(var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+  box-shadow: 0 5px 0 #c97b00;
+  color: #5d3400; font-size: 16px; font-weight: 900;
+  cursor: pointer;
+}
+.claim-btn:active { transform: translateY(5px); box-shadow: none; }
+.claim-btn[disabled] {
+  background: rgba(255,255,255,.2);
+  box-shadow: none;
+  color: rgba(255,255,255,.75);
+  cursor: default;
+  transform: none;
+}
+
+.card-actions { display: flex; gap: 10px; }
+.card-actions .claim-btn { flex: 1; }
+.ghost-btn.small { flex: 1; padding: 13px 12px; font-size: 14px; border-radius: 16px; }
+
+/* Pastki menyudagi ogohlantirish nuqtasi */
+.tab { position: relative; }
+.tab-dot {
+  position: absolute; top: 5px; right: 50%; margin-right: -22px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--coral-2);
+  border: 2px solid #fff;
+}
+.tab-dot[hidden] { display: none; }
 
 /* Umumiy ochko hisoblagichi */
 .coins {
@@ -95,9 +191,25 @@ body {
 .coins .coin {
   width: 22px; height: 22px;
   display: grid; place-items: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff3b0, var(--gold-2) 60%, var(--gold-3));
-  color: #8a5a00; font-size: 12px;
+  font-size: 15px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+}
+
+/* Kalitlar hisoblagichi — ochkodan alohida valyuta */
+.keys {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 13px 5px 7px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.24);
+  border: 2px solid rgba(255,255,255,.6);
+  backdrop-filter: blur(6px);
+  font-weight: 800; font-size: 15px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+.keys .key-chip {
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
 }
 
 /* ======================= XARITA EKRANI ======================= */
@@ -305,54 +417,79 @@ body {
 
 #pack-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+  gap: 11px;
   padding-bottom: 8px;
 }
 
+/*
+  Puzzle kartochkasi — yorliq (tag) shaklida: tepasida ip o'tadigan teshik,
+  pastda raqam. Oddiy kvadratdan ko'ra jonliroq va o'yinga mos.
+*/
 .pz {
   position: relative;
   aspect-ratio: 1;
   border: none;
-  border-radius: 16px;
+  border-radius: 18px 18px 16px 16px;
   display: grid; place-items: center;
-  font-size: 20px; font-weight: 900;
+  font-size: 21px; font-weight: 900;
   cursor: pointer;
   transition: transform .1s;
+  overflow: hidden;
 }
-.pz:active { transform: scale(.93); }
+.pz:active { transform: scale(.93) rotate(-2deg); }
+
+/* Yorliq teshigi */
+.pz::before {
+  content: "";
+  position: absolute; top: 7px; left: 50%;
+  width: 9px; height: 9px; margin-left: -4.5px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.22);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
+}
+/* Yumshoq yorug'lik — yuzasi tekis ko'rinmasin */
+.pz::after {
+  content: "";
+  position: absolute; inset: 0 0 55% 0;
+  background: linear-gradient(rgba(255,255,255,.35), transparent);
+  pointer-events: none;
+}
+.pz .pz-no { margin-top: 8px; }
 
 /* Yechilgan — yashil, tasdiq belgisi bilan */
 .pz.done {
-  background: linear-gradient(#7ff0b4, var(--mint) 55%, #12b98a);
-  box-shadow: 0 4px 0 #0e9670, 0 5px 12px rgba(0,0,0,.2);
-  color: #06503b;
+  background: linear-gradient(#8dffcb, var(--mint) 50%, var(--mint-2));
+  box-shadow: 0 4px 0 #069b6c, 0 5px 12px rgba(0,0,0,.2);
+  color: #04422f;
 }
 .pz.done .pz-tick {
-  position: absolute; top: 4px; right: 6px;
-  font-size: 12px; opacity: .75;
+  position: absolute; bottom: 4px; right: 7px;
+  font-size: 13px; opacity: .8;
 }
 
-/* Navbatdagi — marjon, tebranib turadi */
+/* Navbatdagi — marjon, tebranib turadi, atrofida nur */
 .pz.now {
-  background: radial-gradient(circle at 35% 28%, var(--coral-1), var(--coral-2) 55%, var(--coral-3));
-  box-shadow: 0 4px 0 var(--coral-3), 0 0 0 4px rgba(255,255,255,.5),
-              0 6px 16px rgba(0,0,0,.28);
+  background: radial-gradient(circle at 38% 26%, #ffb3c4, var(--coral-2) 55%, var(--coral-3));
+  box-shadow: 0 4px 0 var(--coral-3), 0 0 0 4px rgba(255,255,255,.6),
+              0 0 18px rgba(255,64,102,.55), 0 6px 16px rgba(0,0,0,.28);
   color: #fff;
   animation: bob 1.6s ease-in-out infinite;
 }
+.pz.now .pz-no { text-shadow: 0 2px 4px rgba(0,0,0,.3); }
 
 /* Qulflangan — xira */
 .pz.locked {
-  background: rgba(255,255,255,.16);
-  border: 2px solid rgba(255,255,255,.28);
+  background: linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.1));
+  border: 2px solid rgba(255,255,255,.3);
   box-shadow: none;
-  color: rgba(255,255,255,.5);
+  color: rgba(255,255,255,.55);
   cursor: not-allowed;
 }
-.pz.locked .pz-no { opacity: .45; }
+.pz.locked::after { opacity: .4; }
+.pz.locked .pz-no { opacity: .5; }
 .pz.locked .pz-lock {
-  position: absolute; bottom: 5px; right: 6px; font-size: 11px; opacity: .6;
+  position: absolute; bottom: 4px; right: 6px; font-size: 12px; opacity: .65;
 }
 
 #pack-nav {
@@ -553,28 +690,31 @@ body {
 .side-btn { position: absolute; bottom: 8px; width: 52px; height: 52px; }
 #btn-shuffle { right: 4px; }
 
-/* Kalit tugmasi — yuqorida, sarlavha yonida (eski kitobcha o'rnida) */
+/* Kalit tugmasi — yuqorida, sarlavha yonida. Nechta kalit borligini
+   ko'rsatadi va ishlatilganda kamayadi. */
 .key-btn {
   position: relative;
   flex: 0 0 auto;
-  height: 44px; padding: 0 12px 0 10px;
-  border: 2px solid rgba(255,255,255,.6);
+  height: 44px; padding: 0 14px 0 10px;
+  border: 2px solid rgba(255,255,255,.7);
   border-radius: 22px;
   background: linear-gradient(var(--violet), #7c5ce0);
   box-shadow: 0 4px 0 #5b41b5, 0 5px 12px rgba(0,0,0,.22);
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 6px;
   cursor: pointer;
 }
 .key-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #5b41b5; }
-.key-btn .key-ico { font-size: 20px; line-height: 1; }
-.key-btn .price {
-  font-size: 14px; font-weight: 900; color: var(--gold-1);
+.key-btn .key-ico {
+  font-size: 20px; line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+}
+.key-btn .key-n {
+  font-size: 16px; font-weight: 900; color: #fff;
   text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
-.key-btn .price::before { content: "−"; opacity: .8; }
 
-/* Ochko kamayganda qisqa qizil urg'u */
-#coin-count.spend { animation: spendFlash .6s ease-out; }
+/* Kalit kamayganda qisqa urg'u */
+#key-count.spend { animation: spendFlash .6s ease-out; }
 @keyframes spendFlash {
   0%   { color: #fff; transform: scale(1); }
   25%  { color: #ff4f6f; transform: scale(1.35); }

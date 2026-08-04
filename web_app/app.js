@@ -85,28 +85,35 @@ const Sound = {
     });
   },
 
-  /* Puzzle yechilganda — qisqa quvnoq jaranglash */
+  /* So'z to'g'ri topilganda — yumshoq ikki nota */
   chime() {
-    this.play([[784, 0, .16], [988, .08, .16], [1319, .17, .28]]);
+    this.play([[698, 0, .13, .18], [1047, .07, .22, .20]], 'sine');
   },
 
-  /* Bitta puzzle yechilganda — qisqa ko'tarilish */
+  /* Puzzle yechilganda — quvnoq uch pog'ona */
   solved() {
-    this.play([[659, 0, .14], [784, .09, .14], [1047, .19, .3, .26]]);
+    this.play([[587, 0, .13, .22], [784, .10, .13, .22],
+               [1175, .21, .34, .26]], 'triangle');
   },
 
-  /* Daraja tugaganda — keng, bayramona ohang (puzzle ovozidan aniq farq qiladi) */
+  /* Daraja tugaganda — keng, bayramona (puzzle ovozidan aniq farq qiladi) */
   fanfare() {
     this.play([
-      [392, 0,   .22, .24], [523, .10, .22, .24], [659, .20, .22, .24],
-      [784, .32, .5,  .30],
-      [1047, .62, .22, .26], [1319, .74, .22, .26], [1568, .86, .75, .30]
-    ], 'square');
+      [523, 0,   .16, .22], [659, .09, .16, .22], [784, .18, .16, .22],
+      [1047, .28, .26, .26], [880, .48, .16, .22], [1047, .58, .16, .24],
+      [1319, .70, .70, .28]
+    ], 'triangle');
   },
 
-  /* Bonus so'z topilganda — mayin "ding" */
+  /* Bonus so'z — mayin qo'ng'iroqcha */
   ding() {
-    this.play([[1175, 0, .12, .16], [1568, .07, .2, .14]], 'sine');
+    this.play([[1568, 0, .1, .13], [2093, .06, .22, .10]], 'sine');
+  },
+
+  /* Kalit olinganda — "chiq" etgan sovg'a ovozi */
+  reward() {
+    this.play([[880, 0, .1, .2], [1175, .07, .1, .2],
+               [1760, .15, .3, .22]], 'triangle');
   }
 };
 
@@ -124,17 +131,16 @@ const Music = {
   GAIN: 0.035,
   BAR: 3.6,          // bitta akkord necha soniya turadi
 
-  /* Mazhur akkordlar — quvnoq, lekin urg'usiz. Notalar bir vaqtda
-     kirib, uzoq turadi va sekin so'nadi: ritm sezilmaydi, fon "nafas
-     olayotgandek" bo'ladi. */
+  /* Yumshoq mazhur ketma-ketlik. Notalar bir vaqtda kirib, uzoq turadi va
+     sekin so'nadi — ritm sezilmaydi, fon "nafas olayotgandek" bo'ladi. */
   CHORDS: [
-    [261.63, 329.63, 392.00],   // C
-    [349.23, 440.00, 523.25],   // F
-    [392.00, 493.88, 587.33],   // G
-    [329.63, 415.30, 493.88]    // E
+    [293.66, 369.99, 440.00],   // D
+    [246.94, 311.13, 369.99],   // Bm
+    [329.63, 415.30, 493.88],   // E
+    [220.00, 277.18, 329.63]    // A
   ],
   /* Ustidan sekin tushadigan yorug' notalar (qo'ng'iroqchalar) */
-  SPARKLE: [1046.50, 1318.51, 1567.98, 1318.51],
+  SPARKLE: [1174.66, 1479.98, 1760.00, 1479.98],
 
   timer: null, bar: 0, nextTime: 0, on: false,
 
@@ -191,13 +197,14 @@ const Music = {
   }
 };
 
-const HINT_COST = 5;
-const START_COINS = 50;
+const START_COINS = 0;
+const START_KEYS = 5;        // har yangi o'yinchiga beriladigan kalitlar
 const BUBBLE_MS = 3500;      // tarjima necha soniya ko'rinadi
 
 function blankProgress() {
   return {
-    coins: START_COINS, cur: { stage: 1, level: 1, puzzle: 0 },
+    coins: START_COINS, keys: START_KEYS,
+    cur: { stage: 1, level: 1, puzzle: 0 },
     solved: {}, learned: {}, muted: false
   };
 }
@@ -211,6 +218,9 @@ function normalize(p) {
   if (!p || typeof p !== 'object') return b;
   return {
     coins: Number.isFinite(p.coins) ? p.coins : b.coins,
+    // Kalit tushunchasi keyinroq qo'shilgan: eski yozuvda bo'lmasa
+    // boshlang'ich miqdor beriladi, aks holda o'yinchi kalitsiz qolardi.
+    keys: Number.isFinite(p.keys) ? p.keys : b.keys,
     cur: (p.cur && typeof p.cur === 'object') ? p.cur : b.cur,
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
@@ -230,6 +240,7 @@ function mergeProgress(a, b) {
   b = normalize(b);
   const out = {
     coins: Math.max(a.coins, b.coins),
+    keys: Math.max(a.keys, b.keys),
     solved: Object.assign({}, a.solved),
     learned: Object.assign({}, a.learned),
     muted: b.muted            // ovoz — shu qurilmaning sozlamasi
@@ -541,7 +552,7 @@ function renderMap() {
     nodes.appendChild(btn);
   });
 
-  $('map-coins').textContent = State.progress.coins;
+  updateCoins();     // ball VA kalitlar — ikkalasi ham yangilansin
 
   // Hozirgi darajani ko'rinadigan joyga surib qo'yamiz.
   // Hammasi tugagan bo'lsa oxirgi darajaga suramiz, pastga emas.
@@ -583,8 +594,8 @@ function starsFor(done, total) {
   kerak emas. Qolgan uchtasi qobiq ichida — menyu ular uchun umumiy va
   bo'lim almashganda joyida qoladi.
 */
-const SHELL_SCREENS = ['map-screen', 'learned-screen', 'top-screen'];
-const TAB_OF = { 'map-screen': 'tab-play', 'learned-screen': 'tab-learned',
+const SHELL_SCREENS = ['map-screen', 'task-screen', 'top-screen'];
+const TAB_OF = { 'map-screen': 'tab-play', 'task-screen': 'tab-task',
                  'top-screen': 'tab-top' };
 
 function showScreen(id) {
@@ -639,7 +650,7 @@ function renderPack() {
   const done = solvedIn(lv.stage, lv.level);
 
   $('pack-title').textContent = lv.name;
-  $('pack-coins').textContent = State.progress.coins;
+  updateCoins();
   $('pack-progress').textContent = done + ' / ' + lv.puzzles + ' yechildi';
   $('pack-nav-name').textContent = lv.stage + '-bosqich · ' + lv.stageName;
 
@@ -945,14 +956,7 @@ function drawLine() {
   const pts = path.map((i) => centers[i]);
   if (dragging && ptr) pts.push(ptr);
 
-  const stroke = (w, color, alpha, blur) => {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = w;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    if (blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+  const trace = () => {
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     if (pts.length === 2) {
@@ -967,13 +971,37 @@ function drawLine() {
       const last = pts[pts.length - 1];
       ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
     }
+  };
+
+  const stroke = (w, color, alpha, blur) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+    trace();
     ctx.stroke();
     ctx.restore();
   };
 
-  stroke(20, '#ff8fa6', 0.35, 14);   // tashqi nur
-  stroke(11, '#ff3d68', 0.95, 0);    // asosiy chiziq
-  stroke(4,  '#ffd9e2', 0.75, 0);    // ichki yorug'lik
+  // Nafis chiziq: qalin marjon o'rniga ingichka, shaffof va yumshoq nurli.
+  // Uch qatlam bir-birining ustiga tushib, shisha naycha taassurotini beradi.
+  stroke(15, '#7be3ff', 0.22, 16);   // keng, xira gardish
+  stroke(7,  '#ffffff', 0.30, 8);    // oq yumshoq qatlam
+  stroke(4.5, '#2fb9ff', 0.92, 0);   // ingichka aniq o'zak
+
+  // Bosilgan harflar ustida kichik nuqtalar — yo'l ko'rinib tursin
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.9;
+  path.forEach((i) => {
+    ctx.beginPath();
+    ctx.arc(centers[i].x, centers[i].y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
 }
 
 /* ---------------------------- So'zni tekshirish ---------------------------- */
@@ -1004,12 +1032,16 @@ function submit(word) {
   if (p.bonus.includes(word)) {
     if (State.foundBonus.has(word)) return flash(word, 'repeat');
     State.foundBonus.add(word);
-    addCoins(1);
+    // Bonus so'z ikki narsa beradi: ball va kalit
+    State.progress.coins += 1;
+    State.progress.keys += 1;
+    updateCoins();
+    Store.save();
     learn(word);
     haptic('ok');
     Sound.ding();
     flash(word, 'hit', 700);
-    toast('🎁 BONUS · ' + word + '  +1');
+    toast('🎁 BONUS · ' + word + '   +1 💎  +1 🗝️');
     return;
   }
 
@@ -1036,11 +1068,20 @@ function addCoins(n) {
   Store.save();
 }
 
+function addKeys(n) {
+  State.progress.keys = Math.max(0, State.progress.keys + n);
+  updateCoins();
+  Store.save();
+}
+
 function updateCoins() {
-  const n = State.progress.coins;
-  $('coin-count').textContent = n;
-  $('map-coins').textContent = n;
-  $('learned-coins').textContent = n;
+  const c = State.progress.coins, k = State.progress.keys;
+  ['coin-count', 'map-coins', 'pack-coins'].forEach((id) => {
+    const e = $(id); if (e) e.textContent = c;
+  });
+  ['key-count', 'map-keys', 'pack-keys', 'task-keys'].forEach((id) => {
+    const e = $(id); if (e) e.textContent = k;
+  });
 }
 
 
@@ -1077,7 +1118,7 @@ function puzzleSolved(stage, level, puzzle) {
   Sound.solved();
   haptic('ok');
   $('solved-badge').textContent = LEVEL_ICON[lv.name] || '⭐';
-  $('solved-sub').textContent = yangi ? '+5 ★' : 'Qayta yechildi';
+  $('solved-sub').textContent = yangi ? '+5 💎' : 'Qayta yechildi';
   $('solved-overlay').hidden = false;
 
   $('btn-solved-next').onclick = () => {
@@ -1165,8 +1206,8 @@ function showStageDone(stage, next, i) {
 
 function useHint() {
   if (!State.puzzle) return;
-  if (State.progress.coins < HINT_COST) {
-    toast('🔑 Kalit uchun ' + HINT_COST + ' ★ kerak');
+  if (State.progress.keys < 1) {
+    toast('🗝️ Kalit qolmadi — Vazifa bo\'limidan oling');
     haptic('err');
     return;
   }
@@ -1177,13 +1218,12 @@ function useHint() {
     if (cell) {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
-      addCoins(-HINT_COST);
-      // Ochko kamayganini o'yinchi ko'rishi kerak — aks holda kalit
-      // bepulday tuyuladi va hisob nega tushganini tushunmaydi.
-      toast('🔑 Harf ochildi  −' + HINT_COST + ' ★');
-      $('coin-count').classList.remove('spend');
-      void $('coin-count').offsetWidth;      // animatsiyani qayta boshlash
-      $('coin-count').classList.add('spend');
+      addKeys(-1);
+      toast('🗝️ Harf ochildi');
+      // Kalit kamayganini o'yinchi ko'rishi kerak
+      $('key-count').classList.remove('spend');
+      void $('key-count').offsetWidth;      // animatsiyani qayta boshlash
+      $('key-count').classList.add('spend');
       haptic('tap');
       return;
     }
@@ -1192,42 +1232,124 @@ function useHint() {
   toast('Ochiladigan harf qolmadi');
 }
 
-/* --------------------------- So'z ro'yxatlari ----------------------------- */
+/* ============================== VAZIFALAR ============================== */
 
-/* Tarjima yashirin turadi, lampa bosilganda ochiladi — grid'dagi bilan bir xil qoida */
-function wordRow(word) {
-  const row = el('div', 'book-word');
-  row.appendChild(el('b', null, word));
-  const uz = el('span', 'uz hidden', '• • •');
-  row.appendChild(uz);
-  const lamp = makeLampFor(word, uz);
-  row.appendChild(lamp);
-  return row;
+/*
+  Kunlik zanjir va kanal vazifasi.
+
+  Kun hisobi va bir martalik mukofotlar SERVERDA saqlanadi: telefon soatini
+  o'zgartirib yoki sahifani yangilab qayta olishning oldi olinadi. Mijoz
+  faqat serverdan kelgan kalitlarni hisobga qo'shadi.
+*/
+const DAILY_PLAN = [1, 1, 1, 2, 2, 2, 3];
+let taskState = null;
+
+async function api(path) {
+  if (!(TG && TG.initData)) return null;
+  try {
+    const r = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: TG.initData })
+    });
+    return await r.json();
+  } catch (_) { return null; }
 }
 
-function makeLampFor(word, uzEl) {
-  const b = el('button', 'lamp', '💡');
-  b.onclick = () => {
-    b.classList.add('used');
-    uzEl.classList.remove('hidden');
-    uzEl.textContent = State.dict[word] || 'tarjima topilmadi';
-    haptic('tap');
-  };
-  return b;
+async function openTasks() {
+  showScreen('task-screen');
+  updateCoins();
+  renderTasks();
+  const s = await api('/api/tasks');
+  if (s && !s.error) { taskState = s; renderTasks(); }
 }
 
-function openLearned() {
-  showScreen('learned-screen');
-  const body = $('learned-body');
-  body.innerHTML = '';
-  const words = Object.keys(State.progress.learned || {}).sort();
-  if (!words.length) {
-    body.appendChild(el('div', 'book-empty',
-      'Hali so\'z topilmadi.\n\nO\'ynashni boshlang — topgan har bir so\'zingiz shu yerga yig\'iladi.'));
+function renderTasks() {
+  const s = taskState;
+  const plan = (s && s.plan) || DAILY_PLAN;
+  const streak = s ? s.streak : 0;
+  const claimed = s ? s.claimed_today : false;
+
+  // Bugun olingan bo'lsa zanjirning shu kuni to'lgan hisoblanadi
+  const filled = claimed ? streak : streak;
+  const nextDay = claimed ? streak : streak + 1;
+
+  const box = $('streak-days');
+  box.innerHTML = '';
+  plan.forEach((k, i) => {
+    const d = el('div', 'day' + (i < filled ? ' got' : '') +
+                        (!claimed && i + 1 === nextDay ? ' next' : ''));
+    d.appendChild(el('span', 'day-n', String(i + 1)));
+    d.appendChild(el('span', 'day-k', '🗝️'.repeat(k)));
+    box.appendChild(d);
+  });
+
+  const btn = $('btn-claim-daily');
+  if (!(TG && TG.initData)) {
+    $('streak-note').textContent = 'Kunlik mukofot Telegram ichida ishlaydi';
+    btn.disabled = true;
+    btn.textContent = 'Mavjud emas';
+  } else if (claimed) {
+    $('streak-note').textContent = streak + '-kun olindi. Ertaga qaytib keling!';
+    btn.disabled = true;
+    btn.textContent = 'Bugun olindi ✓';
   } else {
-    body.appendChild(el('div', 'book-empty', words.length + ' ta so\'z o\'rgandingiz'));
-    words.forEach((w) => body.appendChild(wordRow(w)));
+    const k = plan[Math.min(nextDay - 1, plan.length - 1)];
+    $('streak-note').textContent = nextDay + '-kun uchun ' + k + ' ta kalit tayyor';
+    btn.disabled = false;
+    btn.textContent = 'Olish  +' + k + ' 🗝️';
   }
+
+  const ch = $('btn-claim-channel');
+  if (s && s.channel_done) {
+    ch.disabled = true;
+    ch.textContent = 'Olindi ✓';
+  } else {
+    ch.disabled = false;
+    ch.textContent = 'Tekshirish';
+  }
+
+  // Pastki menyudagi nuqta: olinmagan mukofot borligini bildiradi
+  $('task-dot').hidden = !(s && (!s.claimed_today || !s.channel_done));
+}
+
+async function claimDaily() {
+  const btn = $('btn-claim-daily');
+  btn.disabled = true;
+  const r = await api('/api/claim-daily');
+  if (!r || r.error) { toast('Bajarilmadi, keyinroq urinib ko\'ring'); renderTasks(); return; }
+  if (r.already) { toast('Bugungi mukofot allaqachon olingan'); }
+  else {
+    addKeys(r.keys);
+    Sound.reward();
+    haptic('ok');
+    toast('🗝️ +' + r.keys + ' kalit · ' + r.streak + '-kun');
+  }
+  const s = await api('/api/tasks');
+  if (s && !s.error) taskState = s;
+  renderTasks();
+}
+
+async function claimChannel() {
+  const btn = $('btn-claim-channel');
+  btn.disabled = true;
+  btn.textContent = 'Tekshirilmoqda…';
+  const r = await api('/api/claim-channel');
+  if (!r || r.error) {
+    toast('Tekshirib bo\'lmadi, keyinroq urinib ko\'ring');
+  } else if (!r.joined) {
+    toast('Avval kanalga qo\'shiling');
+  } else if (r.granted) {
+    addKeys(r.keys);
+    Sound.reward();
+    haptic('ok');
+    toast('🗝️ +' + r.keys + ' kalit');
+  } else {
+    toast('Bu mukofot allaqachon olingan');
+  }
+  const s = await api('/api/tasks');
+  if (s && !s.error) taskState = s;
+  renderTasks();
 }
 
 /* ------------------------------- Reyting ---------------------------------- */
@@ -1375,7 +1497,6 @@ async function boot() {
   $('btn-pack-prev').onclick = () => { haptic('tap'); openLevel(State.levelIndex - 1); };
   $('btn-pack-next').onclick = () => { haptic('tap'); openLevel(State.levelIndex + 1); };
   $('btn-hint').onclick = useHint;
-  $('hint-price').textContent = HINT_COST;
   $('btn-shuffle').onclick = () => {
     if (!State.puzzle) return;
     const l = State.puzzle.letters.split('');
@@ -1388,7 +1509,14 @@ async function boot() {
     haptic('tap');
   };
 
-  $('tab-learned').onclick = () => { haptic('tap'); openLearned(); };
+  $('tab-task').onclick = () => { haptic('tap'); openTasks(); };
+  $('btn-claim-daily').onclick = claimDaily;
+  $('btn-claim-channel').onclick = claimChannel;
+  $('btn-open-channel').onclick = () => {
+    const url = 'https://t.me/apexwords';
+    if (TG && TG.openTelegramLink) TG.openTelegramLink(url);
+    else window.open(url, '_blank');
+  };
   $('tab-top').onclick = () => { haptic('tap'); openTop(); };
   $('tab-play').onclick = () => { haptic('tap'); openMap(); };
   $('btn-top-refresh').onclick = openTop;
