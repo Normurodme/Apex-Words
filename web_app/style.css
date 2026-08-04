@@ -912,6 +912,15 @@ body {
 }
 .rules b { color: var(--text); }
 
+.build-stamp {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--stroke-soft);
+  font-size: 12px;
+  color: var(--text-mute);
+  justify-content: center;
+}
+
 /* --------------------------- Modallar --------------------------- */
 
 .modal {
