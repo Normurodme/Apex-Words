@@ -782,7 +782,8 @@ function renderPack() {
   const lv = State.levels[i];
   const done = solvedIn(lv.stage, lv.level);
 
-  $('pack-title').textContent = lv.name;
+  const icon = LEVEL_ICON[lv.name];
+  $('pack-title').textContent = (icon ? icon + '  ' : '') + lv.name;
   updateCoins();
   $('pack-progress').textContent = done + ' / ' + lv.puzzles;
   $('pack-bar').style.width = Math.round(done / lv.puzzles * 100) + '%';
@@ -800,18 +801,23 @@ function renderPack() {
   if (sig === packSig && grid.children.length) return;
   packSig = sig;
 
-  grid.innerHTML = '';
+  const frag = document.createDocumentFragment();
   for (let k = 0; k < lv.puzzles; k++) {
     const state = k < done ? 'done' : (k === done ? 'now' : 'locked');
-    const b = el('button', 'pz ' + state);
+    // Har o'ninchi katak — bosqich toshi. 50 ta bir xil katak ko'zni
+    // toldiradi; oraliq belgilar ro'yxatga ritm beradi va o'yinchi
+    // qayerda turganini tez topadi.
+    const milestone = (k + 1) % 10 === 0;
+    const b = el('button', 'pz ' + state + (milestone ? ' milestone' : ''));
     b.appendChild(el('span', 'pz-no', String(k + 1)));
-    if (state === 'done') b.appendChild(el('span', 'pz-tick', '✓'));
-    if (state === 'locked') b.appendChild(el('span', 'pz-lock', '🔒'));
+    if (state === 'done') b.appendChild(el('span', 'pz-mark', '★'));
+    if (state === 'locked') b.appendChild(el('span', 'pz-mark', '🔒'));
     if (state !== 'locked') {
       b.onclick = () => { haptic('tap'); openPuzzleAt(k); };
     }
-    grid.appendChild(b);
+    frag.appendChild(b);
   }
+  grid.replaceChildren(frag);
 
   // Navbatdagi puzzle ko'rinib tursin
   requestAnimationFrame(() => {
@@ -1397,12 +1403,47 @@ async function api(path) {
   } catch (_) { return null; }
 }
 
+/*
+  Bo'limlar ochilganda kutish BO'LMASLIGI kerak.
+
+  Ilgari so'rov aynan bosilgan paytda ketardi: avval eski holat ko'rinardi,
+  keyin "Loading", keyin 3-4 soniyadan so'ng yangi natija. Endi ma'lumot
+  ilova ochilishi bilan ORQA FONDA yuklanadi, shuning uchun o'yinchi
+  bo'limga o'tganda u allaqachon tayyor turadi.
+*/
+let taskFetch = null, topFetch = null;
+
+function prefetchSections() {
+  if (!(TG && TG.initData)) return;
+  taskFetch = api('/api/tasks').then((s) => {
+    if (s && !s.error) { taskState = s; refreshTaskDot(); }
+    return s;
+  });
+  topFetch = api('/api/top').then((d) => {
+    if (d && !d.error) topCache = d;
+    return d;
+  });
+}
+
+/* Pastki menyudagi nuqta ma'lumot kelishi bilan yangilanadi */
+function refreshTaskDot() {
+  const s = taskState;
+  $('task-dot').hidden = !(s && (!s.claimed_today || !s.channel_done));
+}
+
 async function openTasks() {
   showScreen('task-screen');
   updateCoins();
-  renderTasks();
-  const s = await api('/api/tasks');
-  if (s && !s.error) { taskState = s; renderTasks(); }
+  renderTasks();                       // kesh bo'lsa darhol chiziladi
+
+  // Oldindan boshlangan so'rov bo'lsa uni kutamiz, aks holda yangisini
+  const s = await (taskFetch || api('/api/tasks'));
+  taskFetch = null;
+  if (s && !s.error) {
+    const changed = JSON.stringify(s) !== JSON.stringify(taskState);
+    taskState = s;
+    if (changed) renderTasks();        // o'zgarmagan bo'lsa qayta chizmaymiz
+  }
 }
 
 function renderTasks() {
@@ -1450,8 +1491,7 @@ function renderTasks() {
     ch.textContent = 'Verify';
   }
 
-  // Pastki menyudagi nuqta: olinmagan mukofot borligini bildiradi
-  $('task-dot').hidden = !(s && (!s.claimed_today || !s.channel_done));
+  refreshTaskDot();
 }
 
 async function claimDaily() {
@@ -1546,31 +1586,26 @@ async function openTop() {
   const body = $('top-body');
   const mine = $('my-rank');
 
+  if (!(TG && TG.initData)) {
+    body.innerHTML = '';
+    mine.hidden = true;
+    body.appendChild(el('div', 'empty-note',
+      'Ranks work inside Telegram.\n\nOpen the bot and tap Play.'));
+    return;
+  }
+
   if (topCache) {
-    renderTop(topCache);                      // keshdan darhol
+    renderTop(topCache);                      // keshdan darhol, kutishsiz
   } else {
     body.innerHTML = '';
     mine.hidden = true;
     body.appendChild(el('div', 'empty-note', 'Loading…'));
   }
 
-  if (!(TG && TG.initData)) {
-    body.innerHTML = '';
-    body.appendChild(el('div', 'empty-note',
-      'Ranks work inside Telegram.\n\nOpen the bot and tap Play.'));
-    return;
-  }
-
-  let data;
-  try {
-    const r = await fetch('/api/top', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: TG.initData })
-    });
-    if (!r.ok) throw new Error('status ' + r.status);
-    data = await r.json();
-  } catch (e) {
+  // Ilova ochilishida boshlangan so'rov odatda allaqachon tugagan bo'ladi
+  const data = await (topFetch || api('/api/top'));
+  topFetch = null;
+  if (!data || data.error) {
     if (topCache) return;                     // keshdagisi turaveradi
     body.innerHTML = '';
     body.appendChild(el('div', 'empty-note', 'Could not load ranks. Try again later.'));
@@ -1692,6 +1727,10 @@ async function boot() {
   });
 
   watchMapSize();
+
+  // Vazifa va reyting ma'lumotini darhol so'raymiz — o'yinchi bo'limga
+  // o'tgunicha javob kelib ulguradi va kutish sezilmaydi
+  prefetchSections();
 
   /* Fon musiqasi o'z-o'zidan boshlanmaydi — faqat o'yinchi 🎵 tugmasidan
      yoqqan bo'lsa. Yoqilgan bo'lsa ham brauzer birinchi teginishgacha
