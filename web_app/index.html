@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -71,7 +71,7 @@
           <p><b>3.</b> Barcha kataklar to'lganda puzzle yechiladi va <b>+5 ★</b> olasiz.</p>
           <p><b>4.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>🎁 BONUS +1 ★</b>.</p>
           <p><b>5.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
-          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi, <b>?</b> bitta harfni ochadi — <b>5 ★</b> turadi.</p>
+          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi. <b>🔑 kalit</b> bitta harfni ochadi — <b>5 ★</b> turadi.</p>
         </div>
       </div>
     </div>
@@ -92,14 +92,44 @@
 </div>
 
 
+<!-- ==================== DARAJA ICHI: 50 ta puzzle ==================== -->
+<section id="pack-screen" class="screen">
+  <div class="sky pack-sky">
+    <i class="cloud c1"></i><i class="cloud c3"></i><i class="cloud c5"></i>
+  </div>
+
+  <header class="sec-top">
+    <button id="btn-pack-back" class="round-btn" aria-label="Xaritaga">
+      <span class="glyph">‹</span>
+    </button>
+    <div class="brand" id="pack-title">…</div>
+    <div class="coins"><span class="coin">★</span><span id="pack-coins">0</span></div>
+  </header>
+
+  <div class="pack-sub"><span id="pack-progress">0 / 50</span></div>
+
+  <div id="pack-body" class="sec-body">
+    <div id="pack-grid"></div>
+  </div>
+
+  <footer id="pack-nav">
+    <button id="btn-pack-prev" class="pack-nav-btn">‹ Oldingi</button>
+    <div id="pack-nav-name">…</div>
+    <button id="btn-pack-next" class="pack-nav-btn">Keyingi ›</button>
+  </footer>
+</section>
+
+
 <!-- ============================== O'YIN ============================== -->
 <section id="game-screen" class="screen">
 
   <header id="topbar">
-    <button id="btn-back" class="round-btn" aria-label="Xaritaga"><span class="glyph">🗺</span></button>
-    <button id="btn-prev-level" class="nav-btn" aria-label="Oldingi daraja">‹</button>
+    <button id="btn-back" class="round-btn" aria-label="Ro'yxatga"><span class="glyph">‹</span></button>
     <div id="level-title">…</div>
-    <button id="btn-next-level" class="nav-btn" aria-label="Keyingi daraja">›</button>
+    <button id="btn-hint" class="key-btn" aria-label="Kalit — bitta harfni ochadi">
+      <span class="key-ico">🔑</span>
+      <span class="price" id="hint-price">5</span>
+    </button>
     <div class="coins"><span class="coin">★</span><span id="coin-count">0</span></div>
   </header>
 
@@ -108,25 +138,38 @@
   <div id="current-word"><span></span></div>
 
   <section id="stage-area">
-    <button id="btn-shuffle" class="round-btn side-btn" aria-label="Aralashtirish">
-      <span class="glyph">⇄</span>
-    </button>
-
     <div id="wheel">
       <div id="plate"></div>
       <canvas id="line"></canvas>
       <div id="letters"></div>
     </div>
 
-    <button id="btn-hint" class="round-btn side-btn" aria-label="Maslahat">
-      <span class="glyph">?</span>
-      <span class="price" id="hint-price">5</span>
+    <button id="btn-shuffle" class="round-btn side-btn" aria-label="Aralashtirish">
+      <span class="glyph">⇄</span>
     </button>
   </section>
 </section>
 
 
 <!-- ===================== Vaqtinchalik oynalar ===================== -->
+
+<!-- Bitta puzzle yechilganda -->
+<div id="solved-overlay" class="overlay" hidden>
+  <div class="sheet solved-sheet">
+    <div class="solved-rays"></div>
+    <div class="solved-badge" id="solved-badge">🍽️</div>
+    <h2>Yechildi!</h2>
+    <p id="solved-sub">+5 ★</p>
+    <div class="solved-actions">
+      <button id="btn-solved-list" class="icon-btn" aria-label="Ro'yxatga">
+        <span>📋</span>
+      </button>
+      <button id="btn-solved-next" class="icon-btn big" aria-label="Keyingi">
+        <span>▶</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <div id="done-overlay" class="overlay" hidden>
   <div class="sheet done-sheet">
@@ -156,6 +199,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

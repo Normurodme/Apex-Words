@@ -90,13 +90,18 @@ const Sound = {
     this.play([[784, 0, .16], [988, .08, .16], [1319, .17, .28]]);
   },
 
-  /* Daraja tugaganda — bayramona ohang */
+  /* Bitta puzzle yechilganda — qisqa ko'tarilish */
+  solved() {
+    this.play([[659, 0, .14], [784, .09, .14], [1047, .19, .3, .26]]);
+  },
+
+  /* Daraja tugaganda — keng, bayramona ohang (puzzle ovozidan aniq farq qiladi) */
   fanfare() {
     this.play([
-      [523, 0,    .18], [659, .12,  .18], [784, .24,  .18],
-      [1047, .36, .34, .26],
-      [988, .58,  .14], [1047, .70, .14], [1319, .82, .5, .28]
-    ]);
+      [392, 0,   .22, .24], [523, .10, .22, .24], [659, .20, .22, .24],
+      [784, .32, .5,  .30],
+      [1047, .62, .22, .26], [1319, .74, .22, .26], [1568, .86, .75, .30]
+    ], 'square');
   },
 
   /* Bonus so'z topilganda — mayin "ding" */
@@ -116,28 +121,30 @@ const Sound = {
   uzoq o'ynaganda charchatmasligi kerak.
 */
 const Music = {
-  BPM: 84,
-  GAIN: 0.04,
+  GAIN: 0.035,
+  BAR: 3.6,          // bitta akkord necha soniya turadi
 
-  // To'rt akkord, har birida to'rtta nota (pentatonikaga yaqin, yumshoq)
-  PATTERN: [
-    261.63, 329.63, 392.00, 329.63,   // C
-    220.00, 261.63, 329.63, 261.63,   // Am
-    174.61, 220.00, 261.63, 220.00,   // F
-    196.00, 246.94, 293.66, 246.94    // G
+  /* Mazhur akkordlar — quvnoq, lekin urg'usiz. Notalar bir vaqtda
+     kirib, uzoq turadi va sekin so'nadi: ritm sezilmaydi, fon "nafas
+     olayotgandek" bo'ladi. */
+  CHORDS: [
+    [261.63, 329.63, 392.00],   // C
+    [349.23, 440.00, 523.25],   // F
+    [392.00, 493.88, 587.33],   // G
+    [329.63, 415.30, 493.88]    // E
   ],
-  BASS: [130.81, 110.00, 87.31, 98.00],
+  /* Ustidan sekin tushadigan yorug' notalar (qo'ng'iroqchalar) */
+  SPARKLE: [1046.50, 1318.51, 1567.98, 1318.51],
 
-  timer: null, step: 0, nextTime: 0, on: false,
+  timer: null, bar: 0, nextTime: 0, on: false,
 
   start() {
     if (this.on) return;
     const ctx = Sound.ready();
     if (!ctx) return;                 // ovoz o'chirilgan bo'lsa boshlanmaydi
     this.on = true;
-    this.step = 0;
-    this.nextTime = ctx.currentTime + 0.1;
-    this.timer = setInterval(() => this.schedule(), 90);
+    this.nextTime = ctx.currentTime + 0.15;
+    this.timer = setInterval(() => this.schedule(), 400);
     this.schedule();
   },
 
@@ -150,28 +157,33 @@ const Music = {
   schedule() {
     const ctx = Sound.ready();
     if (!ctx || !this.on) { this.stop(); return; }
-    const spb = 60 / this.BPM / 2;               // sakkizlik nota davomiyligi
 
-    // 0.4 soniya oldinga rejalashtiramiz — brauzer sekinlashsa ham ritm buzilmaydi
-    while (this.nextTime < ctx.currentTime + 0.4) {
-      const i = this.step % this.PATTERN.length;
-      this.note(ctx, this.PATTERN[i], this.nextTime, spb * 1.7, this.GAIN, 'sine');
-      if (i % 4 === 0) {
-        this.note(ctx, this.BASS[(i / 4) | 0], this.nextTime, spb * 3.4,
-                  this.GAIN * 1.3, 'triangle');
+    // Bir yarim akkord oldinga rejalashtiramiz — brauzer sekinlashsa ham uzilmaydi
+    while (this.nextTime < ctx.currentTime + this.BAR * 1.5) {
+      const ch = this.CHORDS[this.bar % this.CHORDS.length];
+      ch.forEach((f, k) => {
+        // Har nota biroz surilib kiradi — birdaniga "taq" etib boshlanmasin
+        this.note(ctx, f, this.nextTime + k * 0.12, this.BAR * 1.15,
+                  this.GAIN, 'sine', 0.9);
+      });
+      // Har ikkinchi akkordda bitta yorug' nota
+      if (this.bar % 2 === 0) {
+        this.note(ctx, this.SPARKLE[(this.bar / 2) % this.SPARKLE.length],
+                  this.nextTime + 0.5, 1.6, this.GAIN * 0.5, 'triangle', 0.25);
       }
-      this.nextTime += spb;
-      this.step++;
+      this.nextTime += this.BAR;
+      this.bar++;
     }
   },
 
-  note(ctx, freq, at, dur, vol, type) {
+  /* attack — notaning ochilish vaqti. Uzun bo'lsa ovoz yumshoq "suzib" kiradi. */
+  note(ctx, freq, at, dur, vol, type, attack) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = type;
     osc.frequency.value = freq;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(vol, at + 0.04);
+    g.gain.exponentialRampToValueAtTime(vol, at + (attack || 0.05));
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     osc.connect(g).connect(ctx.destination);
     osc.start(at);
@@ -506,13 +518,19 @@ function renderMap() {
     }
 
     btn.appendChild(el('span', 'num', String(i + 1)));
+    btn.appendChild(el('span', 'name', lv.name));
 
-    // Nom + mavzuga mos belgi (Japan yonida bayroq, Pizza yonida pitsa...)
-    const nm = el('span', 'name');
+    // Mavzu belgisi FONDA, tugun ortida katta bo'lib turadi — nom yonidagi
+    // mayda sticker o'rniga. Yozuvni bosmasligi uchun shaffof va pastda.
     const icon = LEVEL_ICON[lv.name];
-    if (icon) nm.appendChild(el('span', 'name-ico', icon));
-    nm.appendChild(el('span', null, lv.name));
-    btn.appendChild(nm);
+    if (icon) {
+      const deco = el('div', 'node-deco', icon);
+      deco.style.left = pts[i].x + 'px';
+      deco.style.top = pts[i].y + 'px';
+      // Yo'lning qaysi tomonida bo'sh joy ko'proq — o'sha tomonga qo'yamiz
+      deco.classList.add(pts[i].x < w / 2 ? 'right' : 'left');
+      nodes.appendChild(deco);
+    }
 
     if (unlocked) {
       btn.onclick = () => {
@@ -573,6 +591,7 @@ function showScreen(id) {
   const inShell = SHELL_SCREENS.includes(id);
   $('shell').hidden = !inShell;
   $('game-screen').classList.toggle('active', id === 'game-screen');
+  $('pack-screen').classList.toggle('active', id === 'pack-screen');
 
   SHELL_SCREENS.forEach((s) => $(s).classList.toggle('active', s === id));
   document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
@@ -580,12 +599,10 @@ function showScreen(id) {
 
   // Ekran almashganda ochiq oynalar yopiladi — aks holda yangi bo'lim
   // ustida osilib qoladi va foydalanuvchi "faqat qoida qoldi" deb o'ylaydi.
-  $('info-overlay').hidden = true;
+  ['info-overlay', 'solved-overlay', 'done-overlay', 'stage-overlay']
+    .forEach((o) => { $(o).hidden = true; });
   hideBubble();
 
-  // Fon musiqasi faqat o'yin davomida chalinadi
-  if (id === 'game-screen') Music.start();
-  else Music.stop();
 }
 
 function openMap() {
@@ -596,23 +613,66 @@ function openMap() {
 
 /* ============================= O'YIN EKRANI ============================== */
 
-async function openLevel(i) {
+/* ======================== DARAJA ICHI (50 puzzle) ======================== */
+
+/*
+  Xaritadagi tugun bosilganda darhol o'yin boshlanmaydi — avval shu darajaning
+  50 ta puzzlesi ro'yxati ochiladi. Shunda o'yinchi istagan puzzleni qayta
+  o'ynay oladi va qayerda turganini ko'radi.
+*/
+function openLevel(i) {
   if (i < 0 || i >= State.levels.length || !isUnlocked(i)) return;
-  const lv = State.levels[i];
-  const done = solvedIn(lv.stage, lv.level);
   State.levelIndex = i;
-  showScreen('game-screen');
-  // Tugagan daraja qaytadan ochilsa boshidan boshlanadi
-  await openPuzzle(lv.stage, lv.level, done >= lv.puzzles ? 0 : done);
-  updateLevelNav();
+  showScreen('pack-screen');
+  renderPack();
 }
 
-/* Sarlavha yonidagi ‹ › tugmalari: qo'shni darajalarga o'tish.
-   ‹ oldingi darajaga qaytaradi (o'tilgan darajani qayta o'ynash uchun). */
-function updateLevelNav() {
+/* Puzzle ochiqmi: yechilganlari va navbatdagisi ochiq, qolgani qulf */
+function puzzleUnlocked(idx) {
+  return idx <= solvedIn(State.levels[State.levelIndex].stage,
+                         State.levels[State.levelIndex].level);
+}
+
+function renderPack() {
   const i = State.levelIndex;
-  $('btn-prev-level').disabled = i <= 0;
-  $('btn-next-level').disabled = !(i + 1 < State.levels.length && isUnlocked(i + 1));
+  const lv = State.levels[i];
+  const done = solvedIn(lv.stage, lv.level);
+
+  $('pack-title').textContent = lv.name;
+  $('pack-coins').textContent = State.progress.coins;
+  $('pack-progress').textContent = done + ' / ' + lv.puzzles + ' yechildi';
+  $('pack-nav-name').textContent = lv.stage + '-bosqich · ' + lv.stageName;
+
+  // Qo'shni darajalarga o'tish. ORQAGA har doim mumkin — o'tilgan darajani
+  // qayta o'ynash uchun; oldinga faqat ochilgan bo'lsa.
+  $('btn-pack-prev').disabled = i <= 0;
+  $('btn-pack-next').disabled = !(i + 1 < State.levels.length && isUnlocked(i + 1));
+
+  const grid = $('pack-grid');
+  grid.innerHTML = '';
+  for (let k = 0; k < lv.puzzles; k++) {
+    const state = k < done ? 'done' : (k === done ? 'now' : 'locked');
+    const b = el('button', 'pz ' + state);
+    b.appendChild(el('span', 'pz-no', String(k + 1)));
+    if (state === 'done') b.appendChild(el('span', 'pz-tick', '✓'));
+    if (state === 'locked') b.appendChild(el('span', 'pz-lock', '🔒'));
+    if (state !== 'locked') {
+      b.onclick = () => { haptic('tap'); openPuzzleAt(k); };
+    }
+    grid.appendChild(b);
+  }
+
+  // Navbatdagi puzzle ko'rinib tursin
+  requestAnimationFrame(() => {
+    const now = grid.querySelector('.pz.now') || grid.querySelector('.pz.done');
+    if (now) now.scrollIntoView({ block: 'center' });
+  });
+}
+
+async function openPuzzleAt(idx) {
+  const lv = State.levels[State.levelIndex];
+  showScreen('game-screen');
+  await openPuzzle(lv.stage, lv.level, idx);
 }
 
 async function openPuzzle(stage, level, idx) {
@@ -785,13 +845,23 @@ function localPoint(e) {
   return { x: e.clientX - wr.left, y: e.clientY - wr.top };
 }
 
+/*
+  Barmoq qaysi harf ustida.
+
+  Sezish maydoni harfning o'zidan kattaroq (1.45), chunki barmoq uchi
+  ko'rsatkichdan kengroq va aniq markazga tushmaydi. Eng YAQIN harf
+  tanlanadi — ilgari birinchi mos kelgani olinardi va tez tortilganda
+  noto'g'ri harf ilinib qolardi.
+*/
 function hitTest(p) {
+  let best = -1, bestD = Infinity;
   for (let i = 0; i < centers.length; i++) {
     const c = centers[i];
     const dx = p.x - c.x, dy = p.y - c.y;
-    if (dx * dx + dy * dy <= (c.r * 1.15) ** 2) return i;
+    const d = dx * dx + dy * dy;
+    if (d <= (c.r * 1.45) ** 2 && d < bestD) { bestD = d; best = i; }
   }
-  return -1;
+  return best;
 }
 
 function onDown(e) {
@@ -858,22 +928,52 @@ function showCurrent(text, cls) {
   s.className = cls || '';
 }
 
+/*
+  Chiziq.
+
+  Avval to'g'ri chiziqlar ketma-ketligi edi va burchaklarda "singan" ko'rinardi.
+  Endi nuqtalar orasidan SILLIQ egri o'tkaziladi: har bo'g'inning o'rtasi
+  tayanch nuqta bo'ladi, harflarning markazi esa burilish nuqtasi.
+  Ustiga yumshoq yorug'lik qo'shiladi — barmoq izi "yonib turgandek" bo'ladi.
+*/
 function drawLine() {
   const cv = $('line');
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
-  // Har bir indeks hozirgi g'ildirakda mavjudligiga ishonch hosil qilamiz
   if (!path.length || path.some((i) => !centers[i])) return;
-  ctx.strokeStyle = '#ff4f6f';
-  ctx.lineWidth = 9;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.globalAlpha = .92;
-  ctx.beginPath();
-  ctx.moveTo(centers[path[0]].x, centers[path[0]].y);
-  for (let k = 1; k < path.length; k++) ctx.lineTo(centers[path[k]].x, centers[path[k]].y);
-  if (dragging && ptr) ctx.lineTo(ptr.x, ptr.y);
-  ctx.stroke();
+
+  const pts = path.map((i) => centers[i]);
+  if (dragging && ptr) pts.push(ptr);
+
+  const stroke = (w, color, alpha, blur) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    if (pts.length === 2) {
+      ctx.lineTo(pts[1].x, pts[1].y);
+    } else {
+      // Kvadratik egri: nuqta — burilish, keyingi o'rta nuqta — tugash joyi
+      for (let k = 1; k < pts.length - 1; k++) {
+        const mx = (pts[k].x + pts[k + 1].x) / 2;
+        const my = (pts[k].y + pts[k + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[k].x, pts[k].y, mx, my);
+      }
+      const last = pts[pts.length - 1];
+      ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  stroke(20, '#ff8fa6', 0.35, 14);   // tashqi nur
+  stroke(11, '#ff3d68', 0.95, 0);    // asosiy chiziq
+  stroke(4,  '#ffd9e2', 0.75, 0);    // ichki yorug'lik
 }
 
 /* ---------------------------- So'zni tekshirish ---------------------------- */
@@ -965,12 +1065,30 @@ function toast(text) {
 
 function puzzleSolved(stage, level, puzzle) {
   const k = key(stage, level);
+  const yangi = (State.progress.solved[k] || 0) <= puzzle;   // birinchi marta yechildimi
   State.progress.solved[k] = Math.max(State.progress.solved[k] || 0, puzzle + 1);
-  addCoins(5);
+  if (yangi) addCoins(5);                 // qayta o'ynaganda ochko takror berilmaydi
+  else Store.save();
 
   const lv = State.levels.find((l) => l.stage === stage && l.level === level);
-  if (puzzle + 1 >= lv.puzzles) finishLevel(stage, level);
-  else openPuzzle(stage, level, puzzle + 1);
+  if (puzzle + 1 >= lv.puzzles) { finishLevel(stage, level); return; }
+
+  // Har puzzledan keyin qisqa oyna: davom etish yoki ro'yxatga qaytish
+  Sound.solved();
+  haptic('ok');
+  $('solved-badge').textContent = LEVEL_ICON[lv.name] || '⭐';
+  $('solved-sub').textContent = yangi ? '+5 ★' : 'Qayta yechildi';
+  $('solved-overlay').hidden = false;
+
+  $('btn-solved-next').onclick = () => {
+    $('solved-overlay').hidden = true;
+    openPuzzle(stage, level, puzzle + 1);
+  };
+  $('btn-solved-list').onclick = () => {
+    $('solved-overlay').hidden = true;
+    showScreen('pack-screen');
+    renderPack();
+  };
 }
 
 /* Shu bosqichning hamma darajalari tugadimi */
@@ -984,7 +1102,6 @@ function finishLevel(stage, level) {
   const i = State.levels.findIndex((l) => l.stage === stage && l.level === level);
   const next = State.levels[i + 1];
 
-  Music.stop();
   Sound.fanfare();
   haptic('ok');
   Store.save();
@@ -1049,7 +1166,7 @@ function showStageDone(stage, next, i) {
 function useHint() {
   if (!State.puzzle) return;
   if (State.progress.coins < HINT_COST) {
-    toast('Ochko yetarli emas');
+    toast('🔑 Kalit uchun ' + HINT_COST + ' ★ kerak');
     haptic('err');
     return;
   }
@@ -1061,10 +1178,18 @@ function useHint() {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
       addCoins(-HINT_COST);
+      // Ochko kamayganini o'yinchi ko'rishi kerak — aks holda kalit
+      // bepulday tuyuladi va hisob nega tushganini tushunmaydi.
+      toast('🔑 Harf ochildi  −' + HINT_COST + ' ★');
+      $('coin-count').classList.remove('spend');
+      void $('coin-count').offsetWidth;      // animatsiyani qayta boshlash
+      $('coin-count').classList.add('spend');
       haptic('tap');
       return;
     }
   }
+  // Ochiladigan harf qolmagan bo'lsa ochko olinmaydi
+  toast('Ochiladigan harf qolmadi');
 }
 
 /* --------------------------- So'z ro'yxatlari ----------------------------- */
@@ -1241,7 +1366,14 @@ async function boot() {
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
 
-  $('btn-back').onclick = () => { haptic('tap'); openMap(); };
+  $('btn-back').onclick = () => {
+    haptic('tap');
+    showScreen('pack-screen');
+    renderPack();
+  };
+  $('btn-pack-back').onclick = () => { haptic('tap'); openMap(); };
+  $('btn-pack-prev').onclick = () => { haptic('tap'); openLevel(State.levelIndex - 1); };
+  $('btn-pack-next').onclick = () => { haptic('tap'); openLevel(State.levelIndex + 1); };
   $('btn-hint').onclick = useHint;
   $('hint-price').textContent = HINT_COST;
   $('btn-shuffle').onclick = () => {
@@ -1256,9 +1388,6 @@ async function boot() {
     haptic('tap');
   };
 
-  $('btn-prev-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex - 1); };
-  $('btn-next-level').onclick = () => { haptic('tap'); openLevel(State.levelIndex + 1); };
-
   $('tab-learned').onclick = () => { haptic('tap'); openLearned(); };
   $('tab-top').onclick = () => { haptic('tap'); openTop(); };
   $('tab-play').onclick = () => { haptic('tap'); openMap(); };
@@ -1272,7 +1401,7 @@ async function boot() {
       Music.stop();
     } else {
       Sound.chime();                             // yoqilganini eshittiramiz
-      if ($('game-screen').classList.contains('active')) Music.start();
+      Music.start();
     }
     Store.save();
   };
@@ -1284,6 +1413,20 @@ async function boot() {
 
   watchMapSize();
 
+  /* Musiqa ilova ochilishi bilan boshlanadi. Brauzerlar ovozni foydalanuvchi
+     biror joyni bosmaguncha to'sadi, shuning uchun birinchi teginishda ham
+     qayta uriniladi. */
+  Music.start();
+  const kickOff = () => {
+    Music.start();
+    if (Music.on) {
+      document.removeEventListener('pointerdown', kickOff);
+      document.removeEventListener('touchstart', kickOff);
+    }
+  };
+  document.addEventListener('pointerdown', kickOff);
+  document.addEventListener('touchstart', kickOff);
+
   /* Progressni qurilmalar orasida bir xil ushlab turish.
      Ilova yashirilganda kutmasdan yoziladi (aks holda kechiktirilgan saqlash
      yo'qoladi), qaytib ochilganda esa serverdan yangilanadi — boshqa
@@ -1294,11 +1437,13 @@ async function boot() {
       Store.flushOnExit();
       return;
     }
-    if ($('game-screen').classList.contains('active')) Music.start();
+    Music.start();
     if (await Store.resync()) {
       updateCoins();
+      // Ochiq turgan ekranni yangilaymiz — boshqa qurilmada o'ynalgan
+      // bo'lsa yangi yechilgan puzzlelar shu yerda ham ko'rinsin
       if ($('map-screen').classList.contains('active')) renderMap();
-      else updateLevelNav();
+      else if ($('pack-screen').classList.contains('active')) renderPack();
     }
   });
   window.addEventListener('pagehide', () => Store.flushOnExit());
