@@ -1,35 +1,40 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
-<!-- Uchta bo'lim bitta qobiq ichida: pastki menyu ular uchun umumiy va
-     bo'lim almashganda joyida qoladi. -->
-<div id="shell">
+<!-- Atmosfera qatlami: butun ilova ostida turadi va hech qachon
+     qayta chizilmaydi — shuning uchun ekran almashganda uzilish bo'lmaydi. -->
+<div class="ambience" aria-hidden="true">
+  <span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span>
+  <span class="grain"></span>
+</div>
 
+<!-- Three sections share one shell so the tab bar never moves. -->
+<div id="shell">
   <div id="screens">
 
-    <!-- ==================== SAYOHAT (darajalar xaritasi) ==================== -->
+    <!-- ============================ JOURNEY ============================ -->
     <section id="map-screen" class="screen active">
-      <div class="sky">
-        <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
-        <i class="cloud c4"></i><i class="cloud c5"></i>
-      </div>
-
-      <header class="sec-top">
-        <div class="brand">Apex&nbsp;Words</div>
-        <button id="btn-sound" class="mini-btn" aria-label="Ovoz">🔊</button>
-        <button id="btn-info" class="mini-btn" aria-label="Qoidalar">?</button>
-        <div class="keys"><span class="key-chip">🗝️</span><span id="map-keys">0</span></div>
-        <div class="coins"><span class="coin">💎</span><span id="map-coins">0</span></div>
+      <header class="topbar">
+        <div class="wordmark">Apex<span>Words</span></div>
+        <div class="spacer"></div>
+        <button id="btn-music" class="icon-round" aria-label="Background music">🎵</button>
+        <button id="btn-sound" class="icon-round" aria-label="Sound effects">🔊</button>
+        <button id="btn-info" class="icon-round" aria-label="How to play">?</button>
       </header>
+
+      <div class="wallet">
+        <div class="chip chip-key"><span class="chip-ico">🗝️</span><span id="map-keys">0</span></div>
+        <div class="chip chip-gem"><span class="chip-ico">💎</span><span id="map-coins">0</span></div>
+      </div>
 
       <div id="map-scroll">
         <div id="map-inner">
@@ -39,130 +44,130 @@
       </div>
     </section>
 
-    <!-- ========================= VAZIFALAR ========================= -->
+    <!-- ============================= REWARDS ============================= -->
     <section id="task-screen" class="screen">
-      <header class="sec-top">
-        <div class="brand">Vazifalar</div>
-        <div class="keys"><span class="key-chip">🗝️</span><span id="task-keys">0</span></div>
+      <header class="topbar">
+        <h1 class="screen-title">Rewards</h1>
+        <div class="spacer"></div>
+        <div class="chip chip-key"><span class="chip-ico">🗝️</span><span id="task-keys">0</span></div>
       </header>
-      <div id="task-body" class="sec-body">
 
-        <div class="card streak-card">
-          <div class="card-head">
-            <span class="card-ico">🔥</span>
-            <div>
-              <h3>Kunlik zanjir</h3>
-              <p id="streak-note">Har kuni kirib kalit oling</p>
+      <div id="task-body" class="scroll-body">
+
+        <section class="panel panel-hero">
+          <div class="panel-glow"></div>
+          <div class="panel-head">
+            <span class="panel-ico">🔥</span>
+            <div class="panel-text">
+              <h2>Daily streak</h2>
+              <p id="streak-note">Come back every day for free keys</p>
             </div>
           </div>
           <div id="streak-days"></div>
-          <button id="btn-claim-daily" class="claim-btn">Olish</button>
-        </div>
+          <button id="btn-claim-daily" class="btn btn-gold">Claim</button>
+        </section>
 
-        <div class="card">
-          <div class="card-head">
-            <span class="card-ico">📣</span>
-            <div>
-              <h3>Join ApexWords channel</h3>
-              <p>Kanalga qo'shiling va <b>5 🗝️</b> oling</p>
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-ico">📣</span>
+            <div class="panel-text">
+              <h2>Join ApexWords channel</h2>
+              <p>Subscribe and collect <b>5 🗝️</b></p>
             </div>
           </div>
-          <div class="card-actions">
-            <button id="btn-open-channel" class="ghost-btn small">Kanalni ochish</button>
-            <button id="btn-claim-channel" class="claim-btn">Tekshirish</button>
+          <div class="panel-row">
+            <button id="btn-open-channel" class="btn btn-ghost">Open channel</button>
+            <button id="btn-claim-channel" class="btn btn-gold">Verify</button>
           </div>
-        </div>
+        </section>
 
       </div>
     </section>
 
-    <!-- =========================== TOP =========================== -->
+    <!-- ============================== RANKS ============================== -->
     <section id="top-screen" class="screen">
-      <header class="sec-top">
-        <div class="brand">🏆 Top 100</div>
-        <button id="btn-top-refresh" class="mini-btn" aria-label="Yangilash">⟳</button>
+      <header class="topbar">
+        <h1 class="screen-title">Top 100</h1>
+        <div class="spacer"></div>
+        <button id="btn-top-refresh" class="icon-round" aria-label="Refresh">⟳</button>
       </header>
-      <div id="top-body" class="sec-body"></div>
+      <div id="top-body" class="scroll-body"></div>
       <div id="my-rank" hidden></div>
     </section>
 
-    <!-- Qoidalar bo'limlar ustida ochiladi, lekin pastki menyuni YOPMAYDI —
-         shuning uchun #screens ichida turadi. -->
+    <!-- Rules float above the sections but never cover the tab bar. -->
     <div id="info-overlay" class="overlay inset" hidden>
       <div class="sheet">
-        <div class="sheet-head">
-          <h2>Qanday o'ynaladi</h2>
-          <button class="close-btn" data-close="info-overlay">✕</button>
-        </div>
+        <header class="sheet-head">
+          <h2>How to play</h2>
+          <button class="icon-round" data-close="info-overlay" aria-label="Close">✕</button>
+        </header>
         <div class="sheet-body rules">
-          <p><b>1.</b> Pastdagi harflarni barmog'ingiz bilan ketma-ket tortib so'z yasang.</p>
-          <p><b>2.</b> So'z ro'yxatda bo'lsa — yuqoridagi katakka tushadi.</p>
-          <p><b>3.</b> Barcha kataklar to'lganda puzzle yechiladi va <b>+5 💎</b> olasiz.</p>
-          <p><b>4.</b> Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>🎁 BONUS: +1 💎 va +1 🗝️</b>.</p>
-          <p><b>5.</b> Har topilgan so'z yonida <span class="lamp-demo">💡</span> chiqadi. Uni bossangiz o'zbekcha tarjimasi bir necha soniyaga ko'rinadi.</p>
-          <p><b>6.</b> <b>⇄</b> harflarni aralashtiradi. <b>🗝️ kalit</b> bitta harfni ochadi — <b>1 kalit</b> sarflaydi.</p>
-          <p><b>7.</b> Kalitlarni <b>🎁 Vazifa</b> bo'limidan har kuni bepul olasiz.</p>
+          <p><span class="rule-n">1</span> Swipe across the letters to build a word.</p>
+          <p><span class="rule-n">2</span> If the word is on the board, it snaps into place.</p>
+          <p><span class="rule-n">3</span> Fill every slot to clear the puzzle and earn <b>+5 💎</b>.</p>
+          <p><span class="rule-n">4</span> Found a real word that isn't listed? <b>Bonus: +1 💎 and +1 🗝️</b>.</p>
+          <p><span class="rule-n">5</span> Tap <span class="lamp-demo">💡</span> next to any word you found to reveal its meaning.</p>
+          <p><span class="rule-n">6</span> <b>⇄</b> shuffles the letters. <b>🗝️</b> reveals one letter and costs one key.</p>
+          <p><span class="rule-n">7</span> Collect free keys every day in <b>Rewards</b>.</p>
         </div>
       </div>
     </div>
 
   </div>
 
-  <footer id="tabbar">
+  <nav id="tabbar">
     <button class="tab" id="tab-task">
-      <span class="tab-ico">🎁</span><span>Vazifa</span>
+      <span class="tab-ico">🎁</span><span>Rewards</span>
       <span id="task-dot" class="tab-dot" hidden></span>
     </button>
     <button class="tab active" id="tab-play">
-      <span class="tab-ico">🗺️</span><span>Sayohat</span>
+      <span class="tab-ico">🗺️</span><span>Journey</span>
     </button>
     <button class="tab" id="tab-top">
-      <span class="tab-ico">🏆</span><span>Top</span>
+      <span class="tab-ico">🏆</span><span>Ranks</span>
     </button>
-  </footer>
+  </nav>
 </div>
 
 
-<!-- ==================== DARAJA ICHI: 50 ta puzzle ==================== -->
+<!-- ====================== LEVEL: 50 puzzles ====================== -->
 <section id="pack-screen" class="screen">
-  <div class="sky pack-sky">
-    <i class="cloud c1"></i><i class="cloud c3"></i><i class="cloud c5"></i>
-  </div>
-
-  <header class="sec-top">
-    <button id="btn-pack-back" class="round-btn" aria-label="Xaritaga">
-      <span class="glyph">‹</span>
-    </button>
-    <div class="brand" id="pack-title">…</div>
-    <div class="keys"><span class="key-chip">🗝️</span><span id="pack-keys">0</span></div>
-    <div class="coins"><span class="coin">💎</span><span id="pack-coins">0</span></div>
+  <header class="topbar">
+    <button id="btn-pack-back" class="icon-round solid" aria-label="Back">‹</button>
+    <h1 class="screen-title" id="pack-title">…</h1>
+    <div class="spacer"></div>
+    <div class="chip chip-key"><span class="chip-ico">🗝️</span><span id="pack-keys">0</span></div>
+    <div class="chip chip-gem"><span class="chip-ico">💎</span><span id="pack-coins">0</span></div>
   </header>
 
-  <div class="pack-sub"><span id="pack-progress">0 / 50</span></div>
+  <div class="pack-meter">
+    <div class="meter"><i id="pack-bar"></i></div>
+    <span id="pack-progress">0 / 50</span>
+  </div>
 
-  <div id="pack-body" class="sec-body">
+  <div id="pack-body" class="scroll-body">
     <div id="pack-grid"></div>
   </div>
 
   <footer id="pack-nav">
-    <button id="btn-pack-prev" class="pack-nav-btn">‹ Oldingi</button>
+    <button id="btn-pack-prev" class="btn btn-ghost slim">‹ Prev</button>
     <div id="pack-nav-name">…</div>
-    <button id="btn-pack-next" class="pack-nav-btn">Keyingi ›</button>
+    <button id="btn-pack-next" class="btn btn-ghost slim">Next ›</button>
   </footer>
 </section>
 
 
-<!-- ============================== O'YIN ============================== -->
+<!-- ============================== GAME ============================== -->
 <section id="game-screen" class="screen">
-
-  <header id="topbar">
-    <button id="btn-back" class="round-btn" aria-label="Ro'yxatga"><span class="glyph">‹</span></button>
-    <div id="level-title">…</div>
-    <button id="btn-hint" class="key-btn" aria-label="Kalit — bitta harfni ochadi">
-      <span class="key-ico">🗝️</span>
-      <span class="key-n" id="key-count">0</span>
+  <header class="topbar">
+    <button id="btn-back" class="icon-round solid" aria-label="Back">‹</button>
+    <h1 class="screen-title" id="level-title">…</h1>
+    <div class="spacer"></div>
+    <button id="btn-hint" class="chip chip-key tappable" aria-label="Reveal a letter">
+      <span class="chip-ico">🗝️</span><span id="key-count">0</span>
     </button>
-    <div class="coins"><span class="coin">💎</span><span id="coin-count">0</span></div>
+    <div class="chip chip-gem"><span class="chip-ico">💎</span><span id="coin-count">0</span></div>
   </header>
 
   <section id="tray"><div id="grid"></div></section>
@@ -175,55 +180,47 @@
       <canvas id="line"></canvas>
       <div id="letters"></div>
     </div>
-
-    <button id="btn-shuffle" class="round-btn side-btn" aria-label="Aralashtirish">
-      <span class="glyph">⇄</span>
-    </button>
+    <button id="btn-shuffle" class="icon-round solid shuffle" aria-label="Shuffle">⇄</button>
   </section>
 </section>
 
 
-<!-- ===================== Vaqtinchalik oynalar ===================== -->
+<!-- =========================== MODALS =========================== -->
 
-<!-- Bitta puzzle yechilganda -->
 <div id="solved-overlay" class="overlay" hidden>
-  <div class="sheet solved-sheet">
-    <div class="solved-rays"></div>
-    <div class="solved-badge" id="solved-badge">🍽️</div>
-    <h2>Yechildi!</h2>
-    <p id="solved-sub">+5 ★</p>
-    <div class="solved-actions">
-      <button id="btn-solved-list" class="icon-btn" aria-label="Ro'yxatga">
-        <span>📋</span>
-      </button>
-      <button id="btn-solved-next" class="icon-btn big" aria-label="Keyingi">
-        <span>▶</span>
-      </button>
+  <div class="sheet modal modal-solved">
+    <div class="rays"></div>
+    <div class="medal" id="solved-badge">🍽️</div>
+    <h2>Solved!</h2>
+    <p id="solved-sub">+5 💎</p>
+    <div class="modal-row">
+      <button id="btn-solved-list" class="icon-round xl" aria-label="Back to list">📋</button>
+      <button id="btn-solved-next" class="icon-round xl primary" aria-label="Next puzzle">▶</button>
     </div>
   </div>
 </div>
 
 <div id="done-overlay" class="overlay" hidden>
-  <div class="sheet done-sheet">
-    <div class="done-stars"><span>★</span><span>★</span><span>★</span></div>
-    <h2 id="done-title">Daraja tugadi!</h2>
+  <div class="sheet modal">
+    <div class="stars"><span>★</span><span>★</span><span>★</span></div>
+    <h2 id="done-title">Level complete!</h2>
     <p id="done-sub"></p>
-    <div class="done-actions">
-      <button id="btn-next" class="primary-btn">Keyingi daraja ▶</button>
-      <button id="btn-stay" class="ghost-btn">Xaritaga qaytish</button>
+    <div class="modal-col">
+      <button id="btn-next" class="btn btn-gold">Next level ▶</button>
+      <button id="btn-stay" class="btn btn-ghost">Back to map</button>
     </div>
   </div>
 </div>
 
-<!-- Butun bosqich tugaganda alohida chiqadi -->
 <div id="stage-overlay" class="overlay" hidden>
-  <div class="sheet done-sheet stage-sheet">
-    <div class="stage-badge" id="stage-badge">🏆</div>
-    <h2 id="stage-title">Bosqich tugadi!</h2>
+  <div class="sheet modal modal-chapter">
+    <div class="rays"></div>
+    <div class="medal big" id="stage-badge">🏆</div>
+    <h2 id="stage-title">Chapter complete!</h2>
     <p id="stage-sub"></p>
-    <div class="done-actions">
-      <button id="btn-stage-next" class="primary-btn">Keyingi bosqich ▶</button>
-      <button id="btn-stage-stay" class="ghost-btn">Xaritaga qaytish</button>
+    <div class="modal-col">
+      <button id="btn-stage-next" class="btn btn-gold">Next chapter ▶</button>
+      <button id="btn-stage-stay" class="btn btn-ghost">Back to map</button>
     </div>
   </div>
 </div>
@@ -231,6 +228,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

@@ -425,7 +425,7 @@ class DB:
         top = [
             {
                 "rank": i + 1,
-                "name": (name or "O'yinchi")[:32],
+                "name": (name or "Player")[:32],
                 "photo": photo or "",
                 "score": score,
                 "me": row_uid == uid,
@@ -620,29 +620,30 @@ def play_keyboard() -> InlineKeyboardMarkup | None:
     if not WEBAPP_URL.startswith("https://"):
         return None      # Telegram WebApp tugmasi faqat https bilan ishlaydi
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🎮 O'ynash", web_app=WebAppInfo(url=WEBAPP_URL))
+        InlineKeyboardButton(text="🎮 Play", web_app=WebAppInfo(url=WEBAPP_URL))
     ]])
 
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
-    name = message.from_user.first_name or "do'stim"
+    name = message.from_user.first_name or "friend"
     text = (
-        f"Salom, <b>{name}</b>! 👋\n\n"
-        "<b>Apex Words</b> — harflardan so'z yasab ingliz tilini o'rganasiz.\n\n"
-        "• Harflarni barmog'ingiz bilan tortib so'z yasang\n"
-        "• Ro'yxatdagi so'zni topsangiz — katakka tushadi\n"
-        "• Ro'yxatda yo'q, lekin haqiqiy ingliz so'zi bo'lsa — <b>+1 bonus</b>\n"
-        "• Har topilgan so'zning o'zbekcha tarjimasi ko'rsatiladi\n\n"
-        "Hozircha 2 bosqich, 10 daraja, 500 puzzle tayyor."
+        f"Hey <b>{name}</b>! 👋\n\n"
+        "<b>Apex Words</b> — swipe letters into words and grow your English.\n\n"
+        "• Drag across the letters to build a word\n"
+        "• Words on the board snap into place\n"
+        "• Real words that aren't listed earn a <b>bonus</b>\n"
+        "• Tap 💡 on any word you found to see what it means\n"
+        "• Collect free keys every day in <b>Rewards</b>\n\n"
+        "2 chapters, 10 levels and 500 puzzles are ready to play."
     )
     kb = play_keyboard()
     if kb:
         await message.answer(text, reply_markup=kb)
     else:
         await message.answer(
-            text + "\n\n⚠️ WEBAPP_URL hali https manzilga sozlanmagan — "
-            "o'yin tugmasi ko'rinmaydi."
+            text + "\n\n⚠️ WEBAPP_URL is not set to an https address yet — "
+            "the play button stays hidden."
         )
 
 
@@ -650,8 +651,8 @@ async def cmd_start(message: Message):
 async def cmd_stats(message: Message):
     total, active = await db.stats()
     await message.answer(
-        f"👥 Jami o'yinchi: <b>{total}</b>\n"
-        f"🔥 Oxirgi 24 soatda: <b>{active}</b>"
+        f"👥 Players: <b>{total}</b>\n"
+        f"🔥 Active in 24h: <b>{active}</b>"
     )
 
 

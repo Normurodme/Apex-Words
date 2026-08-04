@@ -50,8 +50,20 @@ const State = {
 /* Tashqi audio fayl ishlatilmaydi — ohanglar Web Audio bilan joyida
    sintezlanadi. Shu sababli hech narsa yuklanmaydi va kechikish bo'lmaydi. */
 
+/*
+  Ovoz zanjiri.
+
+  Avval har nota to'g'ridan-to'g'ri chiqishga ulanardi va quruq, "arzon"
+  eshitilardi. Endi hamma narsa umumiy zanjirdan o'tadi:
+
+      nota -> lowpass filtr -> [aks-sado] -> master -> chiqish
+
+  Lowpass o'tkir yuqori chastotalarni yumshatadi, aks-sado (delay + feedback)
+  esa xonada chalinayotgandek kenglik beradi. Shu ikkisi ovozni "yumshoq"
+  qiladi — o'yin uzoq o'ynalganda charchatmaydi.
+*/
 const Sound = {
-  ctx: null,
+  ctx: null, master: null, warm: null, wet: null,
 
   ready() {
     if (!State.progress || State.progress.muted) return null;
@@ -59,10 +71,33 @@ const Sound = {
     if (!AC) return null;
     if (!this.ctx) {
       try { this.ctx = new AC(); } catch (_) { return null; }
+      this.build();
     }
-    // Brauzer audio kontekstni foydalanuvchi bosgunicha to'xtatib turadi
     if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     return this.ctx;
+  },
+
+  build() {
+    const c = this.ctx;
+    this.master = c.createGain();
+    this.master.gain.value = 0.9;
+    this.master.connect(c.destination);
+
+    // Yumshatuvchi filtr
+    this.warm = c.createBiquadFilter();
+    this.warm.type = 'lowpass';
+    this.warm.frequency.value = 2600;
+    this.warm.Q.value = 0.6;
+    this.warm.connect(this.master);
+
+    // Qisqa aks-sado: kenglik beradi, lekin "g'or" effektiga aylanmaydi
+    const delay = c.createDelay(1.0);
+    delay.delayTime.value = 0.26;
+    const fb = c.createGain();  fb.gain.value = 0.26;
+    this.wet = c.createGain();  this.wet.gain.value = 0.3;
+    delay.connect(fb).connect(delay);
+    delay.connect(this.wet).connect(this.master);
+    this.warm.connect(delay);
   },
 
   /* seq: [chastota, boshlanish (s), davomiyligi (s), balandlik] */
@@ -77,43 +112,43 @@ const Sound = {
       osc.frequency.value = f;
       // Yumshoq kirish va chiqish — "chirt" etgan ovoz bo'lmasligi uchun
       g.gain.setValueAtTime(0.0001, t0 + at);
-      g.gain.exponentialRampToValueAtTime(vol || 0.22, t0 + at + 0.015);
+      g.gain.exponentialRampToValueAtTime(vol || 0.22, t0 + at + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
-      osc.connect(g).connect(ctx.destination);
+      osc.connect(g).connect(this.warm);
       osc.start(t0 + at);
       osc.stop(t0 + at + dur + 0.05);
     });
   },
 
-  /* So'z to'g'ri topilganda — yumshoq ikki nota */
+  /* Word accepted — soft rising pair */
   chime() {
-    this.play([[698, 0, .13, .18], [1047, .07, .22, .20]], 'sine');
+    this.play([[659, 0, .16, .15], [988, .06, .3, .16]], 'sine');
   },
 
-  /* Puzzle yechilganda — quvnoq uch pog'ona */
+  /* Puzzle cleared — bright three-step lift */
   solved() {
-    this.play([[587, 0, .13, .22], [784, .10, .13, .22],
-               [1175, .21, .34, .26]], 'triangle');
+    this.play([[523, 0, .14, .2], [784, .09, .14, .2],
+               [1047, .18, .2, .22], [1568, .28, .5, .2]], 'triangle');
   },
 
-  /* Daraja tugaganda — keng, bayramona (puzzle ovozidan aniq farq qiladi) */
+  /* Level complete — wide fanfare, clearly bigger than a puzzle */
   fanfare() {
     this.play([
-      [523, 0,   .16, .22], [659, .09, .16, .22], [784, .18, .16, .22],
-      [1047, .28, .26, .26], [880, .48, .16, .22], [1047, .58, .16, .24],
-      [1319, .70, .70, .28]
+      [392, 0, .18, .2], [523, .09, .18, .2], [659, .18, .18, .2],
+      [784, .27, .22, .24], [659, .46, .12, .18], [784, .55, .12, .2],
+      [1047, .64, .28, .24], [1568, .90, .9, .22]
     ], 'triangle');
   },
 
-  /* Bonus so'z — mayin qo'ng'iroqcha */
+  /* Bonus word — tiny glass bell */
   ding() {
-    this.play([[1568, 0, .1, .13], [2093, .06, .22, .10]], 'sine');
+    this.play([[1760, 0, .09, .1], [2637, .05, .3, .07]], 'sine');
   },
 
-  /* Kalit olinganda — "chiq" etgan sovg'a ovozi */
+  /* Reward claimed — coin-drop sparkle */
   reward() {
-    this.play([[880, 0, .1, .2], [1175, .07, .1, .2],
-               [1760, .15, .3, .22]], 'triangle');
+    this.play([[784, 0, .09, .18], [1175, .06, .09, .18],
+               [1568, .13, .12, .18], [2093, .21, .45, .16]], 'triangle');
   }
 };
 
@@ -128,29 +163,44 @@ const Sound = {
   uzoq o'ynaganda charchatmasligi kerak.
 */
 const Music = {
-  GAIN: 0.035,
-  BAR: 3.6,          // bitta akkord necha soniya turadi
+  GAIN: 0.022,
 
-  /* Yumshoq mazhur ketma-ketlik. Notalar bir vaqtda kirib, uzoq turadi va
-     sekin so'nadi — ritm sezilmaydi, fon "nafas olayotgandek" bo'ladi. */
-  CHORDS: [
-    [293.66, 369.99, 440.00],   // D
-    [246.94, 311.13, 369.99],   // Bm
-    [329.63, 415.30, 493.88],   // E
-    [220.00, 277.18, 329.63]    // A
+  /*
+    Cho'zilgan akkordlar OLIB TASHLANDI. Ular bir-birining ustiga tushib
+    to'xtovsiz g'ing'illash hosil qilardi va tez charchatardi — asosiy
+    shikoyat aynan shu edi.
+
+    O'rniga musiqa qutisi uslubi: siyrak, alohida tomchi notalar. Har nota
+    tez uriladi va uzoq so'nadi, orasi 1.5–3 soniya. Hech qachon ikkitadan
+    ortiq nota bir vaqtda yangramaydi, shuning uchun "devor" hosil bo'lmaydi.
+
+    Notalar mazhur pentatonikadan olinadi — bu shkalada istalgan ikki nota
+    birga yoqimli eshitiladi, shuning uchun tasodifiy tanlansa ham hech
+    qachon falsh chiqmaydi.
+  */
+  SCALE: [
+    523.25, 587.33, 659.25, 783.99, 880.00,      // C5 D5 E5 G5 A5
+    1046.50, 1174.66, 1318.51, 1567.98           // C6 D6 E6 G6
   ],
-  /* Ustidan sekin tushadigan yorug' notalar (qo'ng'iroqchalar) */
-  SPARKLE: [1174.66, 1479.98, 1760.00, 1479.98],
+  BASS: [130.81, 146.83, 164.81, 196.00],        // C3 D3 E3 G3
 
-  timer: null, bar: 0, nextTime: 0, on: false,
+  timer: null, nextTime: 0, on: false, since: 0, prev: -1,
+
+  /* O'CHIRILGAN. Fon musiqasi charchatgani uchun butunlay to'xtatildi —
+     kod qoldi, lekin ishga tushmaydi. Qayta yoqish uchun shuni true qiling. */
+  ENABLED: false,
 
   start() {
+    if (!this.ENABLED) return;
     if (this.on) return;
-    const ctx = Sound.ready();
-    if (!ctx) return;                 // ovoz o'chirilgan bo'lsa boshlanmaydi
+    // Faqat ATAYLAB yoqilgan bo'lsa chalinadi
+    if (!State.progress || !State.progress.music) return;
+    const ctx = Sound.ready('music');
+    if (!ctx) return;
     this.on = true;
-    this.nextTime = ctx.currentTime + 0.15;
-    this.timer = setInterval(() => this.schedule(), 400);
+    this.since = 0;
+    this.nextTime = ctx.currentTime + 0.3;
+    this.timer = setInterval(() => this.schedule(), 500);
     this.schedule();
   },
 
@@ -161,37 +211,46 @@ const Music = {
   },
 
   schedule() {
-    const ctx = Sound.ready();
+    const ctx = Sound.ready('music');
     if (!ctx || !this.on) { this.stop(); return; }
 
-    // Bir yarim akkord oldinga rejalashtiramiz — brauzer sekinlashsa ham uzilmaydi
-    while (this.nextTime < ctx.currentTime + this.BAR * 1.5) {
-      const ch = this.CHORDS[this.bar % this.CHORDS.length];
-      ch.forEach((f, k) => {
-        // Har nota biroz surilib kiradi — birdaniga "taq" etib boshlanmasin
-        this.note(ctx, f, this.nextTime + k * 0.12, this.BAR * 1.15,
-                  this.GAIN, 'sine', 0.9);
-      });
-      // Har ikkinchi akkordda bitta yorug' nota
-      if (this.bar % 2 === 0) {
-        this.note(ctx, this.SPARKLE[(this.bar / 2) % this.SPARKLE.length],
-                  this.nextTime + 0.5, 1.6, this.GAIN * 0.5, 'triangle', 0.25);
+    // Uch soniya oldinga rejalashtiramiz
+    while (this.nextTime < ctx.currentTime + 3) {
+      // Ketma-ket bir xil nota tushmasin — takrorlanish darhol seziladi
+      let i = Math.floor(Math.random() * this.SCALE.length);
+      if (i === this.prev) i = (i + 1) % this.SCALE.length;
+      this.prev = i;
+
+      this.pluck(ctx, this.SCALE[i], this.nextTime, this.GAIN);
+
+      // Ba'zan yumshoq hamroh nota — kvinta yoki tersiya masofasida
+      if (Math.random() < 0.28) {
+        const j = Math.min(i + 2, this.SCALE.length - 1);
+        this.pluck(ctx, this.SCALE[j], this.nextTime + 0.09, this.GAIN * 0.55);
       }
-      this.nextTime += this.BAR;
-      this.bar++;
+
+      // Har ~8 notada bitta past nota — pastki qismni ushlab turadi
+      if (this.since % 8 === 0) {
+        this.pluck(ctx, this.BASS[(this.since / 8) % this.BASS.length],
+                   this.nextTime, this.GAIN * 0.8, 3.4);
+      }
+
+      this.since++;
+      this.nextTime += 1.5 + Math.random() * 1.5;   // siyrak va notekis
     }
   },
 
-  /* attack — notaning ochilish vaqti. Uzun bo'lsa ovoz yumshoq "suzib" kiradi. */
-  note(ctx, freq, at, dur, vol, type, attack) {
+  /* Cho'zilmaydigan nota: tez uriladi, uzoq so'nadi — musiqa qutisi kabi */
+  pluck(ctx, freq, at, vol, decay) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = type;
+    osc.type = 'sine';
     osc.frequency.value = freq;
+    const dur = decay || 2.6;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(vol, at + (attack || 0.05));
-    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    osc.connect(g).connect(ctx.destination);
+    g.gain.exponentialRampToValueAtTime(vol, at + 0.006);   // deyarli bir zumda
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);  // sekin o'chadi
+    osc.connect(g).connect(Sound.warm);
     osc.start(at);
     osc.stop(at + dur + 0.05);
   }
@@ -205,7 +264,12 @@ function blankProgress() {
   return {
     coins: START_COINS, keys: START_KEYS,
     cur: { stage: 1, level: 1, puzzle: 0 },
-    solved: {}, learned: {}, muted: false
+    solved: {}, learned: {},
+    muted: false,      // ovoz effektlari
+    music: false       // fon musiqasi — STANDART HOLATDA O'CHIQ.
+                       // Doim chalinib turgan fon tez charchatadi va
+                       // ko'pchilik o'yinni jim o'ynashni afzal ko'radi.
+                       // Xohlagan o'yinchi 🎵 tugmasidan yoqadi.
   };
 }
 
@@ -224,7 +288,9 @@ function normalize(p) {
     cur: (p.cur && typeof p.cur === 'object') ? p.cur : b.cur,
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
-    muted: !!p.muted
+    muted: !!p.muted,
+    // Majburan o'chiq: ilgari yoqib qo'yganlarda ham qayta boshlanmasin
+    music: false
   };
 }
 
@@ -243,7 +309,8 @@ function mergeProgress(a, b) {
     keys: Math.max(a.keys, b.keys),
     solved: Object.assign({}, a.solved),
     learned: Object.assign({}, a.learned),
-    muted: b.muted            // ovoz — shu qurilmaning sozlamasi
+    muted: b.muted,           // ovoz — shu qurilmaning sozlamasi
+    music: b.music
   };
   for (const k in b.solved) {
     out.solved[k] = Math.max(out.solved[k] || 0, b.solved[k] || 0);
@@ -500,7 +567,7 @@ function renderMap() {
     // joyida. Oldingi tugun bilan orasida BANNER_GAP bo'shlig'i bor, shuning
     // uchun yuqoridagi tugunning nomiga tegmaydi.
     if (lv.first) {
-      const b = el('div', 'stage-banner', lv.stage + '-BOSQICH · ' + lv.stageName);
+      const b = el('div', 'stage-banner', 'CHAPTER ' + lv.stage + ' · ' + lv.stageName);
       b.style.top = (pts[i].y + (i === 0 ? BOTTOM_PAD * 0.5
                                          : NODE_GAP * 0.5 + BANNER_GAP * 0.5)) + 'px';
       nodes.appendChild(b);
@@ -651,8 +718,9 @@ function renderPack() {
 
   $('pack-title').textContent = lv.name;
   updateCoins();
-  $('pack-progress').textContent = done + ' / ' + lv.puzzles + ' yechildi';
-  $('pack-nav-name').textContent = lv.stage + '-bosqich · ' + lv.stageName;
+  $('pack-progress').textContent = done + ' / ' + lv.puzzles;
+  $('pack-bar').style.width = Math.round(done / lv.puzzles * 100) + '%';
+  $('pack-nav-name').textContent = 'Chapter ' + lv.stage + ' · ' + lv.stageName;
 
   // Qo'shni darajalarga o'tish. ORQAGA har doim mumkin — o'tilgan darajani
   // qayta o'ynash uchun; oldinga faqat ochilgan bo'lsa.
@@ -766,7 +834,7 @@ function hideBubble() {
 function showBubble(word, anchor) {
   const bub = $('bubble');
   $('bubble-word').textContent = word;
-  $('bubble-uz').textContent = State.dict[word] || 'tarjima topilmadi';
+  $('bubble-uz').textContent = State.dict[word] || 'no translation';
 
   bub.hidden = false;
   bub.classList.remove('show');
@@ -1118,7 +1186,7 @@ function puzzleSolved(stage, level, puzzle) {
   Sound.solved();
   haptic('ok');
   $('solved-badge').textContent = LEVEL_ICON[lv.name] || '⭐';
-  $('solved-sub').textContent = yangi ? '+5 💎' : 'Qayta yechildi';
+  $('solved-sub').textContent = yangi ? '+5 💎' : 'Replayed';
   $('solved-overlay').hidden = false;
 
   $('btn-solved-next').onclick = () => {
@@ -1153,10 +1221,10 @@ function finishLevel(stage, level) {
     return;
   }
 
-  $('done-title').textContent = 'Daraja tugadi!';
+  $('done-title').textContent = 'Level complete!';
   $('done-sub').textContent = next
-    ? '"' + next.name + '" darajasi ochildi. Hozir o\'tasizmi?'
-    : 'Barcha mavjud darajalar tugadi. Yangi bosqichlar tez orada!';
+    ? '"' + next.name + '" is unlocked. Continue now?'
+    : 'You finished every level available. New chapters are coming soon!';
 
   // Keyingi daraja bo'lmasa faqat xaritaga qaytish qoladi
   $('btn-next').hidden = !next;
@@ -1182,11 +1250,11 @@ function showStageDone(stage, next, i) {
 
   $('stage-badge').textContent = LEVEL_ICON[
     (State.levels.find((l) => l.stage === stage + 1) || {}).name] || '🏆';
-  $('stage-title').textContent = stage + '-BOSQICH TUGADI!';
+  $('stage-title').textContent = 'CHAPTER ' + stage + ' COMPLETE!';
   $('stage-sub').textContent = nextStage
-    ? '"' + stageName + '" to\'liq yakunlandi. Endi ' + (stage + 1) +
-      '-bosqich — "' + nextStage.stageName + '" ochildi. O\'tasizmi?'
-    : '"' + stageName + '" to\'liq yakunlandi! Yangi bosqichlar tez orada qo\'shiladi.';
+    ? '"' + stageName + '" is fully cleared. Chapter ' + (stage + 1) +
+      ' — "' + nextStage.stageName + '" is now open. Continue?'
+    : '"' + stageName + '" is fully cleared! New chapters are coming soon.';
 
   $('btn-stage-next').hidden = !nextStage;
   if (nextStage) $('btn-stage-next').textContent = nextStage.stageName + ' ▶';
@@ -1207,7 +1275,7 @@ function showStageDone(stage, next, i) {
 function useHint() {
   if (!State.puzzle) return;
   if (State.progress.keys < 1) {
-    toast('🗝️ Kalit qolmadi — Vazifa bo\'limidan oling');
+    toast('🗝️ Out of keys — collect more in Rewards');
     haptic('err');
     return;
   }
@@ -1219,7 +1287,7 @@ function useHint() {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
       addKeys(-1);
-      toast('🗝️ Harf ochildi');
+      toast('🗝️ Letter revealed');
       // Kalit kamayganini o'yinchi ko'rishi kerak
       $('key-count').classList.remove('spend');
       void $('key-count').offsetWidth;      // animatsiyani qayta boshlash
@@ -1229,7 +1297,7 @@ function useHint() {
     }
   }
   // Ochiladigan harf qolmagan bo'lsa ochko olinmaydi
-  toast('Ochiladigan harf qolmadi');
+  toast('Nothing left to reveal');
 }
 
 /* ============================== VAZIFALAR ============================== */
@@ -1286,27 +1354,27 @@ function renderTasks() {
 
   const btn = $('btn-claim-daily');
   if (!(TG && TG.initData)) {
-    $('streak-note').textContent = 'Kunlik mukofot Telegram ichida ishlaydi';
+    $('streak-note').textContent = 'Daily rewards work inside Telegram';
     btn.disabled = true;
-    btn.textContent = 'Mavjud emas';
+    btn.textContent = 'Unavailable';
   } else if (claimed) {
-    $('streak-note').textContent = streak + '-kun olindi. Ertaga qaytib keling!';
+    $('streak-note').textContent = 'Day ' + streak + ' claimed. See you tomorrow!';
     btn.disabled = true;
-    btn.textContent = 'Bugun olindi ✓';
+    btn.textContent = 'Claimed today ✓';
   } else {
     const k = plan[Math.min(nextDay - 1, plan.length - 1)];
-    $('streak-note').textContent = nextDay + '-kun uchun ' + k + ' ta kalit tayyor';
+    $('streak-note').textContent = k + (k === 1 ? ' key' : ' keys') + ' waiting for day ' + nextDay;
     btn.disabled = false;
-    btn.textContent = 'Olish  +' + k + ' 🗝️';
+    btn.textContent = 'Claim  +' + k + ' 🗝️';
   }
 
   const ch = $('btn-claim-channel');
   if (s && s.channel_done) {
     ch.disabled = true;
-    ch.textContent = 'Olindi ✓';
+    ch.textContent = 'Claimed ✓';
   } else {
     ch.disabled = false;
-    ch.textContent = 'Tekshirish';
+    ch.textContent = 'Verify';
   }
 
   // Pastki menyudagi nuqta: olinmagan mukofot borligini bildiradi
@@ -1317,13 +1385,13 @@ async function claimDaily() {
   const btn = $('btn-claim-daily');
   btn.disabled = true;
   const r = await api('/api/claim-daily');
-  if (!r || r.error) { toast('Bajarilmadi, keyinroq urinib ko\'ring'); renderTasks(); return; }
-  if (r.already) { toast('Bugungi mukofot allaqachon olingan'); }
+  if (!r || r.error) { toast('Something went wrong, try again later'); renderTasks(); return; }
+  if (r.already) { toast('Today\'s reward is already claimed'); }
   else {
     addKeys(r.keys);
     Sound.reward();
     haptic('ok');
-    toast('🗝️ +' + r.keys + ' kalit · ' + r.streak + '-kun');
+    toast('🗝️ +' + r.keys + ' keys · day ' + r.streak);
   }
   const s = await api('/api/tasks');
   if (s && !s.error) taskState = s;
@@ -1333,19 +1401,19 @@ async function claimDaily() {
 async function claimChannel() {
   const btn = $('btn-claim-channel');
   btn.disabled = true;
-  btn.textContent = 'Tekshirilmoqda…';
+  btn.textContent = 'Checking…';
   const r = await api('/api/claim-channel');
   if (!r || r.error) {
-    toast('Tekshirib bo\'lmadi, keyinroq urinib ko\'ring');
+    toast('Could not verify, try again later');
   } else if (!r.joined) {
-    toast('Avval kanalga qo\'shiling');
+    toast('Join the channel first');
   } else if (r.granted) {
     addKeys(r.keys);
     Sound.reward();
     haptic('ok');
-    toast('🗝️ +' + r.keys + ' kalit');
+    toast('🗝️ +' + r.keys + ' keys');
   } else {
-    toast('Bu mukofot allaqachon olingan');
+    toast('This reward is already claimed');
   }
   const s = await api('/api/tasks');
   if (s && !s.error) taskState = s;
@@ -1374,10 +1442,15 @@ function avatar(name, photo) {
 }
 
 function updateSoundBtn() {
-  const b = $('btn-sound');
-  const off = !!(State.progress && State.progress.muted);
-  b.textContent = off ? '🔇' : '🔊';
-  b.classList.toggle('off', off);
+  const p = State.progress || {};
+  const s = $('btn-sound');
+  s.textContent = p.muted ? '🔇' : '🔊';
+  s.classList.toggle('off', !!p.muted);
+
+  const m = $('btn-music');
+  m.textContent = '🎵';
+  m.classList.toggle('off', !p.music);
+  m.setAttribute('aria-pressed', p.music ? 'true' : 'false');
 }
 
 function initial(name) {
@@ -1405,13 +1478,13 @@ async function openTop() {
   } else {
     body.innerHTML = '';
     mine.hidden = true;
-    body.appendChild(el('div', 'book-empty', 'Yuklanmoqda…'));
+    body.appendChild(el('div', 'empty-note', 'Loading…'));
   }
 
   if (!(TG && TG.initData)) {
     body.innerHTML = '';
-    body.appendChild(el('div', 'book-empty',
-      'Reyting faqat Telegram ichida ishlaydi.\n\nBotni oching va "O\'ynash" tugmasini bosing.'));
+    body.appendChild(el('div', 'empty-note',
+      'Ranks work inside Telegram.\n\nOpen the bot and tap Play.'));
     return;
   }
 
@@ -1427,7 +1500,7 @@ async function openTop() {
   } catch (e) {
     if (topCache) return;                     // keshdagisi turaveradi
     body.innerHTML = '';
-    body.appendChild(el('div', 'book-empty', 'Reyting yuklanmadi. Keyinroq urinib ko\'ring.'));
+    body.appendChild(el('div', 'empty-note', 'Could not load ranks. Try again later.'));
     return;
   }
 
@@ -1443,8 +1516,8 @@ function renderTop(data) {
   const mine = $('my-rank');
   body.innerHTML = '';
   if (!data.top || !data.top.length) {
-    body.appendChild(el('div', 'book-empty',
-      'Reyting hali bo\'sh.\n\nBirinchi bo\'lib ochko to\'plang!'));
+    body.appendChild(el('div', 'empty-note',
+      'No ranks yet.\n\nBe the first to score!'));
   } else {
     const medal = ['gold', 'silver', 'bronze'];
     data.top.forEach((p) => {
@@ -1454,7 +1527,7 @@ function renderTop(data) {
       row.appendChild(avatar(p.name, p.photo));
       row.appendChild(el('div', 'rank-name', p.name));
       const sc = el('div', 'rank-score');
-      sc.appendChild(el('span', 'coin-dot', '★'));
+      sc.appendChild(el('span', 'coin-dot', '💎'));
       sc.appendChild(el('span', null, String(p.score)));
       row.appendChild(sc);
       body.appendChild(row);
@@ -1463,7 +1536,7 @@ function renderTop(data) {
 
   if (data.me) {
     mine.innerHTML = '';
-    mine.appendChild(el('span', null, 'Sizning o\'rningiz: ' + data.me.rank + '-o\'rin'));
+    mine.appendChild(el('span', null, 'Your place: #' + data.me.rank));
     mine.appendChild(el('span', null, '★ ' + data.me.score));
     mine.hidden = false;
   }
@@ -1522,15 +1595,21 @@ async function boot() {
   $('btn-top-refresh').onclick = openTop;
   $('btn-info').onclick = () => { $('info-overlay').hidden = false; };
 
+  // 🔊 — ovoz effektlari (standart: yoqilgan)
   $('btn-sound').onclick = () => {
     State.progress.muted = !State.progress.muted;
     updateSoundBtn();
-    if (State.progress.muted) {
-      Music.stop();
-    } else {
-      Sound.chime();                             // yoqilganini eshittiramiz
-      Music.start();
-    }
+    if (State.progress.muted) Music.stop();
+    else { Sound.chime(); Music.start(); }
+    Store.save();
+  };
+
+  // 🎵 — fon musiqasi (standart: O'CHIQ, ataylab yoqiladi)
+  $('btn-music').onclick = () => {
+    State.progress.music = !State.progress.music;
+    updateSoundBtn();
+    if (State.progress.music) Music.start();
+    else Music.stop();
     Store.save();
   };
   updateSoundBtn();
@@ -1541,19 +1620,21 @@ async function boot() {
 
   watchMapSize();
 
-  /* Musiqa ilova ochilishi bilan boshlanadi. Brauzerlar ovozni foydalanuvchi
-     biror joyni bosmaguncha to'sadi, shuning uchun birinchi teginishda ham
-     qayta uriniladi. */
-  Music.start();
-  const kickOff = () => {
+  /* Fon musiqasi o'z-o'zidan boshlanmaydi — faqat o'yinchi 🎵 tugmasidan
+     yoqqan bo'lsa. Yoqilgan bo'lsa ham brauzer birinchi teginishgacha
+     ovozni to'sadi, shuning uchun teginishda qayta uriniladi. */
+  if (State.progress.music) {
     Music.start();
-    if (Music.on) {
-      document.removeEventListener('pointerdown', kickOff);
-      document.removeEventListener('touchstart', kickOff);
-    }
-  };
-  document.addEventListener('pointerdown', kickOff);
-  document.addEventListener('touchstart', kickOff);
+    const kickOff = () => {
+      Music.start();
+      if (Music.on) {
+        document.removeEventListener('pointerdown', kickOff);
+        document.removeEventListener('touchstart', kickOff);
+      }
+    };
+    document.addEventListener('pointerdown', kickOff);
+    document.addEventListener('touchstart', kickOff);
+  }
 
   /* Progressni qurilmalar orasida bir xil ushlab turish.
      Ilova yashirilganda kutmasdan yoziladi (aks holda kechiktirilgan saqlash
