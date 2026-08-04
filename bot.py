@@ -616,11 +616,39 @@ def make_app(bot=None) -> web.Application:
 dp = Dispatcher()
 
 
+def build_tag() -> str:
+    """
+    Har deployda o'zgaradigan qisqa belgi.
+
+    Telegram Mini App'ni QURILMADA keshlaydi va bu keshni server sarlavhalari
+    (no-store) har doim ham buzmaydi: ilova o'sha URL uchun eski nusxani
+    saqlab qoladi. Natijada yangi dizayn chiqarilsa ham o'yinchi eskisini
+    ko'raveradi.
+
+    Yechim — URL'ning o'ziga o'zgaruvchan qism qo'shish. web_app/ ichidagi
+    fayllarning eng so'nggi o'zgarish vaqtini olamiz: fayl o'zgarsa belgi
+    ham o'zgaradi va Telegram uni butunlay boshqa sahifa deb biladi.
+    """
+    try:
+        newest = max(p.stat().st_mtime for p in WEB_DIR.rglob("*") if p.is_file())
+        return str(int(newest))
+    except ValueError:
+        return "0"
+
+
+BUILD = build_tag()
+
+
+def play_url() -> str:
+    sep = "&" if "?" in WEBAPP_URL else "?"
+    return f"{WEBAPP_URL}{sep}b={BUILD}"
+
+
 def play_keyboard() -> InlineKeyboardMarkup | None:
     if not WEBAPP_URL.startswith("https://"):
         return None      # Telegram WebApp tugmasi faqat https bilan ishlaydi
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🎮 Play", web_app=WebAppInfo(url=WEBAPP_URL))
+        InlineKeyboardButton(text="🎮 Play", web_app=WebAppInfo(url=play_url()))
     ]])
 
 
@@ -716,10 +744,10 @@ async def main():
     if WEBAPP_URL.startswith("https://"):
         try:
             await bot.set_chat_menu_button(
-                menu_button=MenuButtonWebApp(text="O'ynash",
-                                             web_app=WebAppInfo(url=WEBAPP_URL))
+                menu_button=MenuButtonWebApp(text="Play",
+                                             web_app=WebAppInfo(url=play_url()))
             )
-            log.info("Menyu tugmasi sozlandi: %s", WEBAPP_URL)
+            log.info("Menyu tugmasi sozlandi: %s", play_url())
         except Exception as e:
             log.warning("Menyu tugmasi sozlanmadi: %s", e)
     else:
