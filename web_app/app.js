@@ -512,11 +512,22 @@ function isUnlocked(i) {
 /* Har daraja uchun mavzuga mos belgi. Daraja nomlari o'zgarmas bo'lgani
    uchun oddiy jadval yetarli — puzzle fayllarini qayta yaratish shart emas.
    12 bosqichning hammasi oldindan yozib qo'yilgan. */
+/*
+  BAYROQ EMOJILARI ISHLATILMAYDI.
+
+  Windows ularni umuman chizmaydi: 🇯🇵 o'rniga "JP" harflari ko'rinadi
+  (skrinshotda aynan shu edi). Sabab — bayroqlar "regional indicator"
+  juftligidan yasaladi va Segoe UI Emoji ularni qo'llab-quvvatlamaydi.
+
+  Shuning uchun har daraja uchun mamlakat bayrog'i emas, o'sha joyga xos
+  TANIQLI belgi tanlandi: Kanada -> chinor bargi, Yaponiya -> Fudzi,
+  Misr -> tuya. Bular Windows, Android va iOS'da bir xil chiziladi.
+*/
 const LEVEL_ICON = {
   // 1. Countries
-  England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Japan: '🇯🇵', Brazil: '🇧🇷', Egypt: '🇪🇬', Canada: '🇨🇦',
+  England: '🏰', Japan: '🗻', Brazil: '🌴', Egypt: '🐫', Canada: '🍁',
   // 2. Cities
-  Paris: '🗼', Tokyo: '🏯', Dubai: '🕌', Rome: '🏛️', London: '🎡',
+  Paris: '🗼', Tokyo: '⛩️', Dubai: '🕌', Rome: '🏛️', London: '🎡',
   // 3. Foods
   Pizza: '🍕', Sushi: '🍣', Burger: '🍔', Pasta: '🍝', Tacos: '🌮',
   // 4. Animals
@@ -526,7 +537,7 @@ const LEVEL_ICON = {
   // 6. Fruits
   Apple: '🍎', Mango: '🥭', Banana: '🍌', Cherry: '🍒', Orange: '🍊',
   // 7. Towers
-  Eiffel: '🗼', Pisa: '🏛️', 'Big Ben': '🕰️', Petronas: '🏙️', 'Burj Khalifa': '🌇',
+  Eiffel: '🗼', Pisa: '🏛️', 'Big Ben': '🕰️', Petronas: '🌃', 'Burj Khalifa': '🌇',
   // 8. Cars
   Tesla: '⚡', Toyota: '🚗', Ferrari: '🏎️', Bugatti: '🏁', Mercedes: '🚙',
   // 9. Mythical
