@@ -229,8 +229,9 @@ body {
 /* ======================= YUMALOQ TUGMALAR ======================= */
 
 .icon-round {
+  position: relative;
   flex: 0 0 auto;
-  width: 38px; height: 38px;
+  width: 40px; height: 40px;
   display: grid; place-items: center;
   border: 1.5px solid var(--stroke);
   border-radius: 50%;
@@ -241,6 +242,13 @@ body {
   font-size: 16px; font-weight: 800; line-height: 1;
   cursor: pointer;
   transition: transform var(--tap), background var(--tap);
+}
+/* Ko'rinadigan doira 40px, lekin barmoq uchun sezish maydoni 46px.
+   Kichik tugmalarga tegish qiyin bo'lmasligi kerak. */
+.icon-round::before {
+  content: "";
+  position: absolute; inset: -3px;
+  border-radius: 50%;
 }
 .icon-round:active { transform: scale(.9); background: var(--glass-strong); }
 .icon-round.off { opacity: .45; }
@@ -364,9 +372,12 @@ body {
   background: rgba(7,28,70,.5);
   border: 1.5px solid var(--stroke-soft);
   backdrop-filter: blur(8px);
-  font-size: 12.5px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0,0,0,.45);
+  /* Rangni ATAYLAB belgilaymiz. Aks holda tugunning o'z rangi meros
+     bo'ladi va tugagan darajada jigarrang yozuv to'q fonda yo'qoladi. */
+  color: #fff;
 }
 
 .node.locked {

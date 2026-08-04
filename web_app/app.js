@@ -79,76 +79,109 @@ const Sound = {
 
   build() {
     const c = this.ctx;
+
     this.master = c.createGain();
-    this.master.gain.value = 0.9;
+    this.master.gain.value = 0.75;
     this.master.connect(c.destination);
 
-    // Yumshatuvchi filtr
+    /* Yumshatuvchi filtr. 2600 Hz juda past edi — ovozlar bo'g'iq chiqardi.
+       4800 Hz o'tkirlikni oladi, lekin tiniqlikni saqlaydi. */
     this.warm = c.createBiquadFilter();
     this.warm.type = 'lowpass';
-    this.warm.frequency.value = 2600;
-    this.warm.Q.value = 0.6;
+    this.warm.frequency.value = 4800;
+    this.warm.Q.value = 0.4;
     this.warm.connect(this.master);
 
-    // Qisqa aks-sado: kenglik beradi, lekin "g'or" effektiga aylanmaydi
+    /* Qisqa aks-sado. Kechikish 0.26 -> 0.14 s va qaytish 0.26 -> 0.16:
+       ilgari notalar bir-biriga yopishib "loyqa" eshitilardi. */
     const delay = c.createDelay(1.0);
-    delay.delayTime.value = 0.26;
-    const fb = c.createGain();  fb.gain.value = 0.26;
-    this.wet = c.createGain();  this.wet.gain.value = 0.3;
+    delay.delayTime.value = 0.14;
+    const fb = c.createGain();  fb.gain.value = 0.16;
+    this.wet = c.createGain();  this.wet.gain.value = 0.16;
     delay.connect(fb).connect(delay);
     delay.connect(this.wet).connect(this.master);
     this.warm.connect(delay);
   },
 
+  /*
+    Bitta nota.
+
+    Uchta narsa ovozni "arzon"likdan chiqaradi:
+      1. LINEAR hujum. exponentialRamp nolga yaqin qiymatdan boshlanganda
+         "chirt" beradi; linearRamp toza kiradi.
+      2. Ikkinchi qatlam — oktava tepada, ancha past ovozda. Bitta sinus
+         yalang'och eshitiladi, ikkitasi to'liq tuyuladi.
+      3. Ozgina detune — ikki qatlam sekin "nafas oladi".
+  */
+  note({ freq, at, dur, vol = 0.2, type = 'triangle', glide = 0 }) {
+    const ctx = this.ctx;
+    const mk = (f, v, ty, det) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = ty;
+      osc.frequency.setValueAtTime(f, at);
+      if (glide) osc.frequency.exponentialRampToValueAtTime(f * glide, at + dur * 0.8);
+      if (det) osc.detune.value = det;
+
+      const peak = Math.max(v, 0.0001);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(peak, at + 0.008);          // toza hujum
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);     // tabiiy so'nish
+      osc.connect(g).connect(this.warm);
+      osc.start(at);
+      osc.stop(at + dur + 0.06);
+    };
+    mk(freq, vol, type, 0);
+    mk(freq * 2, vol * 0.16, 'sine', 6);      // yorug'lik beruvchi oktava
+  },
+
   /* seq: [chastota, boshlanish (s), davomiyligi (s), balandlik] */
-  play(seq, type) {
+  play(seq, type, glide) {
     const ctx = this.ready();
     if (!ctx) return;
     const t0 = ctx.currentTime + 0.02;
     seq.forEach(([f, at, dur, vol]) => {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = type || 'triangle';
-      osc.frequency.value = f;
-      // Yumshoq kirish va chiqish — "chirt" etgan ovoz bo'lmasligi uchun
-      g.gain.setValueAtTime(0.0001, t0 + at);
-      g.gain.exponentialRampToValueAtTime(vol || 0.22, t0 + at + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
-      osc.connect(g).connect(this.warm);
-      osc.start(t0 + at);
-      osc.stop(t0 + at + dur + 0.05);
+      this.note({ freq: f, at: t0 + at, dur, vol: vol || 0.18,
+                  type: type || 'triangle', glide: glide || 0 });
     });
   },
 
-  /* Word accepted — soft rising pair */
+  /* So'z qabul qilindi — yengil, tez ikki nota. Eng ko'p eshitiladigan
+     ovoz, shuning uchun ataylab qisqa va past. */
   chime() {
-    this.play([[659, 0, .16, .15], [988, .06, .3, .16]], 'sine');
+    this.play([[784, 0, .10, .13], [1175, .05, .20, .12]], 'sine');
   },
 
-  /* Puzzle cleared — bright three-step lift */
+  /* Puzzle yechildi — mazhur trezvuchie bo'ylab yorug' ko'tarilish */
   solved() {
-    this.play([[523, 0, .14, .2], [784, .09, .14, .2],
-               [1047, .18, .2, .22], [1568, .28, .5, .2]], 'triangle');
+    this.play([[523, 0, .12, .16], [659, .07, .12, .16],
+               [784, .14, .14, .17], [1047, .22, .38, .18]], 'triangle');
   },
 
-  /* Level complete — wide fanfare, clearly bigger than a puzzle */
+  /* Daraja tugadi — kengroq va uzunroq, puzzle ovozidan aniq farq qiladi */
   fanfare() {
     this.play([
-      [392, 0, .18, .2], [523, .09, .18, .2], [659, .18, .18, .2],
-      [784, .27, .22, .24], [659, .46, .12, .18], [784, .55, .12, .2],
-      [1047, .64, .28, .24], [1568, .90, .9, .22]
+      [523, 0,   .14, .17], [659, .08, .14, .17], [784, .16, .16, .18],
+      [1047, .26, .20, .20],
+      [880, .46, .12, .16], [1047, .54, .12, .18], [1319, .62, .18, .19],
+      [1568, .76, .70, .17]
     ], 'triangle');
   },
 
-  /* Bonus word — tiny glass bell */
+  /* Bonus so'z — mayda shisha qo'ng'iroqcha */
   ding() {
-    this.play([[1760, 0, .09, .1], [2637, .05, .3, .07]], 'sine');
+    this.play([[2093, 0, .07, .07], [3136, .04, .22, .045]], 'sine');
   },
 
-  /* Reward claimed — coin-drop sparkle */
+  /* Mukofot olindi — pastdan yuqoriga sirg'aluvchi uchqun */
   reward() {
-    this.play([[784, 0, .09, .18], [1175, .06, .09, .18],
-               [1568, .13, .12, .18], [2093, .21, .45, .16]], 'triangle');
+    this.play([[659, 0, .09, .14], [988, .07, .09, .15],
+               [1319, .14, .11, .15], [1976, .22, .40, .13]], 'triangle');
+  },
+
+  /* Noto'g'ri so'z — juda qisqa, pastga tushuvchi. Jazolovchi emas. */
+  miss() {
+    this.play([[311, 0, .13, .10]], 'sine', 0.82);
   }
 };
 
@@ -186,12 +219,7 @@ const Music = {
 
   timer: null, nextTime: 0, on: false, since: 0, prev: -1,
 
-  /* O'CHIRILGAN. Fon musiqasi charchatgani uchun butunlay to'xtatildi —
-     kod qoldi, lekin ishga tushmaydi. Qayta yoqish uchun shuni true qiling. */
-  ENABLED: false,
-
   start() {
-    if (!this.ENABLED) return;
     if (this.on) return;
     // Faqat ATAYLAB yoqilgan bo'lsa chalinadi
     if (!State.progress || !State.progress.music) return;
@@ -289,8 +317,12 @@ function normalize(p) {
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
     muted: !!p.muted,
-    // Majburan o'chiq: ilgari yoqib qo'yganlarda ham qayta boshlanmasin
-    music: false
+    /* Fon musiqasi bir marta MAJBURAN tozalanadi. Ilgari u avtomatik
+       yonib qolgan va bezor qilgan edi; musicReset bayrog'i shu tozalash
+       aynan bir marta bo'lishini kafolatlaydi, keyin o'yinchining tanlovi
+       hurmat qilinadi. */
+    music: p.musicReset ? !!p.music : false,
+    musicReset: true
   };
 }
 
@@ -1114,6 +1146,7 @@ function submit(word) {
   }
 
   haptic('err');
+  Sound.miss();
   flash(word, 'miss', 500);
 }
 
