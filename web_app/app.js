@@ -544,11 +544,26 @@ const EDGE_PAD = 118;      // yuqoridagi bo'sh joy
 const BOTTOM_PAD = 150;    // pastda ko'proq: 1-bosqich nomi shu yerga sig'adi
 const BANNER_GAP = 76;     // bosqich nomi uchun qo'shimcha oraliq
 
-function renderMap() {
+/*
+  Xarita va ro'yxat har ochilganda butun DOM'ni qayta qurardi: 10 ta tugun,
+  SVG yo'l, 50 ta katak. Ko'zga bu miltillash bo'lib urilardi va sekin
+  telefonda seziladigan to'xtash berardi.
+
+  Endi holatdan qisqa "imzo" olinadi. Imzo o'zgarmagan bo'lsa — qayta
+  chizishning ma'nosi yo'q va funksiya darhol qaytadi.
+*/
+let mapSig = '', packSig = '';
+
+function renderMap(force) {
   const scroll = $('map-scroll');
   const inner = $('map-inner');
   const nodes = $('map-nodes');
   const svg = $('map-path');
+
+  const sig = (scroll.clientWidth || 0) + '|' +
+              JSON.stringify(State.progress.solved) + '|' + State.levels.length;
+  if (!force && sig === mapSig && nodes.children.length) return;
+  mapSig = sig;
 
   const n = State.levels.length;
   // Ekran hali joylashmagan bo'lsa clientWidth 0 bo'ladi va hamma tugun bitta
@@ -583,7 +598,12 @@ function renderMap() {
     `<path d="${d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="6"
            stroke-linecap="round" stroke-dasharray="2 18"/>`;
 
-  nodes.innerHTML = '';
+  /* Elementlar avval XOTIRADAGI fragmentga yig'iladi va oxirida bir marta
+     DOM'ga qo'yiladi. Ilgari har tugun alohida qo'shilardi va brauzer har
+     safar joylashuvni qayta hisoblab, birinchi chizilishni ~100 ms ga
+     cho'zardi — bu ko'zga to'xtash bo'lib bilinardi. */
+  const frag = document.createDocumentFragment();
+
   // -1 = hali topilmadi. Oldin 0 dan boshlanardi va "0 yolg'on qiymat"
   // bo'lgani uchun 1-daraja joriy bo'lganda ham izlash to'xtamasdi;
   // hamma daraja tugagan holatda esa xarita eng pastga surilib qolardi.
@@ -602,7 +622,7 @@ function renderMap() {
       const b = el('div', 'stage-banner', 'CHAPTER ' + lv.stage + ' · ' + lv.stageName);
       b.style.top = (pts[i].y + (i === 0 ? BOTTOM_PAD * 0.5
                                          : NODE_GAP * 0.5 + BANNER_GAP * 0.5)) + 'px';
-      nodes.appendChild(b);
+      frag.appendChild(b);
     }
 
     const btn = el('button', 'node ' + (complete ? 'done' : unlocked ? 'current' : 'locked'));
@@ -639,7 +659,7 @@ function renderMap() {
       deco.style.top = pts[i].y + 'px';
       // Yo'lning qaysi tomonida bo'sh joy ko'proq — o'sha tomonga qo'yamiz
       deco.classList.add(pts[i].x < w / 2 ? 'right' : 'left');
-      nodes.appendChild(deco);
+      frag.appendChild(deco);
     }
 
     if (unlocked) {
@@ -648,8 +668,11 @@ function renderMap() {
         openLevel(i);
       };
     }
-    nodes.appendChild(btn);
+    frag.appendChild(btn);
   });
+
+  // Bitta amalda almashtiramiz — brauzer joylashuvni faqat bir marta hisoblaydi
+  nodes.replaceChildren(frag);
 
   updateCoins();     // ball VA kalitlar — ikkalasi ham yangilansin
 
@@ -676,7 +699,7 @@ function watchMapSize() {
     const w = scroll.clientWidth, h = scroll.clientHeight;
     if (w === mapW && h === mapH) return;      // haqiqiy o'zgarish bo'lsagina
     mapW = w; mapH = h;
-    renderMap();
+    renderMap(true);
   }).observe(scroll);
 }
 
@@ -760,6 +783,12 @@ function renderPack() {
   $('btn-pack-next').disabled = !(i + 1 < State.levels.length && isUnlocked(i + 1));
 
   const grid = $('pack-grid');
+  // Faqat holat o'zgarganda qayta quramiz — aks holda 50 ta katak har
+  // safar yangidan yaratilib miltillashga sabab bo'lardi.
+  const sig = i + '|' + done + '|' + lv.puzzles;
+  if (sig === packSig && grid.children.length) return;
+  packSig = sig;
+
   grid.innerHTML = '';
   for (let k = 0; k < lv.puzzles; k++) {
     const state = k < done ? 'done' : (k === done ? 'now' : 'locked');
