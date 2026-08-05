@@ -63,6 +63,326 @@
      "puzzles": 50
     }
    ]
+  },
+  {
+   "stage": 3,
+   "name": "Foods",
+   "file": "stage_03.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Pizza",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Sushi",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Burger",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Pasta",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Tacos",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 4,
+   "name": "Animals",
+   "file": "stage_04.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Lion",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Panda",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Eagle",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Shark",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Tiger",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 5,
+   "name": "Sports",
+   "file": "stage_05.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Soccer",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Tennis",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Boxing",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Cricket",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Hockey",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 6,
+   "name": "Fruits",
+   "file": "stage_06.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Apple",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Mango",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Banana",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Cherry",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Orange",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 7,
+   "name": "Towers",
+   "file": "stage_07.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Eiffel",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Pisa",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Big Ben",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Petronas",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Burj Khalifa",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 8,
+   "name": "Cars",
+   "file": "stage_08.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Tesla",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Toyota",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Ferrari",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Bugatti",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Mercedes",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 9,
+   "name": "Mythical",
+   "file": "stage_09.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Dragon",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Phoenix",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Unicorn",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Kraken",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Griffin",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 10,
+   "name": "Gems",
+   "file": "stage_10.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Diamond",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Ruby",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Emerald",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Pearl",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Sapphire",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 11,
+   "name": "Legends",
+   "file": "stage_11.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Sherlock",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Dracula",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Aladdin",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Hercules",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Robin Hood",
+     "puzzles": 50
+    }
+   ]
+  },
+  {
+   "stage": 12,
+   "name": "Wonders",
+   "file": "stage_12.json",
+   "levels": [
+    {
+     "level": 1,
+     "name": "Pyramid",
+     "puzzles": 50
+    },
+    {
+     "level": 2,
+     "name": "Colosseum",
+     "puzzles": 50
+    },
+    {
+     "level": 3,
+     "name": "Petra",
+     "puzzles": 50
+    },
+    {
+     "level": 4,
+     "name": "Stonehenge",
+     "puzzles": 50
+    },
+    {
+     "level": 5,
+     "name": "Taj Mahal",
+     "puzzles": 50
+    }
+   ]
   }
  ]
 }

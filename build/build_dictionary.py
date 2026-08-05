@@ -48,7 +48,12 @@ MIN_LEN = 3
 MAX_LEN = 9
 
 # zipf shkalasi: 7 = "the", 4 = 10 000 so'zda bir marta, 3 = 100 000 da bir, 2 = millionda bir.
-CORE_ZIPF = 3.55   # yechim so'zlari uchun — o'rtacha o'quvchi taniydigan daraja
+# Bo'sag'a o'lchov bilan tanlandi. 12 bosqich uchun 3000 ta yaroqli baza
+# so'z kerak; har bo'sag'ada nechta chiqishi sanab ko'rilgan:
+#     3.80 -> 2956 (yetmaydi)   3.60 -> 3873   3.40 -> 4987
+# 3.60 tanlandi: zaxira yetarli va so'zlar hali ham tanish qoladi
+# (taxminan eng ko'p ishlatiladigan 5300 so'z).
+CORE_ZIPF = 3.60   # yechim so'zlari uchun — o'rtacha o'quvchi taniydigan daraja
 # Bonus bo'sag'asi ATAYLAB core'ga yaqin. 2.60 da ro'yxatga 'aam', 'dak', 'goran'
 # kabi minglab chet tili tokeni va qisqartma tushib qolgan edi — o'yinchi ularni
 # tasodifan yasab +1 olardi va tarjima oynasida ma'nosiz so'z ko'rardi.
@@ -406,7 +411,9 @@ def main():
             full.append(w)
             # BONUS_ONLY so'zlari full'da qoladi, lekin core'ga tushmaydi:
             # o'yinchi ularni topsa +1 oladi, ammo to'rda katak bo'lmaydi.
-            if z >= CORE_ZIPF and not is_inflected(w) and w not in BONUS_ONLY:
+            # BONUS_ONLY endi ishlatilmaydi: olmoshlar ham to'liq huquqli
+            # so'z sifatida qabul qilinadi (ular ham o'rganiladigan lug'at).
+            if z >= CORE_ZIPF and not is_inflected(w):
                 core.append(w)
 
     core.sort()

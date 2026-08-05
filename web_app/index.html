@@ -6,7 +6,7 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -109,7 +109,7 @@
           <!-- Qaysi versiya ochilganini bir qarashda bilish uchun. Kesh yoki
                noto'g'ri manzil tufayli eski nusxa ochilsa, bu raqam eskicha
                qoladi va muammo darhol ko'rinadi. -->
-          <p class="build-stamp">Build <b id="build-no">22</b></p>
+          <p class="build-stamp">Build <b id="build-no">23</b></p>
         </div>
       </div>
     </div>
@@ -164,10 +164,7 @@
     <button id="btn-back" class="icon-round solid" aria-label="Back">‹</button>
     <h1 class="screen-title" id="level-title">…</h1>
     <div class="spacer"></div>
-    <button id="btn-hint" class="chip chip-key tappable" aria-label="Reveal a letter">
-      <span class="chip-ico">🗝️</span><span id="key-count">0</span>
-    </button>
-    <div class="chip chip-gem"><span class="chip-ico">💎</span><span id="coin-count">0</span></div>
+    <div class="chip chip-gem"><span class="chip-ico">💠</span><span id="coin-count">0</span></div>
   </header>
 
   <section id="tray"><div id="grid"></div></section>
@@ -175,12 +172,20 @@
   <div id="current-word"><span></span></div>
 
   <section id="stage-area">
+    <!-- Aralashtirish CHAPDA, kalit esa O'NGDA ekranning o'rtaroq
+         balandligida — barmoq ikkalasiga ham qulay yetadi. -->
+    <button id="btn-shuffle" class="icon-round solid shuffle" aria-label="Shuffle">🔀</button>
+
     <div id="wheel">
       <div id="plate"></div>
       <canvas id="line"></canvas>
       <div id="letters"></div>
     </div>
-    <button id="btn-shuffle" class="icon-round solid shuffle" aria-label="Shuffle">⇄</button>
+
+    <button id="btn-hint" class="key-btn" aria-label="Reveal a letter">
+      <span class="key-ico">⚷</span>
+      <span class="key-n" id="key-count">0</span>
+    </button>
   </section>
 </section>
 
@@ -228,6 +233,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

@@ -170,13 +170,21 @@ const Sound = {
                [880.00, .17, .14, .16], [1174.66, .27, .55, .15]], 'triangle');
   },
 
-  /* Daraja tugadi — kengroq va uzunroq, puzzle ovozidan aniq farq qiladi */
+  /*
+    Daraja/bosqich tugadi — bayram.
+
+    Ilgari bu ham boshqa ovozlar kabi bir xil tembr edi va farqi
+    sezilmasdi. Endi u ANIQ boshqacha: pastdan yuqoriga uch pog'onali
+    ko'tarilish, so'ng tepada ikki nota birga yangraydi (akkord) va
+    uzoq cho'ziladi. Bu "yakun" hissini beradi.
+  */
   fanfare() {
     this.play([
-      [523, 0,   .14, .17], [659, .08, .14, .17], [784, .16, .16, .18],
-      [1047, .26, .20, .20],
-      [880, .46, .12, .16], [1047, .54, .12, .18], [1319, .62, .18, .19],
-      [1568, .76, .70, .17]
+      [392, 0,    .16, .18], [523, .10, .16, .18], [659, .20, .16, .18],
+      [784, .30,  .18, .20], [1047, .42, .22, .22],
+      // Yakuniy akkord: uch nota bir vaqtda, uzoq so'nadi
+      [784, .62, 1.10, .16], [1047, .62, 1.10, .18], [1319, .62, 1.15, .16],
+      [1568, .70, 1.05, .12]
     ], 'triangle');
   },
 
@@ -496,8 +504,14 @@ const Store = {
 
 /* ------------------------ Ma'lumotlarni yuklash --------------------------- */
 
+/* Ma'lumot fayllari uchun versiya belgisi.
+   index.json va stage_*.json da ?v= yo'q edi, shuning uchun yangi
+   bosqichlar chiqarilganda brauzer eski nusxani keshdan olib qolardi
+   va o'yinchi faqat eski bosqichlarni ko'rardi. */
+const DATA_V = '23';
+
 async function loadIndex() {
-  State.index = await (await fetch('data/index.json')).json();
+  State.index = await (await fetch('data/index.json?v=' + DATA_V)).json();
   // Barcha darajalarni bitta tekis ro'yxatga yig'amiz — xarita shu bo'yicha quriladi
   State.levels = [];
   State.index.stages.forEach((s) => {
@@ -513,7 +527,7 @@ async function loadIndex() {
 
 async function loadDict() {
   try {
-    const r = await fetch('data/dict.json');
+    const r = await fetch('data/dict.json?v=' + DATA_V);
     if (r.ok) State.dict = await r.json();
   } catch (_) { State.dict = {}; }
 }
@@ -521,7 +535,7 @@ async function loadDict() {
 async function loadStage(n) {
   if (State.stages[n]) return State.stages[n];
   const info = State.index.stages.find((s) => s.stage === n);
-  State.stages[n] = await (await fetch('data/' + info.file)).json();
+  State.stages[n] = await (await fetch('data/' + info.file + '?v=' + DATA_V)).json();
   return State.stages[n];
 }
 
@@ -839,7 +853,9 @@ function renderPack() {
     const milestone = (k + 1) % 10 === 0;
     const b = el('button', 'pz ' + state + (milestone ? ' milestone' : ''));
     b.appendChild(el('span', 'pz-no', String(k + 1)));
-    if (state === 'done') b.appendChild(el('span', 'pz-mark', '★'));
+    // Har bosqichning o'z belgisi katak ustida suv nishoni bo'lib turadi:
+    // Kanadada chinor bargi, Misrda tuya, Yaponiyada sakura...
+    if (icon) b.appendChild(el('span', 'pz-emblem', icon));
     if (state === 'locked') b.appendChild(el('span', 'pz-mark', '🔒'));
     if (state !== 'locked') {
       b.onclick = () => { haptic('tap'); openPuzzleAt(k); };

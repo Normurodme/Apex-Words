@@ -415,70 +415,89 @@ body {
 
 #pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 11px; }
 
-/* Puzzle — xaritaga bosilgan kvadrat muhr */
+/*
+  Puzzle — XARITAGA BOSILGAN MUM MUHR.
+
+  To'rtburchak butunlay tashlab yuborilgan. Har katak sakkiz qirrali muhr:
+  clip-path bilan burchaklari kesilgan, atrofida tishli halqa, o'rtasida
+  raqam va ortida shu bosqichning belgisi (Kanadada chinor bargi, Misrda
+  tuya, Yaponiyada sakura). Shu ikkisi — qirra va belgi — 50 ta bir xil
+  katakni har bosqichda boshqacha ko'rsatadi.
+*/
 .pz {
   position: relative;
   aspect-ratio: 1;
-  border: var(--line);
-  border-radius: var(--r-md);
+  border: none;
+  background: none;
   display: grid; place-items: center;
   font-family: inherit;
   font-size: 22px; font-weight: 700;
   cursor: pointer;
   transition: transform var(--tap);
 }
-.pz:active { transform: scale(.92); }
-.pz .pz-no { position: relative; z-index: 2; }
-.pz-mark { position: absolute; bottom: 3px; right: 7px; z-index: 2; font-size: 11px; }
+.pz:active { transform: scale(.9) rotate(-3deg); }
 
-/* Ichki ikki chiziq — eski atlas ramkasi */
+/* Muhrning o'zi — sakkiz qirrali jism */
+.pz::before {
+  content: "";
+  position: absolute; inset: 0;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%,
+                     30% 100%, 0 70%, 0 30%);
+  box-shadow: inset 0 -6px 10px rgba(0,0,0,.2), inset 0 3px 6px rgba(255,255,255,.35);
+}
+/* Ichki tishli halqa */
 .pz::after {
   content: "";
-  position: absolute; inset: 4px;
-  border-radius: 7px;
-  border: 1px solid rgba(255,255,255,.35);
+  position: absolute; inset: 5px;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%,
+                     30% 100%, 0 70%, 0 30%);
+  border: 1px dashed rgba(255,255,255,.4);
   pointer-events: none;
 }
 
-.pz.done {
-  background: linear-gradient(var(--moss-1), var(--moss-2));
-  border-color: var(--moss-3);
-  box-shadow: 0 3px 0 var(--moss-3), var(--shadow);
-  color: #eaf7ee;
-}
-.pz.done .pz-mark { color: var(--gold-1); }
+.pz .pz-no { position: relative; z-index: 3; }
 
-.pz.now {
-  background: radial-gradient(circle at 38% 26%, var(--gold-1), var(--gold-2) 72%);
-  border-color: var(--gold-3);
-  box-shadow: 0 3px 0 var(--gold-3), 0 0 0 4px rgba(201,148,42,.22), var(--shadow-2);
-  color: #4a3405;
+/* Bosqich belgisi — muhr ortidagi suv nishoni */
+.pz-emblem {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 30px;
+  opacity: .26;
+  z-index: 1;
+  pointer-events: none;
 }
+.pz-mark { position: absolute; bottom: 4px; right: 8px; z-index: 3; font-size: 11px; }
 
-.pz.locked {
+/* Yechilgan — yashil mum */
+.pz.done { color: #f2fbf5; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.pz.done::before { background: radial-gradient(circle at 36% 26%, var(--moss-1), var(--moss-2) 62%, var(--moss-3)); }
+.pz.done .pz-emblem { opacity: .34; }
+
+/* Navbatdagi — oltin mum, atrofida nur */
+.pz.now { color: #4a3405; }
+.pz.now::before {
+  background: radial-gradient(circle at 36% 24%, #fff2c4, var(--gold-1) 45%, var(--gold-2) 75%, var(--gold-3));
+  filter: drop-shadow(0 0 10px rgba(201,148,42,.55));
+}
+.pz.now .pz-emblem { opacity: .42; }
+
+/* Qulflangan — hali bosilmagan, bo'sh joy */
+.pz.locked { color: rgba(35,48,31,.3); cursor: not-allowed; }
+.pz.locked::before {
   background: linear-gradient(var(--p-2), var(--p-4));
-  border-color: rgba(122,90,30,.35);
-  box-shadow: inset 0 2px 5px rgba(90,60,20,.18);
-  color: rgba(35,48,31,.32);
-  cursor: not-allowed;
+  box-shadow: inset 0 2px 6px rgba(90,60,20,.25);
 }
-.pz.locked::after { border-color: rgba(255,255,255,.25); }
-.pz.locked .pz-mark { opacity: .45; }
+.pz.locked::after { border-color: rgba(122,90,30,.28); }
+.pz.locked .pz-emblem { opacity: .12; }
 
-/* Har o'ninchi — burchakda oltin varaq. FON qatlamida, matnni to'smaydi. */
-.pz.milestone { border-color: var(--gold-2); }
-.pz.milestone.done {
-  background-image: linear-gradient(135deg, var(--gold-2) 0 15px, transparent 15px),
-                    linear-gradient(var(--moss-1), var(--moss-2));
+/* Har o'ninchi — kattaroq va oltin gardishli bosqich toshi */
+.pz.milestone .pz-no { font-size: 1.12em; }
+.pz.milestone::after {
+  inset: 3px;
+  border: 2px solid var(--gold-2);
+  border-style: solid;
 }
-.pz.milestone.now {
-  background-image: linear-gradient(135deg, #fff3c9 0 15px, transparent 15px),
-                    radial-gradient(circle at 38% 26%, var(--gold-1), var(--gold-2) 72%);
-}
-.pz.milestone.locked {
-  background-image: linear-gradient(135deg, rgba(201,148,42,.55) 0 15px, transparent 15px),
-                    linear-gradient(var(--p-2), var(--p-4));
-}
+.pz.milestone.locked::after { border-color: rgba(201,148,42,.45); }
 
 /* Pastki navigatsiya — charm tasma */
 #pack-nav {
@@ -648,7 +667,26 @@ body {
   box-shadow: 0 0 0 4px rgba(165,42,53,.22), 0 4px 0 var(--seal-3);
 }
 
-.shuffle { position: absolute; right: 2px; bottom: 6px; width: 50px; height: 50px; font-size: 24px; }
+/* Aralashtirish CHAPDA pastda */
+.shuffle { position: absolute; left: 2px; bottom: 6px; width: 50px; height: 50px; font-size: 22px; }
+
+/* Kalit — O'NGDA, ekranning o'rtaroq balandligida (eski kitobcha o'rni) */
+.key-btn {
+  position: absolute; right: 0; top: 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: 56px; padding: 8px 0 7px;
+  border: 2px solid var(--gold-3);
+  border-radius: var(--r-md);
+  background: linear-gradient(var(--p-1), var(--p-3));
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow);
+  color: var(--ink-1);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform var(--tap), box-shadow var(--tap);
+}
+.key-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-3); }
+.key-btn .key-ico { font-size: 24px; line-height: 1; color: var(--gold-3); }
+.key-btn .key-n { font-size: 15px; font-weight: 700; line-height: 1; }
 
 /* ============================ REYTING ============================ */
 

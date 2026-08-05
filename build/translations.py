@@ -433,7 +433,18 @@ def main():
         except json.JSONDecodeError:
             existing = {}
 
-    merged = {**existing, **UZ}
+    # Avtomatik tarjimalar (autotranslate.py) — QO'LDA yozilganidan PASTROQ
+    # ustuvorlikda. Shu tartib muhim: avtomatika xato tarjima berishi mumkin
+    # ("bat" -> ko'rshapalak yoki tayoq), qo'lda tuzatilgani esa doim yutadi.
+    auto = {}
+    auto_path = ROOT / "data" / "uz_auto.json"
+    if auto_path.exists():
+        try:
+            auto = json.loads(auto_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            auto = {}
+
+    merged = {**existing, **auto, **UZ}
     merged = {k: v for k, v in sorted(merged.items())}
     out.write_text(json.dumps(merged, ensure_ascii=False, indent=0), encoding="utf-8")
 
@@ -441,7 +452,8 @@ def main():
     (ROOT / "data" / "dict.json").write_text(
         json.dumps(merged, ensure_ascii=False, indent=0), encoding="utf-8")
 
-    print(f"UZ lug'atida: {len(UZ):,} so'z")
+    print(f"Qo'lda yozilgan : {len(UZ):,} so'z")
+    print(f"Avtomatik       : {len(auto):,} so'z")
     print(f"dict.json ga yozildi: {len(merged):,} so'z")
     return 0
 

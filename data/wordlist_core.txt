@@ -1,7 +1,4 @@
 abandon
-abdomen
-abdominal
-abide
 ability
 able
 abnormal
@@ -10,7 +7,6 @@ abortion
 about
 above
 abroad
-abruptly
 absence
 absent
 absolute
@@ -64,7 +60,6 @@ addiction
 addition
 address
 adequate
-adhere
 adjacent
 adjust
 admiral
@@ -169,16 +164,12 @@ amateur
 amazingly
 amber
 ambient
-ambiguous
 ambition
 ambitious
 ambulance
-ambush
 amen
-amend
 amendment
 amid
-amidst
 amnesty
 among
 amongst
@@ -202,14 +193,12 @@ animation
 anime
 ankle
 announce
-announcer
 annual
 annually
 anonymous
 another
 answer
 ant
-antarctic
 antenna
 anthem
 antique
@@ -242,7 +231,6 @@ approach
 approval
 approve
 apt
-aquarium
 aquatic
 arbitrary
 arc
@@ -268,7 +256,6 @@ array
 arrest
 arrival
 arrive
-arrogance
 arrogant
 arrow
 arsenal
@@ -299,7 +286,6 @@ associate
 assume
 assurance
 assure
-asteroid
 asthma
 astronaut
 astronomy
@@ -312,7 +298,6 @@ atomic
 atop
 attach
 attack
-attacker
 attain
 attempt
 attend
@@ -337,10 +322,8 @@ autism
 auto
 automatic
 autonomy
-autopsy
 autumn
 auxiliary
-avail
 available
 avenue
 average
@@ -359,11 +342,9 @@ awhile
 awkward
 axe
 axis
-baba
 baby
 bachelor
 back
-backdrop
 backlash
 backstage
 backup
@@ -399,8 +380,6 @@ bank
 banker
 bankrupt
 banner
-banquet
-baptism
 bar
 barbecue
 barber
@@ -429,7 +408,6 @@ bathroom
 batman
 baton
 battalion
-batter
 battery
 battle
 beach
@@ -447,7 +425,6 @@ because
 become
 bed
 bedroom
-bedtime
 bee
 beef
 beer
@@ -511,7 +488,6 @@ bite
 bitter
 bizarre
 black
-blackout
 bladder
 blade
 blah
@@ -525,21 +501,15 @@ bless
 blind
 blink
 bliss
-blitz
 bloc
 block
-blockade
-bloke
 blonde
 blood
 bloom
 blossom
 blow
 blue
-bluff
 blunt
-blur
-blush
 board
 boat
 bodily
@@ -556,7 +526,6 @@ bonus
 book
 boom
 boost
-booster
 boot
 booth
 booze
@@ -580,7 +549,6 @@ bounty
 bourbon
 bout
 bow
-bowel
 bowl
 box
 boxer
@@ -595,7 +563,6 @@ branch
 brand
 brass
 brave
-bravery
 bravo
 breach
 bread
@@ -626,20 +593,16 @@ broadly
 broker
 bronze
 brother
-brow
 brown
-browse
 browser
 brunswick
 brush
 brutal
 brutality
-brutally
 bubble
 bucket
 buddy
 budget
-buff
 buffalo
 buffer
 bug
@@ -655,7 +618,6 @@ bully
 bum
 bump
 bumper
-bun
 bunch
 bundle
 bunker
@@ -681,7 +643,6 @@ buzz
 bye
 bypass
 cab
-cabbage
 cabin
 cabinet
 cable
@@ -698,8 +659,6 @@ caliber
 call
 caller
 calm
-calmly
-calorie
 camera
 camp
 campaign
@@ -714,7 +673,6 @@ cane
 cannon
 cannot
 canon
-canton
 canvas
 canyon
 cap
@@ -726,7 +684,6 @@ capsule
 captain
 caption
 captive
-captivity
 capture
 car
 caravan
@@ -749,12 +706,9 @@ carrier
 carrot
 carry
 cart
-cartel
 cartoon
-cartridge
 case
 cash
-cashier
 casino
 cast
 caste
@@ -767,10 +721,8 @@ catalogue
 catalyst
 catch
 category
-cater
 cathedral
 cattle
-caucus
 cause
 caution
 cautious
@@ -819,7 +771,6 @@ chap
 chapel
 chapter
 character
-charcoal
 charge
 charger
 charity
@@ -835,7 +786,6 @@ cheek
 cheer
 cheerful
 cheese
-cheesy
 chef
 chemical
 chemistry
@@ -851,7 +801,6 @@ childhood
 childish
 chili
 chill
-chimney
 chin
 chip
 chocolate
@@ -868,7 +817,6 @@ chronicle
 chuck
 chunk
 church
-cigar
 cigarette
 cinema
 cinematic
@@ -879,12 +827,10 @@ circus
 citation
 cite
 citizen
-citrus
 city
 civic
 civil
 civilian
-clad
 claim
 clan
 clarify
@@ -896,7 +842,6 @@ classical
 classroom
 classy
 clause
-claw
 clay
 clean
 cleaner
@@ -916,7 +861,6 @@ climb
 clinic
 clinical
 clip
-cloak
 clock
 clone
 close
@@ -926,7 +870,6 @@ closet
 closure
 cloth
 cloud
-cloudy
 clown
 club
 clue
@@ -970,9 +913,7 @@ colony
 color
 colorful
 colour
-colt
 column
-columnist
 coma
 combat
 combine
@@ -986,7 +927,6 @@ comfy
 comic
 command
 commander
-commence
 comment
 commerce
 commit
@@ -998,7 +938,6 @@ communal
 communion
 communism
 community
-commute
 compact
 companion
 company
@@ -1017,7 +956,6 @@ composite
 compound
 comprise
 computer
-comrade
 concept
 concern
 concert
@@ -1047,7 +985,6 @@ console
 constant
 construct
 consul
-consulate
 consult
 consume
 consumer
@@ -1067,7 +1004,6 @@ contrast
 control
 convert
 convey
-convict
 convince
 convoy
 cook
@@ -1091,7 +1027,6 @@ correct
 correctly
 corridor
 corrupt
-cortex
 cosmetic
 cosmic
 cost
@@ -1118,7 +1053,6 @@ courier
 course
 court
 courtesy
-courtroom
 courtyard
 cousin
 cove
@@ -1135,7 +1069,6 @@ craft
 crane
 crank
 crash
-crater
 crawl
 crazy
 cream
@@ -1150,7 +1083,6 @@ creed
 creek
 creep
 creepy
-crescent
 crest
 crew
 cricket
@@ -1176,7 +1108,6 @@ cruel
 cruelty
 cruise
 crunch
-crusade
 crush
 crust
 cry
@@ -1185,12 +1116,10 @@ cube
 cubic
 cue
 cuisine
-culinary
 cult
 cultural
 culture
 cup
-curator
 curb
 cure
 curiosity
@@ -1203,7 +1132,6 @@ curry
 curse
 curtain
 curve
-cushion
 custody
 custom
 customer
@@ -1211,9 +1139,7 @@ cut
 cute
 cutter
 cycle
-cyclist
 cylinder
-cynical
 daddy
 daily
 dairy
@@ -1269,7 +1195,6 @@ deer
 default
 defeat
 defect
-defective
 defence
 defend
 defendant
@@ -1280,7 +1205,6 @@ deficit
 define
 definite
 degree
-deity
 delay
 delegate
 delete
@@ -1348,10 +1272,8 @@ dial
 dialogue
 diameter
 diamond
-diarrhea
 diary
 dice
-dictate
 dictator
 die
 diesel
@@ -1396,7 +1318,6 @@ discount
 discourse
 discover
 discovery
-discrete
 discuss
 disease
 disgrace
@@ -1413,15 +1334,12 @@ display
 disposal
 dispute
 disregard
-disrupt
-dissent
 distance
 distant
 distinct
 distract
 distress
 district
-disturb
 ditch
 dive
 diverse
@@ -1433,7 +1351,6 @@ division
 divorce
 dock
 doctor
-doctoral
 doctrine
 document
 dodge
@@ -1456,7 +1373,6 @@ donkey
 donor
 doom
 door
-dorm
 dose
 dot
 double
@@ -1485,7 +1401,6 @@ dress
 drift
 drill
 drink
-drip
 drive
 driver
 driveway
@@ -1501,7 +1416,6 @@ dry
 dual
 duchess
 duck
-duct
 dude
 due
 duel
@@ -1509,9 +1423,7 @@ dull
 dumb
 dummy
 dump
-dungeon
 duo
-duplicate
 durable
 duration
 during
@@ -1519,10 +1431,8 @@ dust
 dusty
 duty
 dwarf
-dwell
 dye
 dynamic
-dynamite
 dynasty
 each
 eager
@@ -1540,7 +1450,6 @@ east
 eastern
 easy
 eat
-eccentric
 echo
 eclipse
 ecology
@@ -1556,7 +1465,6 @@ editor
 editorial
 educate
 education
-educator
 effect
 effective
 efficacy
@@ -1570,7 +1478,6 @@ eighth
 eighty
 either
 elaborate
-elastic
 elbow
 elder
 elderly
@@ -1579,7 +1486,6 @@ elect
 election
 electoral
 electric
-electro
 electron
 elegant
 element
@@ -1594,13 +1500,11 @@ elite
 else
 elsewhere
 embassy
-emblem
 embrace
 emerald
 emerge
 emergence
 emergency
-eminent
 emission
 emotion
 emotional
@@ -1619,7 +1523,6 @@ enclosure
 encounter
 encourage
 end
-endeavor
 endless
 endorse
 endurance
@@ -1812,8 +1715,6 @@ favor
 favorable
 favorite
 fear
-fearful
-fearless
 feasible
 feast
 feat
@@ -1838,9 +1739,7 @@ fertile
 fertility
 fest
 festival
-festive
 fetch
-fetish
 fetus
 feud
 fever
@@ -1850,7 +1749,6 @@ fiction
 fictional
 field
 fierce
-fiery
 fifteen
 fifth
 fifty
@@ -1869,7 +1767,6 @@ finale
 finally
 finance
 financial
-finch
 find
 fine
 finger
@@ -1913,18 +1810,14 @@ float
 flock
 flood
 floor
-flop
 floral
 flour
 flow
 flower
 flu
-fluffy
 fluid
 flush
-flux
 fly
-flyer
 foam
 focal
 focus
@@ -1934,7 +1827,6 @@ fold
 folder
 folk
 follow
-follower
 font
 food
 fool
@@ -1949,7 +1841,6 @@ force
 forecast
 forehead
 foreign
-foreman
 foremost
 forest
 forestry
@@ -1986,7 +1877,6 @@ fox
 fraction
 fracture
 fragile
-fragment
 frame
 framework
 franchise
@@ -2032,7 +1922,6 @@ fur
 furious
 furnace
 furniture
-furry
 further
 fury
 fuse
@@ -2050,14 +1939,11 @@ gamble
 game
 gamma
 gang
-gangster
 gap
 garage
 garbage
 garden
 garlic
-garment
-garner
 garrison
 gas
 gasoline
@@ -2101,14 +1987,11 @@ gigantic
 gin
 girl
 give
-giveaway
-glacier
 glad
 gladly
 glance
 glass
 glimpse
-glitter
 global
 globally
 globe
@@ -2129,7 +2012,6 @@ good
 goodman
 goodness
 goodwill
-goofy
 gorgeous
 gorilla
 gosh
@@ -2140,7 +2022,6 @@ governor
 gown
 grab
 grace
-gracious
 grad
 grade
 gradual
@@ -2163,7 +2044,6 @@ grateful
 gratitude
 grave
 gravel
-graveyard
 gravity
 gray
 grease
@@ -2181,7 +2061,6 @@ grid
 grief
 grill
 grim
-grin
 grind
 grip
 grocery
@@ -2211,7 +2090,6 @@ guru
 gut
 guy
 gym
-gypsy
 habit
 habitat
 hack
@@ -2238,7 +2116,6 @@ handsome
 handy
 happen
 happier
-happiest
 happily
 happiness
 happy
@@ -2247,7 +2124,6 @@ harbour
 hard
 harder
 hardly
-hardship
 hardware
 hare
 harm
@@ -2259,7 +2135,6 @@ harper
 harsh
 harvest
 hash
-hassle
 hat
 hatch
 hate
@@ -2277,12 +2152,10 @@ headline
 heal
 health
 healthy
-heap
 hear
 heart
 heartbeat
 heat
-heater
 heaven
 heavenly
 heavily
@@ -2297,8 +2170,8 @@ helmet
 help
 helpful
 helpless
-hen
 hence
+her
 herd
 here
 hereby
@@ -2307,6 +2180,8 @@ heritage
 hero
 heroic
 heroin
+hers
+herself
 hesitate
 hey
 hide
@@ -2321,16 +2196,18 @@ highway
 hike
 hilarious
 hill
+him
+himself
 hint
 hip
 hire
+his
 historian
 historic
 history
 hit
 hobby
 hockey
-hog
 hold
 holder
 hole
@@ -2389,13 +2266,11 @@ hugely
 huh
 hulk
 hull
-hum
 human
 humane
 humanity
 humble
 humidity
-humility
 humor
 humorous
 humour
@@ -2446,14 +2321,12 @@ imagine
 immature
 immediate
 immense
-immensely
 immigrant
 imminent
 immortal
 immune
 immunity
 impact
-impatient
 imperial
 implement
 imply
@@ -2461,7 +2334,6 @@ import
 important
 impose
 impress
-improper
 improve
 impulse
 inability
@@ -2486,7 +2358,6 @@ indicate
 indicator
 indirect
 indoor
-induce
 induction
 industry
 infamous
@@ -2498,7 +2369,6 @@ infinite
 infinity
 inflation
 influence
-influx
 inform
 informal
 infrared
@@ -2551,7 +2421,6 @@ intent
 intention
 inter
 interact
-intercept
 interest
 interface
 interfere
@@ -2567,16 +2436,12 @@ interview
 intimacy
 intimate
 into
-intricate
 introduce
-intuitive
 invade
 invalid
 invasion
 invasive
-invent
 invention
-inventor
 inventory
 invest
 investor
@@ -2593,6 +2458,8 @@ isolate
 isolation
 issue
 item
+its
+itself
 ivory
 jacket
 jail
@@ -2608,13 +2475,11 @@ jerk
 jet
 jewelry
 job
-jockey
 join
 joint
 jointly
 joke
 joker
-jolly
 journey
 joy
 judge
@@ -2634,13 +2499,10 @@ just
 justice
 justify
 juvenile
-kang
-karate
 karma
 keen
 keep
 keeper
-kernel
 key
 keyboard
 khan
@@ -2655,7 +2517,6 @@ kindness
 kingdom
 kiss
 kitchen
-kite
 kitten
 knee
 knife
@@ -2666,7 +2527,6 @@ knockout
 knot
 know
 knowledge
-kung
 lab
 label
 labor
@@ -2692,7 +2552,6 @@ lantern
 lap
 large
 largely
-larvae
 laser
 last
 lastly
@@ -2701,7 +2560,6 @@ lately
 later
 lateral
 latest
-latitude
 latter
 laugh
 laughter
@@ -2748,25 +2606,21 @@ lender
 length
 lengthy
 lens
-leopard
 less
 lesser
 lesson
 let
 lethal
 letter
-lettuce
 level
 lever
 leverage
 levy
 liability
 liable
-liaison
 liar
 liberal
 liberty
-librarian
 library
 license
 lick
@@ -2804,7 +2658,6 @@ literacy
 literal
 literally
 literary
-lithium
 litter
 little
 live
@@ -2831,13 +2684,11 @@ lone
 lonely
 long
 longer
-longevity
 look
 lookout
 loop
 loose
 loosely
-lore
 lose
 loser
 loss
@@ -2857,16 +2708,12 @@ loyalty
 luck
 luckily
 lucky
-lucrative
 luggage
-lumber
 lump
 lunar
 lunch
 lung
 lure
-lush
-luxurious
 luxury
 lynch
 lyric
@@ -2874,7 +2721,6 @@ machine
 machinery
 macro
 mad
-madam
 madness
 magazine
 magic
@@ -2888,7 +2734,6 @@ mail
 main
 mainly
 maintain
-majestic
 majesty
 major
 majority
@@ -2904,7 +2749,6 @@ manager
 mandate
 mandatory
 manga
-mango
 manifest
 manifesto
 mankind
@@ -2925,7 +2769,6 @@ margin
 marginal
 marijuana
 marine
-marital
 mark
 marker
 market
@@ -2935,14 +2778,12 @@ martial
 marvel
 mascot
 masculine
-mash
 mask
 mass
 massacre
 massage
 massive
 master
-mastery
 mat
 match
 mate
@@ -3009,7 +2850,6 @@ metabolic
 metal
 metallic
 metaphor
-meteor
 meter
 method
 metric
@@ -3035,7 +2875,7 @@ milk
 mill
 million
 mind
-miner
+mine
 mineral
 miniature
 minimal
@@ -3057,7 +2897,6 @@ mission
 mist
 mistake
 mistaken
-mister
 mistress
 mix
 mixture
@@ -3111,7 +2950,6 @@ mortal
 mortality
 mortar
 mortgage
-mosaic
 mosque
 mosquito
 most
@@ -3136,31 +2974,27 @@ mud
 muddy
 mug
 multiple
-multitude
 mum
-mummy
 municipal
 murder
 murderer
 muscle
 muscular
-muse
 museum
 mushroom
 music
 musical
 musician
 must
-mustang
 mustard
 mutant
 mutation
 mute
 mutual
 mutually
+myself
 mystery
 mystic
-mystical
 myth
 mythology
 nail
@@ -3197,7 +3031,6 @@ necklace
 need
 needle
 needless
-needy
 negative
 neglect
 negotiate
@@ -3227,7 +3060,6 @@ niece
 night
 nightmare
 nine
-nineteen
 ninety
 ninth
 nitrogen
@@ -3238,7 +3070,6 @@ node
 noise
 noisy
 nominal
-nominate
 nominee
 none
 nonprofit
@@ -3273,7 +3104,6 @@ novelty
 now
 nowhere
 nuclear
-nucleus
 nude
 null
 number
@@ -3284,7 +3114,6 @@ nursery
 nut
 nutrition
 oak
-oasis
 oath
 obese
 obesity
@@ -3306,9 +3135,7 @@ occupy
 occur
 ocean
 odd
-oddly
 off
-offend
 offender
 offense
 offensive
@@ -3327,7 +3154,6 @@ olive
 omega
 once
 one
-oneself
 ongoing
 onion
 only
@@ -3356,8 +3182,6 @@ oracle
 oral
 orange
 orbit
-orbital
-orchard
 orchestra
 order
 ordinance
@@ -3365,18 +3189,16 @@ ordinary
 ore
 organ
 organic
-organism
 organize
-organizer
 origin
 original
-orphan
 orthodox
 other
 otherwise
-ouch
 ought
 ounce
+our
+ours
 out
 outbreak
 outcome
@@ -3391,14 +3213,11 @@ outrage
 outreach
 outright
 outside
-outsider
 oval
 oven
 over
 overall
 overcome
-overdose
-overhaul
 overhead
 overlap
 overly
@@ -3448,7 +3267,6 @@ paradise
 paradox
 paragraph
 parallel
-parameter
 paramount
 paranoid
 parcel
@@ -3482,7 +3300,6 @@ patch
 patent
 path
 pathetic
-pathology
 pathway
 patience
 patient
@@ -3513,7 +3330,6 @@ pen
 penalty
 pence
 pencil
-penetrate
 penguin
 peninsula
 pension
@@ -3571,7 +3387,6 @@ pilot
 pin
 pinch
 pine
-pineapple
 ping
 pink
 pint
@@ -3589,11 +3404,9 @@ place
 placement
 plague
 plain
-plaintiff
 plan
 plane
 planet
-planetary
 plant
 plaque
 plasma
@@ -3604,7 +3417,6 @@ platform
 platinum
 plausible
 play
-playboy
 player
 plaza
 plea
@@ -3616,8 +3428,6 @@ pledge
 plenty
 plot
 plug
-plum
-plural
 plus
 pneumonia
 pocket
@@ -3630,7 +3440,6 @@ point
 pointer
 pointless
 poison
-poisonous
 poke
 poker
 polar
@@ -3653,7 +3462,6 @@ poorly
 pop
 popcorn
 popular
-porcelain
 porch
 pork
 port
@@ -3663,7 +3471,6 @@ portfolio
 portion
 portrait
 portray
-portrayal
 pose
 position
 positive
@@ -3675,7 +3482,6 @@ postal
 poster
 posture
 pot
-potassium
 potato
 potent
 potential
@@ -3726,14 +3532,12 @@ prestige
 presume
 pretend
 pretty
-prevail
 prevalent
 prevent
 preview
 previous
 prey
 price
-priceless
 pride
 priest
 primarily
@@ -3778,7 +3582,6 @@ prolific
 prominent
 promise
 promote
-promoter
 promotion
 prompt
 promptly
@@ -3811,7 +3614,6 @@ province
 provision
 proximity
 proxy
-psalm
 pseudo
 psychic
 pub
@@ -3826,7 +3628,6 @@ pulp
 pulse
 pump
 pumpkin
-pun
 punch
 punish
 punk
@@ -3837,12 +3638,10 @@ puppy
 purchase
 pure
 purely
-purge
 purity
 purple
 purpose
 purse
-pursuant
 pursue
 pursuit
 push
@@ -3883,7 +3682,6 @@ radiation
 radical
 radio
 radius
-rag
 rage
 raid
 rail
@@ -3896,7 +3694,6 @@ rainy
 raise
 rally
 ramp
-rampant
 ranch
 random
 randomly
@@ -3926,7 +3723,6 @@ reactor
 read
 reader
 readily
-readiness
 ready
 real
 realism
@@ -3964,7 +3760,6 @@ recruit
 red
 reduce
 reduction
-redundant
 reel
 refer
 referee
@@ -4039,7 +3834,6 @@ repeat
 replace
 replay
 replica
-replicate
 reply
 report
 reporter
@@ -4090,7 +3884,6 @@ reunion
 reveal
 revenge
 revenue
-reversal
 reverse
 review
 revision
@@ -4099,10 +3892,7 @@ revive
 revolt
 reward
 rhetoric
-rhino
-rhyme
 rhythm
-rib
 ribbon
 rice
 rich
@@ -4155,7 +3945,6 @@ rope
 roster
 rot
 rotary
-rotate
 rotation
 rotten
 rouge
@@ -4196,7 +3985,6 @@ sadly
 sadness
 safari
 safe
-safeguard
 safely
 safety
 saga
@@ -4221,7 +4009,6 @@ sample
 samurai
 sanctuary
 sand
-sandstone
 sandwich
 sandy
 sane
@@ -4236,14 +4023,12 @@ sausage
 savage
 save
 savior
-savvy
 saw
 say
 scale
 scam
 scan
 scandal
-scanner
 scar
 scarce
 scare
@@ -4262,7 +4047,6 @@ school
 science
 scientist
 scoop
-scooter
 scope
 score
 scorer
@@ -4282,14 +4066,12 @@ scum
 sea
 seal
 search
-seaside
 season
 seasonal
 seat
 second
 secondary
 secondly
-secrecy
 secret
 secretary
 secretly
@@ -4298,7 +4080,6 @@ sector
 secular
 secure
 security
-sedan
 see
 seed
 seek
@@ -4334,7 +4115,6 @@ serial
 series
 serious
 seriously
-sermon
 serum
 servant
 serve
@@ -4352,7 +4132,6 @@ several
 severe
 severely
 severity
-sewage
 sewer
 sexual
 sexuality
@@ -4367,8 +4146,6 @@ shale
 shall
 shallow
 shame
-shameful
-shampoo
 shanghai
 shape
 share
@@ -4376,6 +4153,7 @@ shark
 sharp
 sharply
 shave
+she
 shed
 sheep
 sheer
@@ -4432,7 +4210,6 @@ signal
 signature
 silence
 silent
-silently
 silicon
 silk
 silly
@@ -4479,7 +4256,6 @@ skull
 sky
 slack
 slam
-slang
 slap
 slash
 slate
@@ -4489,7 +4265,6 @@ slavery
 sleep
 sleepy
 sleeve
-slender
 slice
 slick
 slide
@@ -4499,7 +4274,6 @@ slip
 slippery
 slogan
 slope
-sloppy
 slot
 slow
 slowly
@@ -4528,7 +4302,6 @@ social
 socialism
 socialist
 socially
-societal
 society
 sociology
 sock
@@ -4620,9 +4393,7 @@ splash
 splendid
 split
 spoil
-spoiler
 spokesman
-sponge
 sponsor
 spoon
 sport
@@ -4631,9 +4402,7 @@ spotlight
 spouse
 spray
 spread
-spree
 spring
-springer
 sprint
 spur
 spy
@@ -4652,7 +4421,6 @@ staff
 stage
 stain
 stainless
-staircase
 stake
 stall
 stamp
@@ -4756,7 +4524,6 @@ subject
 submarine
 submit
 subscribe
-subsidy
 substance
 substrate
 subtle
@@ -4768,7 +4535,6 @@ success
 successor
 such
 suck
-sucker
 sudden
 suddenly
 sue
@@ -4779,13 +4545,11 @@ suicidal
 suicide
 suit
 suitable
-suitcase
 suite
 sum
 summary
 summer
 summit
-summon
 sun
 sunlight
 sunny
@@ -4834,17 +4598,13 @@ sway
 swear
 sweat
 sweater
-sweaty
 sweep
 sweet
-sweetie
 swell
 swift
 swim
 swing
-swipe
 switch
-swollen
 sword
 symbol
 symbolic
@@ -4873,11 +4633,8 @@ talk
 tall
 taller
 tally
-tame
 tan
-tang
 tangible
-tango
 tank
 tap
 tape
@@ -4886,7 +4643,6 @@ task
 taste
 tasty
 tattoo
-tavern
 tax
 taxation
 taxi
@@ -4897,12 +4653,10 @@ teacher
 team
 teammate
 tear
-tease
 technical
 technique
 teen
 teenage
-telegram
 telegraph
 telephone
 telescope
@@ -4948,8 +4702,11 @@ than
 thank
 thankful
 that
+the
 theater
 theft
+their
+them
 theme
 then
 theology
@@ -4964,6 +4721,7 @@ thereof
 thermal
 these
 thesis
+they
 thick
 thickness
 thief
@@ -4971,7 +4729,6 @@ thigh
 thin
 thing
 think
-thinner
 third
 thirst
 thirsty
@@ -5021,8 +4778,6 @@ tiny
 tip
 tire
 tissue
-titanic
-titanium
 title
 toast
 tobacco
@@ -5033,7 +4788,6 @@ together
 toilet
 token
 tolerance
-tolerant
 tolerate
 toll
 tomato
@@ -5068,7 +4822,6 @@ tower
 town
 township
 toxic
-toxicity
 toy
 trace
 track
@@ -5099,7 +4852,6 @@ trash
 trauma
 traumatic
 travel
-traveler
 tray
 treason
 treasure
@@ -5138,7 +4890,6 @@ truck
 true
 truly
 trump
-trumpet
 trunk
 trust
 trustee
@@ -5172,11 +4923,9 @@ twist
 twitch
 two
 type
-typhoon
 typical
 typically
 ugly
-ulster
 ultimate
 ultra
 umbrella
@@ -5194,8 +4943,6 @@ undertake
 underway
 underwear
 underwent
-undo
-uneven
 unfair
 unhappy
 unhealthy
@@ -5217,7 +4964,6 @@ unlock
 unlucky
 unpaid
 unpopular
-unreal
 unrelated
 unrest
 unsafe
@@ -5236,12 +4982,10 @@ upper
 upright
 upset
 upside
-upstream
 upward
 uranium
 urban
 urge
-urgency
 urgent
 urine
 usage
@@ -5273,7 +5017,6 @@ valve
 vampire
 vanilla
 vanity
-vapor
 variable
 variant
 variation
@@ -5293,7 +5036,6 @@ velocity
 velvet
 vendor
 vengeance
-venom
 vent
 venture
 venue
@@ -5315,7 +5057,6 @@ veto
 via
 viable
 vibrant
-vibration
 vice
 vicinity
 vicious
@@ -5371,20 +5112,17 @@ voluntary
 volunteer
 vote
 voter
-vow
 voyage
 wage
 wagon
 waist
 wait
 waiter
-waitress
 wake
 walk
 wall
 wallet
 wallpaper
-walnut
 wander
 want
 war
@@ -5401,8 +5139,6 @@ warp
 warrant
 warranty
 warrior
-wartime
-wary
 wash
 wasnt
 waste
@@ -5434,7 +5170,6 @@ weird
 welcome
 welfare
 well
-wellness
 western
 wet
 whale
@@ -5460,14 +5195,16 @@ whisky
 whisper
 whistle
 white
+who
 whoa
 whoever
 whole
 wholesale
 wholly
+whom
+whose
 why
 wicked
-wicket
 wide
 widely
 widow
@@ -5479,14 +5216,12 @@ wildlife
 wildly
 will
 willing
-willingly
 willow
 win
 wind
 window
 wine
 wing
-winger
 winner
 winter
 wipe
@@ -5505,7 +5240,6 @@ within
 without
 withstand
 witness
-witty
 wizard
 wolf
 woman
@@ -5518,7 +5252,6 @@ wood
 wooden
 woodland
 wool
-worcester
 word
 work
 worker
@@ -5559,10 +5292,13 @@ yesterday
 yet
 yield
 yoga
+you
 young
 younger
+your
+yours
+yourself
 youth
-youthful
 yuan
 zero
 zimbabwe

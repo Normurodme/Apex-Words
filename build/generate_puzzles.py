@@ -45,7 +45,7 @@ LEVEL_PLAN = [
     # 3 harfli baza so'zlar tabiiy ravishda kam (anagrammasi bor 3 harfli so'zlar
     # havzasi ~29 ta), shuning uchun 1-daraja ularning hammasini ishlatib,
     # qolganini 4 harfli bazalar bilan to'ldiradi.
-    (1, 1, "England", [(3, 24), (4, 26)]),
+    (1, 1, "England", [(3, 20), (4, 30)]),
     (1, 2, "Japan",   [(4, 50)]),
     (1, 3, "Brazil",  [(4, 35), (5, 15)]),
     (1, 4, "Egypt",   [(5, 50)]),
@@ -55,9 +55,89 @@ LEVEL_PLAN = [
     (2, 3, "Dubai",   [(6, 50)]),
     (2, 4, "Rome",    [(6, 50)]),
     (2, 5, "London",  [(6, 50)]),
+
+    # --- 3..12 bosqichlar ---
+    #
+    # Taqsimot O'LCHOV bilan tuzilgan. Har uzunlik uchun nechta yaroqli
+    # baza borligi oldindan sanaldi (CORE_ZIPF = 3.60 da):
+    #
+    #     3h: 28   4h: 293   5h: 621   6h: 833   7h: 810   8h: 722   9h: 566
+    #
+    # Rejadagi ehtiyoj shu havzadan oshmasligi kerak:
+    #
+    #     3h: 20   4h: 230   5h: 300   6h: 700   7h: 750   8h: 600   9h: 400
+    #                                                          jami = 3000
+    #
+    # Ilgari uzun bazalar juda ko'p rejalashtirilgan edi (8h uchun 1135 ta
+    # kerak bo'lib qolgan, havzada esa 722) va generator 8-bosqichda
+    # to'xtagan. Endi qiyinlik sekinroq o'sadi: har uzunlikda ikki-uch
+    # bosqich turiladi va shu bilan havza yetadi.
+    (3, 1, "Pizza",  [(5, 50)]),
+    (3, 2, "Sushi",  [(6, 50)]),
+    (3, 3, "Burger", [(6, 50)]),
+    (3, 4, "Pasta",  [(6, 50)]),
+    (3, 5, "Tacos",  [(6, 50)]),
+
+    (4, 1, "Lion",  [(6, 50)]),
+    (4, 2, "Panda", [(6, 50)]),
+    (4, 3, "Eagle", [(6, 50)]),
+    (4, 4, "Shark", [(6, 50)]),
+    (4, 5, "Tiger", [(6, 50)]),
+
+    (5, 1, "Soccer",  [(6, 50)]),
+    (5, 2, "Tennis",  [(6, 50)]),
+    (5, 3, "Boxing",  [(6, 50)]),
+    (5, 4, "Cricket", [(7, 50)]),
+    (5, 5, "Hockey",  [(7, 50)]),
+
+    (6, 1, "Apple",  [(7, 50)]),
+    (6, 2, "Mango",  [(7, 50)]),
+    (6, 3, "Banana", [(7, 50)]),
+    (6, 4, "Cherry", [(7, 50)]),
+    (6, 5, "Orange", [(7, 50)]),
+
+    (7, 1, "Eiffel",       [(7, 50)]),
+    (7, 2, "Pisa",         [(7, 50)]),
+    (7, 3, "Big Ben",      [(7, 50)]),
+    (7, 4, "Petronas",     [(7, 50)]),
+    (7, 5, "Burj Khalifa", [(7, 50)]),
+
+    (8, 1, "Tesla",    [(7, 50)]),
+    (8, 2, "Toyota",   [(7, 50)]),
+    (8, 3, "Ferrari",  [(7, 50)]),
+    (8, 4, "Bugatti",  [(8, 50)]),
+    (8, 5, "Mercedes", [(8, 50)]),
+
+    (9, 1, "Dragon",  [(8, 50)]),
+    (9, 2, "Phoenix", [(8, 50)]),
+    (9, 3, "Unicorn", [(8, 50)]),
+    (9, 4, "Kraken",  [(8, 50)]),
+    (9, 5, "Griffin", [(8, 50)]),
+
+    (10, 1, "Diamond",  [(8, 50)]),
+    (10, 2, "Ruby",     [(8, 50)]),
+    (10, 3, "Emerald",  [(8, 50)]),
+    (10, 4, "Pearl",    [(8, 50)]),
+    (10, 5, "Sapphire", [(8, 50)]),
+
+    (11, 1, "Sherlock",   [(9, 50)]),
+    (11, 2, "Dracula",    [(9, 50)]),
+    (11, 3, "Aladdin",    [(9, 50)]),
+    (11, 4, "Hercules",   [(9, 50)]),
+    (11, 5, "Robin Hood", [(9, 50)]),
+
+    (12, 1, "Pyramid",    [(9, 50)]),
+    (12, 2, "Colosseum",  [(9, 50)]),
+    (12, 3, "Petra",      [(9, 50)]),
+    (12, 4, "Stonehenge", [(9, 50)]),
+    (12, 5, "Taj Mahal",  [(9, 50)]),
 ]
 
-STAGE_NAMES = {1: "Countries", 2: "Cities"}
+STAGE_NAMES = {
+    1: "Countries", 2: "Cities",   3: "Foods",   4: "Animals",
+    5: "Sports",    6: "Fruits",   7: "Towers",  8: "Cars",
+    9: "Mythical", 10: "Gems",    11: "Legends", 12: "Wonders",
+}
 
 # Baza uzunligiga qarab to'rdagi yechim so'zlari soni: (eng kami, eng ko'pi)
 SOLUTION_RANGE = {
@@ -146,6 +226,16 @@ def main():
         lo, hi = SOLUTION_RANGE[L]
         pool = []
         used_sigs = set()
+
+        # Baza CORE ro'yxatdan olinadi.
+        #
+        # Uni full'dan olib ko'rdim — havza kengayadi, lekin puzzle buziladi:
+        # klassik qoidaga ko'ra har puzzleda HAMMA harfni ishlatadigan so'z
+        # bo'lishi shart, u esa aynan bazaning o'zi. Baza core'da bo'lmasa,
+        # o'sha eng uzun so'z to'rga tusha olmaydi.
+        #
+        # Havza yetishi uchun buning o'rniga CORE_ZIPF bo'sag'asi
+        # sozlandi (o'lchov: 3.60 da 3873 yaroqli baza, 3000 kerak).
         for base in (w for w in core if len(w) == L):
             sig = signature(base)
             if sig in used_sigs:        # anagrammalardan faqat bittasi
