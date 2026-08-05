@@ -146,16 +146,28 @@ const Sound = {
     });
   },
 
-  /* So'z qabul qilindi — yengil, tez ikki nota. Eng ko'p eshitiladigan
-     ovoz, shuning uchun ataylab qisqa va past. */
+  /*
+    So'z qabul qilindi.
+
+    Bu ovoz eng ko'p eshitiladi — bir puzzleda o'nlab marta. Shuning uchun
+    u qisqa, past va YUMSHOQ bo'lishi shart: elektron "bip" o'rniga
+    yog'och ksilofonga o'xshash ikki nota. Kvarta oralig'i (do–fa)
+    quloqqa tinch tuyuladi va takrorlanganda charchatmaydi.
+  */
   chime() {
-    this.play([[784, 0, .10, .13], [1175, .05, .20, .12]], 'sine');
+    this.play([[523.25, 0, .13, .12], [698.46, .055, .26, .11]], 'triangle');
   },
 
-  /* Puzzle yechildi — mazhur trezvuchie bo'ylab yorug' ko'tarilish */
+  /*
+    Puzzle yechildi.
+
+    So'z ovozidan aniq kattaroq bo'lishi kerak, lekin daraja
+    bayramidan kichik. Uch nota bilan ko'tarilib, to'rtinchisida
+    qo'ng'iroqday cho'ziladi — "sahifa yopildi" hissi.
+  */
   solved() {
-    this.play([[523, 0, .12, .16], [659, .07, .12, .16],
-               [784, .14, .14, .17], [1047, .22, .38, .18]], 'triangle');
+    this.play([[587.33, 0, .12, .15], [739.99, .085, .12, .15],
+               [880.00, .17, .14, .16], [1174.66, .27, .55, .15]], 'triangle');
   },
 
   /* Daraja tugadi — kengroq va uzunroq, puzzle ovozidan aniq farq qiladi */
@@ -620,9 +632,11 @@ function renderMap(force) {
     const my = (a.y + b.y) / 2;
     d += ` C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`;
   }
+  // Xaritadagi yo'l — siyoh bilan chizilgan nuqtali iz.
+  // Ilgari oq edi va pergament fonda umuman ko'rinmasdi.
   svg.innerHTML =
-    `<path d="${d}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="6"
-           stroke-linecap="round" stroke-dasharray="2 18"/>`;
+    `<path d="${d}" fill="none" stroke="rgba(90,60,20,.5)" stroke-width="5"
+           stroke-linecap="round" stroke-dasharray="2 16"/>`;
 
   /* Elementlar avval XOTIRADAGI fragmentga yig'iladi va oxirida bir marta
      DOM'ga qo'yiladi. Ilgari har tugun alohida qo'shilardi va brauzer har
@@ -1147,16 +1161,16 @@ function drawLine() {
     ctx.restore();
   };
 
-  // Nafis chiziq: qalin marjon o'rniga ingichka, shaffof va yumshoq nurli.
-  // Uch qatlam bir-birining ustiga tushib, shisha naycha taassurotini beradi.
-  stroke(15, '#7be3ff', 0.22, 16);   // keng, xira gardish
-  stroke(7,  '#ffffff', 0.30, 8);    // oq yumshoq qatlam
-  stroke(4.5, '#2fb9ff', 0.92, 0);   // ingichka aniq o'zak
+  // Barmoq izi — qalamda tortilgan chiziq. Pergament fonga mos qizil
+  // muhr rangida; ilgari ko'k-oq edi va yorug' qog'ozda yo'qolib ketardi.
+  stroke(14, '#a52a35', 0.18, 10);   // keng, xira gardish
+  stroke(8,  '#d05a5f', 0.55, 0);    // o'rta qatlam
+  stroke(4,  '#8c1f2a', 0.95, 0);    // ingichka aniq o'zak
 
   // Bosilgan harflar ustida kichik nuqtalar — yo'l ko'rinib tursin
   ctx.save();
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#fdf6e4';
+  ctx.globalAlpha = 0.95;
   path.forEach((i) => {
     ctx.beginPath();
     ctx.arc(centers[i].x, centers[i].y, 3.5, 0, Math.PI * 2);
@@ -1671,7 +1685,9 @@ async function boot() {
   if (TG) {
     TG.ready();
     TG.expand();
-    try { TG.setHeaderColor('#5fd8ff'); TG.setBackgroundColor('#2f9bf7'); } catch (_) {}
+    // Telegram sarlavhasi ham pergament rangida bo'lsin — ilova ekranga
+    // yopishib turadi, chegara sezilmaydi
+    try { TG.setHeaderColor('#eddaae'); TG.setBackgroundColor('#eddaae'); } catch (_) {}
     try { TG.disableVerticalSwipes(); } catch (_) {}
   }
 

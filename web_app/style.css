@@ -1,78 +1,67 @@
 /* =========================================================================
-   Apex Words — "Storybook Atlas"
+   Apex Words — "Illuminated Atlas"
 
-   MAVZU. Ertak kitobi: tungi osmon, yulduzlar, pergament sahifalar,
-   qadimiy oltin va muhr shaklidagi tugunlar. Sarlavhalar serif shriftda —
-   ekran o'yinidan ko'ra kitobga o'xshaydi.
+   YANGI RUH. Ilgari dunyo tungi binafsha edi: to'q fon, neon oltin,
+   shishasimon panellar. Endi butunlay boshqa — QADIMIY XARITA:
 
-   TEZLIK — bu faylning ikkinchi maqsadi, dizayndan kam emas.
-   Oldingi versiyada miltillash va qotishlar bor edi. Sabablari va
-   yechimlari:
+     · sirt pergament, quyoshda saralgan qog'oz rangida
+     · yozuvlar siyoh bilan yozilgan (to'q zaytun-yashil)
+     · urg'ular: nastarin qizil muhr, oltin varaq, o'rmon yashili
+     · chegaralar ikki chiziqli — eski atlaslardagidek
+     · pastki panel charm tasma
 
-     backdrop-filter: blur()   — o'nlab elementda ishlatilgan edi. Har biri
-                                 alohida qatlam va har kadrda qayta hisob.
-                                 BUTUNLAY olib tashlandi.
-     katta blur + animatsiya   — uchta 62vw doira filter: blur(46px) bilan
-                                 doimiy harakatda edi: har kadrda ulkan
-                                 maydon qayta chiziladi. Fon endi STATIK.
-     cheksiz animatsiyalar     — ko'p elementda edi. Endi faqat bitta joriy
-                                 tugunda va u ham faqat transform.
-     conic-gradient aylanishi  — modal ichida edi, juda qimmat. Olib tashlandi.
+   Bu shunchaki rang almashtirish emas: yorug' sirt to'q sirtdan mutlaqo
+   boshqacha his beradi. Matn endi qog'ozga yozilgan, ekranda yonmaydi.
 
-   Qolgan barcha harakat transform/opacity ustida — ular kompozitorda
-   bajariladi va layoutni qayta hisoblatmaydi.
+   TEZLIK qoidalari o'zgarmadi va ular buzilmasligi shart:
+     · backdrop-filter YO'Q (har biri alohida qatlam va qayta hisob)
+     · fon STATIK, katta blur yo'q
+     · cheksiz animatsiya faqat joriy tugunda, faqat transform ustida
    ====================================================================== */
 
 :root {
-  /* --- Tungi osmon --- */
-  --night-1: #241552;
-  --night-2: #1a0f3d;
-  --night-3: #120a2b;
-
   /* --- Pergament --- */
-  --paper-1: #fdf4de;
-  --paper-2: #f3e3bd;
-  --paper-3: #e2cb98;
-  --ink:     #3d2a10;
-  --ink-2:   #6b5231;
+  --p-1: #f6e8c8;   /* eng yorug' varaq */
+  --p-2: #eddaae;
+  --p-3: #e0c78d;
+  --p-4: #cfae70;   /* eskirgan chekka */
 
-  /* --- Qadimiy oltin --- */
-  --gold-1: #ffd97a;
-  --gold-2: #e8b040;
-  --gold-3: #b87d1c;
-  --gold-4: #8a5a10;
+  /* --- Siyoh --- */
+  --ink-1: #23301f;  /* asosiy yozuv */
+  --ink-2: #4a5a3e;  /* ikkinchi darajali */
+  --ink-3: #7b8a68;  /* xira */
 
   /* --- Urg'ular --- */
-  --rose-1: #f2809f;
-  --rose-2: #d94a72;
-  --rose-3: #a82d51;
+  --seal-1: #d05a5f;   /* muhr, ochiq */
+  --seal-2: #a52a35;   /* muhr, to'q */
+  --seal-3: #741d26;
 
-  --jade-1: #6fd8b4;
-  --jade-2: #2aa583;
-  --jade-3: #17755c;
+  --gold-1: #f0d187;
+  --gold-2: #c9942a;
+  --gold-3: #9a6d14;
 
-  --sky:    #8fb8ff;
+  --moss-1: #6fae82;
+  --moss-2: #2f7a52;
+  --moss-3: #1d5638;
 
-  /* --- Matn --- */
-  --text:      #f7efe0;
-  --text-dim:  rgba(247,239,224,.72);
-  --text-mute: rgba(247,239,224,.45);
+  --sea:  #7fa8b8;     /* xaritadagi dengiz */
 
-  /* --- Sirtlar (SHAFFOF EMAS — blursiz ham chuqur ko'rinadi) --- */
-  --panel:   #2c1c5c;
-  --panel-2: #372270;
-  --edge:    rgba(255,217,122,.28);
-  --edge-2:  rgba(255,217,122,.14);
+  /* --- Charm (pastki panel, modal fonlari) --- */
+  --hide-1: #4a3623;
+  --hide-2: #33241680;
 
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
   --r-full: 999px;
 
-  --shadow:   0 8px 20px rgba(9,4,26,.45);
-  --shadow-2: 0 16px 38px rgba(9,4,26,.55);
-  --gleam:    inset 0 1px 0 rgba(255,255,255,.18);
+  --line:   1.5px solid var(--gold-3);
+  --line-2: 1px solid rgba(122,90,30,.35);
+
+  --shadow:   0 4px 12px rgba(60,40,15,.22);
+  --shadow-2: 0 10px 26px rgba(60,40,15,.3);
+  --emboss:   inset 0 1px 0 rgba(255,255,255,.55);
 
   --tap: 100ms cubic-bezier(.3,.7,.4,1);
   --ease: 200ms cubic-bezier(.22,.8,.3,1);
@@ -85,81 +74,47 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html, body {
-  margin: 0; height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 body {
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-  color: var(--text);
+  font-family: var(--serif);
+  color: var(--ink-1);
   user-select: none; -webkit-user-select: none;
 
   /*
-    Tungi osmon.
-
-    Yulduzlar UCH QATLAM bo'lib TAKRORLANADI: har qatlamning o'z katagi
-    bor (170 / 260 / 380 px), shuning uchun ular hech qachon bir xil
-    naqshda ko'rinmaydi va ekran to'la yulduzga to'ladi. Ilgari atigi
-    9 ta yulduz bor edi va osmon bo'sh tuyulardi.
-
-    Bu baribir ARZON: fon bir marta chiziladi, animatsiya ham, blur ham
-    yo'q. Yulduzlar soni chizish narxiga deyarli ta'sir qilmaydi.
+    Eski xarita qog'ozi. To'rt qatlam, hammasi STATIK:
+      1-2. yengil to'r chiziqlar — qog'oz tolasi taassuroti
+      3.   dog'lar — quyoshda saralgan joylar
+      4.   asosiy rang va chetdagi qorayish
   */
+  background-color: var(--p-2);
   background-image:
-    /* mayda, zich */
-    radial-gradient(1px 1px at 18px 24px,  rgba(255,255,255,.75), transparent),
-    radial-gradient(1px 1px at 92px 61px,  rgba(255,255,255,.6),  transparent),
-    radial-gradient(1px 1px at 41px 118px, rgba(200,220,255,.7),  transparent),
-    radial-gradient(1px 1px at 133px 33px, rgba(255,255,255,.55), transparent),
-    radial-gradient(1px 1px at 152px 140px,rgba(255,255,255,.65), transparent),
-    radial-gradient(1px 1px at 66px 152px, rgba(255,240,210,.6),  transparent),
-    /* o'rta */
-    radial-gradient(1.6px 1.6px at 30px 40px,  rgba(255,255,255,.9),  transparent),
-    radial-gradient(1.6px 1.6px at 190px 90px, rgba(255,240,205,.85), transparent),
-    radial-gradient(1.6px 1.6px at 110px 200px,rgba(255,255,255,.8),  transparent),
-    radial-gradient(1.6px 1.6px at 235px 175px,rgba(210,230,255,.8),  transparent),
-    /* yirik, kam */
-    radial-gradient(2.4px 2.4px at 60px 70px,  rgba(255,255,255,1),   transparent),
-    radial-gradient(2.4px 2.4px at 300px 250px,rgba(255,238,190,.95), transparent),
-    radial-gradient(2.2px 2.2px at 200px 330px,rgba(255,255,255,.9),  transparent),
-    /* yumshoq yorug'lik va asosiy gradient */
-    radial-gradient(120% 70% at 50% 0%, #3a2270 0%, transparent 60%),
-    linear-gradient(178deg, var(--night-1) 0%, var(--night-2) 55%, var(--night-3) 100%);
-  background-size:
-    170px 170px, 170px 170px, 170px 170px, 170px 170px, 170px 170px, 170px 170px,
-    260px 260px, 260px 260px, 260px 260px, 260px 260px,
-    380px 380px, 380px 380px, 380px 380px,
-    100% 100%, 100% 100%;
+    repeating-linear-gradient(0deg,  rgba(122,90,30,.045) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgba(122,90,30,.045) 0 1px, transparent 1px 4px),
+    radial-gradient(46% 32% at 18% 22%, rgba(190,150,80,.22), transparent 70%),
+    radial-gradient(40% 30% at 82% 68%, rgba(190,150,80,.2), transparent 70%),
+    radial-gradient(120% 90% at 50% 50%, var(--p-1) 0%, var(--p-2) 55%, var(--p-3) 100%);
   background-attachment: fixed;
 }
 
-/* Atmosfera elementi endi faqat yumshoq yorug'lik — animatsiyasiz, blursiz */
+/* Chetlarning eskirgani — varaq chegarasi hissi */
 .ambience {
   position: fixed; inset: 0;
   pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(60% 40% at 50% 100%, rgba(232,176,64,.10), transparent 70%),
-    radial-gradient(50% 30% at 12% 20%, rgba(143,184,255,.08), transparent 70%);
+  box-shadow: inset 0 0 90px rgba(120,85,35,.28), inset 0 0 22px rgba(120,85,35,.2);
 }
-.orb, .grain { display: none; }   /* eski og'ir qatlamlar o'chirildi */
 
 /* ============================ QOBIQ ============================ */
 
 #shell { position: absolute; inset: 0; display: flex; flex-direction: column; z-index: 1; }
 #shell[hidden] { display: none; }
-
 #screens { position: relative; flex: 1 1 auto; min-height: 0; }
 
 .screen { display: none; position: absolute; inset: 0; flex-direction: column; }
 .screen.active { display: flex; }
 
 #pack-screen, #game-screen { z-index: 2; background: inherit; }
-#pack-screen, #game-screen, #screens > .screen {
-  /* Ichkarida o'zgarish bo'lganda tashqi layout qayta hisoblanmasin */
-  contain: layout paint;
-}
+#pack-screen, #game-screen, #screens > .screen { contain: layout paint; }
 
 /* ============================ TOPBAR ============================ */
 
@@ -171,20 +126,17 @@ body {
 }
 .spacer { flex: 1 1 auto; }
 
+/* Sarlavha — kitob muqovasidagi yozuv */
 .wordmark {
-  font-family: var(--serif);
-  font-size: 23px; font-weight: 700; letter-spacing: .4px;
-  color: var(--paper-1);
-  text-shadow: 0 2px 0 rgba(0,0,0,.35);
+  font-size: 24px; font-weight: 700; letter-spacing: .3px;
+  color: var(--ink-1);
 }
-.wordmark span { color: var(--gold-2); font-style: italic; }
+.wordmark span { color: var(--seal-2); font-style: italic; }
 
 .screen-title {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 19px; font-weight: 700; letter-spacing: .3px;
-  color: var(--paper-1);
-  text-shadow: 0 2px 0 rgba(0,0,0,.35);
+  font-size: 20px; font-weight: 700; letter-spacing: .2px;
+  color: var(--ink-1);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 50vw;
 }
@@ -194,27 +146,27 @@ body {
 .chip {
   flex: 0 0 auto;
   display: inline-flex; align-items: center; gap: 6px;
-  height: 38px; padding: 0 14px 0 9px;
+  height: 36px; padding: 0 13px 0 9px;
   border-radius: var(--r-full);
-  background: linear-gradient(#3a2670, #2a1a55);
-  border: 1.5px solid var(--edge);
-  box-shadow: var(--gleam), var(--shadow);
+  background: linear-gradient(var(--p-1), var(--p-3));
+  border: var(--line);
+  box-shadow: var(--emboss), var(--shadow);
   font-size: 15px; font-weight: 700;
-  color: var(--paper-1);
+  color: var(--ink-1);
 }
-.chip-ico { font-size: 16px; }
-.chip-gem { border-color: rgba(143,184,255,.4); }
-.chip-key { border-color: rgba(255,217,122,.42); }
+.chip-ico { font-size: 15px; }
+.chip-gem { border-color: #6f8f9e; }
+.chip-key { border-color: var(--gold-3); }
 
 .tappable {
   cursor: pointer;
-  background: linear-gradient(var(--gold-2), var(--gold-3));
-  border-color: var(--gold-1);
-  color: #2e1c04;
-  box-shadow: 0 3px 0 var(--gold-4), var(--shadow);
+  background: linear-gradient(var(--seal-1), var(--seal-2));
+  border-color: var(--seal-3);
+  color: #fff2ef;
+  box-shadow: 0 3px 0 var(--seal-3), var(--shadow);
   transition: transform var(--tap), box-shadow var(--tap);
 }
-.tappable:active { transform: translateY(3px); box-shadow: 0 0 0 var(--gold-4); }
+.tappable:active { transform: translateY(3px); box-shadow: 0 0 0 var(--seal-3); }
 
 .wallet {
   position: relative; z-index: 4;
@@ -230,71 +182,73 @@ body {
   flex: 0 0 auto;
   width: 40px; height: 40px;
   display: grid; place-items: center;
-  border: 1.5px solid var(--edge);
+  border: var(--line);
   border-radius: 50%;
-  background: linear-gradient(#3a2670, #2a1a55);
-  box-shadow: var(--gleam);
-  color: var(--paper-1);
+  background: linear-gradient(var(--p-1), var(--p-3));
+  box-shadow: var(--emboss), var(--shadow);
+  color: var(--ink-1);
+  font-family: inherit;
   font-size: 16px; font-weight: 700; line-height: 1;
   cursor: pointer;
   transition: transform var(--tap);
 }
 .icon-round::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
 .icon-round:active { transform: scale(.9); }
-.icon-round.off { opacity: .4; }
+.icon-round.off { opacity: .45; }
 
+/* Muhr tugma — asosiy harakatlar */
 .icon-round.solid {
   width: 42px; height: 42px; font-size: 23px;
-  background: linear-gradient(var(--rose-1), var(--rose-2));
-  border-color: rgba(255,255,255,.55);
-  color: #fff;
-  box-shadow: 0 3px 0 var(--rose-3), var(--shadow);
+  background: radial-gradient(circle at 36% 28%, var(--seal-1), var(--seal-2) 70%);
+  border-color: var(--seal-3);
+  color: #fff2ef;
+  box-shadow: 0 3px 0 var(--seal-3), var(--shadow);
 }
-.icon-round.solid:active { transform: translateY(3px); box-shadow: 0 0 0 var(--rose-3); }
+.icon-round.solid:active { transform: translateY(3px); box-shadow: 0 0 0 var(--seal-3); }
 
 .icon-round.xl { width: 58px; height: 58px; font-size: 22px; }
 .icon-round.xl.primary {
   width: 70px; height: 70px; font-size: 26px;
-  background: linear-gradient(var(--gold-1), var(--gold-2) 55%, var(--gold-3));
-  border-color: var(--paper-1);
-  color: #3e2606;
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow-2);
+  background: radial-gradient(circle at 36% 28%, var(--gold-1), var(--gold-2) 70%);
+  border-color: var(--gold-3);
+  color: #4a3405;
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow-2);
 }
-.icon-round.xl.primary:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-4); }
+.icon-round.xl.primary:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-3); }
 
 /* =========================== TUGMALAR =========================== */
 
 .btn {
-  border: none; border-radius: var(--r-md);
-  padding: 13px 22px;
+  border: var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 22px;
   font-family: inherit;
   font-size: 15px; font-weight: 700;
   cursor: pointer;
   transition: transform var(--tap), box-shadow var(--tap);
 }
-.btn.slim { padding: 10px 14px; font-size: 13px; border-radius: var(--r-sm); }
+.btn.slim { padding: 9px 14px; font-size: 13px; }
 
 .btn-gold {
-  background: linear-gradient(var(--gold-1), var(--gold-2) 55%, var(--gold-3));
-  border: 1.5px solid var(--gold-1);
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow);
-  color: #3e2606;
+  background: linear-gradient(var(--gold-1), var(--gold-2));
+  border-color: var(--gold-3);
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow);
+  color: #4a3405;
 }
-.btn-gold:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-4); }
+.btn-gold:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-3); }
 
 .btn-ghost {
-  background: #33206a;
-  border: 1.5px solid var(--edge);
-  box-shadow: var(--gleam);
-  color: var(--paper-1);
+  background: linear-gradient(var(--p-1), var(--p-3));
+  box-shadow: var(--emboss), var(--shadow);
+  color: var(--ink-1);
 }
 .btn-ghost:active { transform: scale(.97); }
 
 .btn[disabled] {
-  background: #2a1a52;
-  border: 1.5px solid var(--edge-2);
+  background: var(--p-3);
+  border-color: rgba(122,90,30,.3);
   box-shadow: none;
-  color: var(--text-mute);
+  color: var(--ink-3);
   cursor: default; transform: none;
 }
 
@@ -324,75 +278,81 @@ body {
 #map-path { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #map-nodes { position: absolute; inset: 0; }
 
-/* Bob nomi — kitob sarlavhasi kabi */
+/* Bob nomi — atlasdagi kartush (o'ralgan lenta) */
 .stage-banner {
   position: absolute; left: 50%;
   transform: translate(-50%, -50%);
-  padding: 9px 22px;
-  border-radius: var(--r-sm);
-  background: linear-gradient(var(--paper-1), var(--paper-2));
-  border: 1.5px solid var(--gold-3);
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow);
-  color: var(--ink);
-  font-family: var(--serif);
-  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  padding: 8px 24px;
+  border-radius: 4px;
+  background: linear-gradient(var(--p-1), var(--p-3));
+  border: var(--line);
+  box-shadow: 0 3px 0 var(--gold-3), var(--shadow);
+  color: var(--ink-1);
+  font-size: 12px; font-weight: 700; letter-spacing: 2.4px;
   white-space: nowrap; text-transform: uppercase;
 }
+/* Lentaning ikki uchi */
+.stage-banner::before, .stage-banner::after {
+  content: "";
+  position: absolute; top: 50%; margin-top: -7px;
+  border: 7px solid transparent;
+}
+.stage-banner::before { left: -13px;  border-right-color: var(--gold-2); }
+.stage-banner::after  { right: -13px; border-left-color:  var(--gold-2); }
 
-/* Tugun — mum muhr */
+/* Tugun — xaritaga bosilgan mum muhr */
 .node {
   position: absolute;
   width: var(--node); height: var(--node);
   margin: calc(var(--node) / -2) 0 0 calc(var(--node) / -2);
-  border: 2.5px solid rgba(255,255,255,.3);
+  border: 2px solid rgba(90,60,20,.35);
   border-radius: 50%;
   display: grid; place-items: center;
-  font-family: var(--serif);
+  font-family: inherit;
   font-size: 23px; font-weight: 700;
-  color: #fff;
   cursor: pointer;
   z-index: 2;
   transition: transform var(--tap);
 }
 .node:active { transform: scale(.9); }
-.node .num { line-height: 1; text-shadow: 0 2px 3px rgba(0,0,0,.4); }
+.node .num { line-height: 1; }
 
+/* Daraja nomi — qog'ozga yozilgan yorliq */
 .node .name {
-  position: absolute; bottom: -28px;
-  padding: 3px 13px;
-  border-radius: var(--r-full);
-  background: #1e1244;
-  border: 1.5px solid var(--edge);
-  font-family: var(--serif);
+  position: absolute; bottom: -27px;
+  padding: 2px 12px;
+  border-radius: 3px;
+  background: linear-gradient(var(--p-1), var(--p-2));
+  border: var(--line-2);
+  box-shadow: var(--shadow);
   font-size: 13px; font-weight: 700;
   white-space: nowrap;
-  color: var(--paper-1);        /* tugun rangidan meros olmasin */
-  box-shadow: var(--shadow);
+  color: var(--ink-1);
 }
 
 .node.locked {
-  background: linear-gradient(#5b4a80, #3a2c5c);
-  border-color: rgba(255,255,255,.18);
-  box-shadow: 0 4px 0 #291d45;
+  background: radial-gradient(circle at 36% 28%, #cbbb9c, #a4906d 72%);
+  box-shadow: 0 3px 0 #7d6a4a, var(--shadow);
+  color: #6b5c42;
   cursor: not-allowed;
 }
-.node.locked .num { opacity: .25; }
-.node.locked::after { content: "🔒"; position: absolute; font-size: 20px; }
-.node.locked .name { opacity: .6; }
+.node.locked .num { opacity: .3; }
+.node.locked::after { content: "🔒"; position: absolute; font-size: 19px; opacity: .8; }
+.node.locked .name { opacity: .7; }
 
 .node.done {
-  background: linear-gradient(var(--gold-1), var(--gold-2) 50%, var(--gold-3));
-  border-color: var(--paper-1);
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow);
-  color: #3e2606;
+  background: radial-gradient(circle at 36% 28%, var(--moss-1), var(--moss-2) 72%);
+  border-color: var(--moss-3);
+  box-shadow: 0 3px 0 var(--moss-3), var(--shadow);
+  color: #eaf7ee;
 }
 
-/* Joriy tugun — YAGONA cheksiz animatsiya. Kichik element, faqat
-   transform: kompozitorda bajariladi, sahifani qayta chizmaydi. */
+/* Joriy — qizil mum muhr. YAGONA cheksiz animatsiya, faqat transform. */
 .node.current {
-  background: linear-gradient(var(--rose-1), var(--rose-2) 55%, var(--rose-3));
-  border-color: var(--paper-1);
-  box-shadow: 0 4px 0 var(--rose-3), 0 0 0 6px rgba(255,217,122,.2), var(--shadow-2);
+  background: radial-gradient(circle at 36% 28%, var(--seal-1), var(--seal-2) 72%);
+  border-color: var(--seal-3);
+  box-shadow: 0 3px 0 var(--seal-3), 0 0 0 5px rgba(165,42,53,.16), var(--shadow-2);
+  color: #fff2ef;
   animation: bob 2.2s ease-in-out infinite;
   will-change: transform;
 }
@@ -401,47 +361,33 @@ body {
   50%     { transform: translateY(-6px); }
 }
 
-.node .stars {
-  position: absolute; top: -17px;
-  display: flex; gap: 1px; font-size: 13px;
-}
-.node .stars i { font-style: normal; color: rgba(255,255,255,.28); }
-.node .stars i.on { color: var(--gold-1); }
+.node .stars { position: absolute; top: -16px; display: flex; gap: 1px; font-size: 13px; }
+.node .stars i { font-style: normal; color: rgba(90,60,20,.28); }
+.node .stars i.on { color: var(--gold-2); }
 .node .stars i:nth-child(2) { transform: translateY(-3px); font-size: 15px; }
 
 .node .ring { position: absolute; inset: -6px; transform: rotate(-90deg); }
 .node .ring circle { fill: none; stroke-linecap: round; }
-.node .ring .bg { stroke: rgba(255,255,255,.2); stroke-width: 4; }
-.node .ring .fg { stroke: var(--jade-1); stroke-width: 4; }
+.node .ring .bg { stroke: rgba(90,60,20,.2); stroke-width: 4; }
+.node .ring .fg { stroke: var(--moss-2); stroke-width: 4; }
 
-/*
-  Mavzu belgisi.
-
-  Ilgari shunchaki xira emoji edi va "jonsiz" ko'rinardi. Endi u oltin
-  halqa ichidagi MEDALYON: atrofida yumshoq yorug'lik, ostida soya,
-  yengil qiyshaygan. Shu uchtasi tekis belgini hajmli narsaga aylantiradi.
-*/
+/* Mavzu belgisi — xaritaga chizilgan rasm */
 .node-deco {
   position: absolute;
-  width: 86px; height: 86px;
+  width: 84px; height: 84px;
   display: grid; place-items: center;
-  font-size: 44px; line-height: 1;
+  font-size: 42px; line-height: 1;
   pointer-events: none;
-  transform: translate(-50%, -50%) rotate(-7deg);
+  transform: translate(-50%, -50%) rotate(-6deg);
   z-index: 0;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 38% 30%, rgba(255,217,122,.20), rgba(58,34,112,.55) 70%);
-  border: 2px solid rgba(255,217,122,.30);
-  box-shadow: 0 6px 16px rgba(9,4,26,.5), inset 0 0 22px rgba(255,217,122,.12);
-  opacity: .9;
-  /* filter: drop-shadow ATAYLAB ishlatilmadi — u har element uchun alohida
-     qatlam yaratadi va o'nta bezak xarita chizilishini 28 ms dan 138 ms ga
-     cho'zib yuborgan edi. Soyani box-shadow beradi, u ancha arzon. */
-  text-shadow: 0 3px 5px rgba(0,0,0,.5);
+  background: radial-gradient(circle at 38% 30%, rgba(255,255,255,.5), rgba(224,199,141,.5) 72%);
+  border: var(--line-2);
+  box-shadow: var(--shadow);
+  opacity: .95;
 }
-.node-deco.left  { margin-left: -104px; transform: translate(-50%, -50%) rotate(-7deg); }
-.node-deco.right { margin-left:  104px; transform: translate(-50%, -50%) rotate(7deg); }
+.node-deco.left  { margin-left: -102px; }
+.node-deco.right { margin-left:  102px; transform: translate(-50%, -50%) rotate(6deg); }
 
 /* ==================== DARAJA ICHI (50 puzzle) ==================== */
 
@@ -450,159 +396,103 @@ body {
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 10px;
   padding: 0 16px 12px;
-  font-size: 12.5px; font-weight: 700; color: var(--text-dim);
+  font-size: 13px; font-weight: 700; color: var(--ink-2);
 }
 .meter {
-  flex: 1; height: 9px;
+  flex: 1; height: 10px;
   border-radius: var(--r-full);
-  background: #1b1040;
-  border: 1px solid var(--edge-2);
+  background: var(--p-4);
+  border: var(--line-2);
+  box-shadow: inset 0 2px 3px rgba(90,60,20,.25);
   overflow: hidden;
 }
 .meter i {
   display: block; height: 100%; width: 0%;
   border-radius: var(--r-full);
-  background: linear-gradient(90deg, var(--jade-1), var(--jade-2));
+  background: linear-gradient(90deg, var(--moss-1), var(--moss-2));
   transition: width var(--ease);
 }
 
-#pack-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
-  gap: 11px;
-}
+#pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 11px; }
 
-/*
-  Puzzle katagi — kitobga bosilgan MUHR.
-
-  Tekis to'rtburchak jonsiz ko'rinardi. Endi har katakda uch qatlam bor:
-    ::before — yuqoridan pastga yorug'lik, sirt yaltiroq tuyuladi
-    ::after  — pastki ichki soya, katak "chuqur" ko'rinadi
-    box-shadow — pastki qalin chekka, ya'ni hajm
-*/
+/* Puzzle — xaritaga bosilgan kvadrat muhr */
 .pz {
   position: relative;
   aspect-ratio: 1;
-  border: 1.5px solid transparent;
+  border: var(--line);
   border-radius: var(--r-md);
   display: grid; place-items: center;
-  font-family: var(--serif);
+  font-family: inherit;
   font-size: 22px; font-weight: 700;
   cursor: pointer;
-  overflow: hidden;
   transition: transform var(--tap);
 }
 .pz:active { transform: scale(.92); }
 .pz .pz-no { position: relative; z-index: 2; }
+.pz-mark { position: absolute; bottom: 3px; right: 7px; z-index: 2; font-size: 11px; }
 
-/* Yuqoridan tushuvchi yorug'lik — sirt yaltiroq tuyuladi */
-.pz::before {
-  content: "";
-  position: absolute; inset: 0 0 50% 0;
-  background: linear-gradient(rgba(255,255,255,.3), transparent);
-  pointer-events: none;
-}
-/* Ichki halqa — medalyon chekkasi. Ikki qatlamli hoshiya oddiy
-   to'rtburchakni yig'ib olinadigan narsaga o'xshatadi. */
+/* Ichki ikki chiziq — eski atlas ramkasi */
 .pz::after {
   content: "";
   position: absolute; inset: 4px;
-  border-radius: 9px;
-  border: 1px solid rgba(255,255,255,.28);
-  box-shadow: inset 0 -7px 12px rgba(0,0,0,.2);
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.35);
   pointer-events: none;
 }
 
-.pz-no {
-  /* Raqam "bosib chiqarilgan" ko'rinadi: tepasida yorug'lik, pastda soya */
-  text-shadow: 0 1px 0 rgba(255,255,255,.45), 0 -1px 0 rgba(0,0,0,.2);
-}
-.pz-mark { position: absolute; bottom: 3px; right: 7px; z-index: 2; font-size: 11px; }
-
-/* Yechilgan — yashil nefrit lavha, ichida yumshoq nur */
 .pz.done {
-  background:
-    radial-gradient(circle at 38% 26%, rgba(255,255,255,.4), transparent 58%),
-    linear-gradient(var(--jade-1), var(--jade-2) 52%, var(--jade-3));
-  border-color: rgba(255,255,255,.55);
-  box-shadow: 0 3px 0 #0f5844, 0 4px 12px rgba(9,4,26,.4),
-              inset 0 0 18px rgba(255,255,255,.16);
-  color: #03352a;
+  background: linear-gradient(var(--moss-1), var(--moss-2));
+  border-color: var(--moss-3);
+  box-shadow: 0 3px 0 var(--moss-3), var(--shadow);
+  color: #eaf7ee;
 }
-.pz.done .pz-mark { color: var(--gold-1); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.pz.done .pz-mark { color: var(--gold-1); }
 
-/* Navbatdagi — oltin lavha, atrofida sehrli nur */
 .pz.now {
-  background:
-    radial-gradient(circle at 38% 24%, rgba(255,255,255,.55), transparent 58%),
-    linear-gradient(var(--gold-1), var(--gold-2) 52%, var(--gold-3));
-  border-color: var(--paper-1);
-  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 3px rgba(255,217,122,.35),
-              0 0 24px rgba(232,176,64,.55), 0 5px 14px rgba(9,4,26,.45);
-  color: #3a2205;
+  background: radial-gradient(circle at 38% 26%, var(--gold-1), var(--gold-2) 72%);
+  border-color: var(--gold-3);
+  box-shadow: 0 3px 0 var(--gold-3), 0 0 0 4px rgba(201,148,42,.22), var(--shadow-2);
+  color: #4a3405;
 }
-.pz.now::after { border-color: rgba(255,255,255,.6); }
 
-/* Qulflangan — muhrlanmagan bo'sh katak */
 .pz.locked {
-  background: linear-gradient(#33225f, #241550);
-  border-color: var(--edge-2);
-  color: rgba(247,239,224,.32);
+  background: linear-gradient(var(--p-2), var(--p-4));
+  border-color: rgba(122,90,30,.35);
+  box-shadow: inset 0 2px 5px rgba(90,60,20,.18);
+  color: rgba(35,48,31,.32);
   cursor: not-allowed;
 }
-.pz.locked::before { opacity: .3; }
-.pz.locked::after { border-color: rgba(255,255,255,.09); box-shadow: none; }
-.pz.locked .pz-no { text-shadow: none; }
-.pz.locked .pz-mark { opacity: .4; }
+.pz.locked::after { border-color: rgba(255,255,255,.25); }
+.pz.locked .pz-mark { opacity: .45; }
 
-/*
-  Har o'ninchi — bosqich toshi.
-
-  50 ta bir xil katak ko'zni toldiradi. Har o'ninchisiga oltin hoshiya va
-  burchakda belgi qo'yiladi: ro'yxat ritm oladi va o'yinchi qayerdaligini
-  bir qarashda topadi.
-*/
-.pz.milestone {
-  border-color: var(--gold-2);
-  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 2px rgba(232,176,64,.3),
-              0 4px 12px rgba(9,4,26,.4);
-}
-.pz.milestone::after { border-color: rgba(255,217,122,.55); inset: 3px; }
-
-/* Burchak nishoni FON sifatida chiziladi.
-   Ilgari u .pz-no ustidagi ::before edi va raqamning ustiga tushib uni
-   to'sib qo'yardi (skrinshotda 30, 40, 50 shunday ko'ringan). Fon
-   qatlamida bo'lgani uchun endi hech qachon matnni bosmaydi. */
-.pz.milestone {
-  background-image:
-    linear-gradient(135deg, var(--gold-2) 0 15px, transparent 15px),
-    linear-gradient(var(--jade-1), var(--jade-2) 52%, var(--jade-3));
+/* Har o'ninchi — burchakda oltin varaq. FON qatlamida, matnni to'smaydi. */
+.pz.milestone { border-color: var(--gold-2); }
+.pz.milestone.done {
+  background-image: linear-gradient(135deg, var(--gold-2) 0 15px, transparent 15px),
+                    linear-gradient(var(--moss-1), var(--moss-2));
 }
 .pz.milestone.now {
-  background-image:
-    linear-gradient(135deg, #fff3c9 0 15px, transparent 15px),
-    linear-gradient(var(--gold-1), var(--gold-2) 52%, var(--gold-3));
+  background-image: linear-gradient(135deg, #fff3c9 0 15px, transparent 15px),
+                    radial-gradient(circle at 38% 26%, var(--gold-1), var(--gold-2) 72%);
 }
 .pz.milestone.locked {
-  border-color: rgba(232,176,64,.3);
-  box-shadow: none;
-  background-image:
-    linear-gradient(135deg, rgba(232,176,64,.42) 0 15px, transparent 15px),
-    linear-gradient(#33225f, #241550);
+  background-image: linear-gradient(135deg, rgba(201,148,42,.55) 0 15px, transparent 15px),
+                    linear-gradient(var(--p-2), var(--p-4));
 }
 
+/* Pastki navigatsiya — charm tasma */
 #pack-nav {
   position: relative; z-index: 3;
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
-  background: #1a1040;
-  border-top: 1px solid var(--edge-2);
+  background: linear-gradient(var(--hide-1), #3a2919);
+  border-top: 2px solid var(--gold-3);
 }
+#pack-nav .btn-ghost { background: linear-gradient(var(--p-1), var(--p-3)); }
 #pack-nav-name {
   flex: 1; text-align: center;
-  font-family: var(--serif);
-  font-size: 12.5px; font-weight: 700; color: var(--text-dim);
+  font-size: 13px; font-weight: 700; color: var(--p-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -610,50 +500,30 @@ body {
 
 #game-screen { padding: 0 12px calc(env(safe-area-inset-bottom, 0px) + 10px); gap: 10px; }
 
-/*
-  To'r — ochilgan kitob sahifasi.
-
-  Bo'sh sarg'ish to'rtburchak jonsiz edi. Endi unda:
-    - o'rtada nozik buklanish chizig'i (kitob ochilgandek)
-    - ichki ingichka ramka
-    - burchaklarda oltin gulchalar
-    - qog'ozga xos yumshoq yorug'lik
-*/
+/* To'r — ochilgan daftar varag'i, chiziqli */
 #tray {
   position: relative;
   flex: 1 1 auto; min-height: 0;
   border-radius: var(--r-lg);
-  background:
-    linear-gradient(90deg, transparent 49.3%, rgba(184,125,28,.16) 50%, transparent 50.7%),
-    radial-gradient(circle at 22% 12%, rgba(255,255,255,.6), transparent 45%),
-    linear-gradient(var(--paper-1), var(--paper-2) 70%, var(--paper-3));
+  background-color: var(--p-1);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(122,90,30,.09) 0 1px, transparent 1px 26px),
+    radial-gradient(60% 40% at 20% 10%, rgba(255,255,255,.5), transparent 70%);
   border: 2px solid var(--gold-3);
-  box-shadow: 0 5px 0 var(--gold-4), var(--shadow-2), inset 0 0 30px rgba(184,125,28,.1);
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow-2);
   padding: 16px 12px;
   overflow-y: auto;
   contain: content;
   display: flex; align-items: center; justify-content: center;
 }
-/* Ichki ramka */
 #tray::before {
   content: "";
   position: absolute; inset: 6px;
-  border-radius: 15px;
-  border: 1px solid rgba(184,125,28,.28);
+  border-radius: 11px;
+  border: var(--line-2);
   pointer-events: none;
 }
-/* Burchak gulchalari — to'rtta kichik oltin nuqta */
-#tray::after {
-  content: "";
-  position: absolute; inset: 11px;
-  border-radius: 12px;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 0 0,     var(--gold-3) 2.5px, transparent 3px),
-    radial-gradient(circle at 100% 0,  var(--gold-3) 2.5px, transparent 3px),
-    radial-gradient(circle at 0 100%,  var(--gold-3) 2.5px, transparent 3px),
-    radial-gradient(circle at 100% 100%, var(--gold-3) 2.5px, transparent 3px);
-}
+
 #grid {
   display: flex; flex-wrap: wrap;
   justify-content: center; align-content: center;
@@ -661,29 +531,25 @@ body {
 }
 .word-group { display: flex; align-items: center; gap: 5px; }
 
+/* Katak — qog'ozga chizilgan bo'sh xona */
 .cell {
   width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--paper-3);
-  border: 1.5px solid rgba(120,90,40,.35);
-  box-shadow: inset 0 2px 4px rgba(90,65,25,.22);
+  border-radius: 5px;
+  background: rgba(207,174,112,.3);
+  border: 1.5px solid rgba(122,90,30,.45);
   display: grid; place-items: center;
-  font-family: var(--serif);
+  font-family: inherit;
   font-weight: 700; font-size: 18px;
   color: transparent;
 }
 .cell.filled {
   background: linear-gradient(var(--gold-1), var(--gold-2));
-  border-color: var(--gold-4);
-  box-shadow: 0 2px 0 var(--gold-4);
-  color: var(--ink);
+  border-color: var(--gold-3);
+  box-shadow: 0 2px 0 var(--gold-3);
+  color: #3f2c05;
   animation: snap .3s cubic-bezier(.2,1.4,.4,1);
 }
-.cell.hinted {
-  background: #fff;
-  border-color: var(--gold-3);
-  color: var(--ink);
-}
+.cell.hinted { background: #fff; border-color: var(--gold-3); color: var(--ink-1); }
 @keyframes snap {
   0%   { transform: scale(.4) rotate(-12deg); opacity: 0; }
   70%  { transform: scale(1.15) rotate(4deg); }
@@ -692,9 +558,9 @@ body {
 
 .lamp {
   width: 26px; height: 26px;
-  border: 1.5px solid var(--gold-3);
+  border: var(--line-2);
   border-radius: 50%;
-  background: var(--paper-1);
+  background: linear-gradient(var(--p-1), var(--p-3));
   font-size: 12px; line-height: 1;
   cursor: pointer;
   display: grid; place-items: center;
@@ -706,166 +572,135 @@ body {
 .lamp-demo {
   display: inline-grid; place-items: center;
   width: 24px; height: 24px; border-radius: 50%;
-  background: var(--paper-1); border: 1px solid var(--gold-3);
+  background: var(--p-1); border: var(--line-2);
   vertical-align: middle;
 }
 
+/* Yig'ilayotgan so'z — lentada */
 #current-word { flex: 0 0 auto; height: 40px; display: grid; place-items: center; }
 #current-word span {
-  font-family: var(--serif);
-  font-size: 27px; font-weight: 700; letter-spacing: 5px;
-  color: var(--paper-1);
-  padding: 3px 18px; border-radius: var(--r-md);
-  text-shadow: 0 2px 0 rgba(0,0,0,.35);
-  transition: background var(--tap);
+  font-size: 26px; font-weight: 700; letter-spacing: 5px;
+  color: var(--ink-1);
+  padding: 3px 20px; border-radius: 4px;
+  transition: background var(--tap), color var(--tap);
 }
-#current-word span.hit    { background: rgba(42,165,131,.5); }
-#current-word span.repeat { background: rgba(255,255,255,.14); }
-#current-word span.miss   { background: rgba(217,74,114,.5); animation: shake .3s; }
+#current-word span.hit    { background: var(--moss-2); color: #eaf7ee; }
+#current-word span.repeat { background: var(--p-4); }
+#current-word span.miss   { background: var(--seal-2); color: #fff2ef; animation: shake .3s; }
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   25%     { transform: translateX(-8px); }
   75%     { transform: translateX(8px); }
 }
 
-/* G'ildirak — yog'och stol ustidagi doira */
+/* G'ildirak — kompas gulchambari */
 #stage-area { flex: 0 0 auto; position: relative; display: grid; place-items: center; padding: 4px 0 2px; }
 #wheel { position: relative; width: min(80vw, 310px); aspect-ratio: 1; touch-action: none; }
 
-/*
-  Sehrli doira.
-
-  Bitta oltin halqa quruq ko'rinardi. Endi uch halqa: tashqi qalin,
-  ichkarida ingichka, o'rtada esa nuqtali halqa — sehrli chizma
-  taassuroti. Markazda yumshoq yorug'lik.
-*/
 #plate {
   position: absolute; inset: 3%;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255,217,122,.14), transparent 55%),
-    radial-gradient(circle at 36% 26%, #46307f, #1f1249 72%);
+    radial-gradient(circle at 38% 30%, #fffaf0, var(--p-2) 62%, var(--p-3) 100%);
   border: 3px solid var(--gold-3);
-  box-shadow: 0 10px 26px rgba(9,4,26,.6),
-              inset 0 0 44px rgba(0,0,0,.42),
-              inset 0 0 0 1px rgba(255,217,122,.18);
+  box-shadow: var(--shadow-2), inset 0 0 28px rgba(150,110,45,.2);
 }
-/* Ichki ingichka halqa */
+/* Ikki ichki halqa — kompas shkalasi */
 #plate::before {
   content: "";
-  position: absolute; inset: 9%;
+  position: absolute; inset: 8%;
   border-radius: 50%;
-  border: 1px solid rgba(255,217,122,.28);
+  border: 1px solid rgba(122,90,30,.4);
 }
-/* Nuqtali halqa — sehrli belgilar o'rnida */
 #plate::after {
   content: "";
-  position: absolute; inset: 15%;
+  position: absolute; inset: 14%;
   border-radius: 50%;
-  border: 2px dotted rgba(255,217,122,.2);
+  border: 2px dotted rgba(122,90,30,.28);
 }
+
 #line { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #letters { position: absolute; inset: 0; }
 
-/* Harflar — pergament plitkalar, kitob harflari kabi */
-/* Harf — o'yilgan suyak plitka. Yuqorida yorug'lik, pastda ichki soya:
-   harf sirtdan bo'rtib chiqqandek ko'rinadi. */
+/* Harf — yog'och bosma harf */
 .letter {
   position: absolute;
   width: var(--tile); height: var(--tile);
   margin: calc(var(--tile) / -2) 0 0 calc(var(--tile) / -2);
-  border-radius: 13px;
-  background:
-    radial-gradient(circle at 34% 24%, #fff, transparent 60%),
-    linear-gradient(var(--paper-1), var(--paper-2) 58%, var(--paper-3));
+  border-radius: 8px;
+  background: linear-gradient(#fdf6e4, var(--p-2) 62%, var(--p-3));
   border: 2px solid var(--gold-3);
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow),
-              inset 0 -5px 9px rgba(150,110,45,.22);
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow),
+              inset 0 -4px 8px rgba(150,110,45,.18);
   display: grid; place-items: center;
-  font-family: var(--serif);
+  font-family: inherit;
   font-size: 26px; font-weight: 700;
-  color: var(--ink);
-  text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  color: var(--ink-1);
+  text-shadow: 0 1px 0 rgba(255,255,255,.8);
   transition: transform var(--tap), box-shadow var(--tap), background var(--tap);
 }
 .letter.active {
   transform: scale(1.16);
-  background:
-    radial-gradient(circle at 34% 24%, #fff8d6, transparent 62%),
-    linear-gradient(var(--gold-1), var(--gold-2));
-  box-shadow: 0 0 0 4px rgba(255,217,122,.4),
-              0 0 22px rgba(232,176,64,.55),
-              0 4px 0 var(--gold-4);
+  background: linear-gradient(var(--seal-1), var(--seal-2));
+  border-color: var(--seal-3);
+  color: #fff2ef;
+  text-shadow: none;
+  box-shadow: 0 0 0 4px rgba(165,42,53,.22), 0 4px 0 var(--seal-3);
 }
 
 .shuffle { position: absolute; right: 2px; bottom: 6px; width: 50px; height: 50px; font-size: 24px; }
 
 /* ============================ REYTING ============================ */
 
-/*
-  Reyting qatori — kitobdagi yozuv satri.
-
-  Oddiy ro'yxat o'rniga: chapda o'yilgan raqam medaloni, o'ngda ball
-  oltin bilan. Birinchi uchtasi metall plastinka ko'rinishida — oltin,
-  kumush, bronza — shuning uchun ular ro'yxatdan darhol ajralib turadi.
-*/
 .rank-row {
   position: relative;
   display: flex; align-items: center; gap: 11px;
   padding: 9px 12px 9px 8px;
   margin-bottom: 8px;
   border-radius: var(--r-md);
-  background: linear-gradient(#2f1e63, #251650);
-  border: 1px solid var(--edge-2);
-  box-shadow: var(--gleam);
+  background: linear-gradient(var(--p-1), var(--p-2));
+  border: var(--line-2);
+  box-shadow: var(--emboss), var(--shadow);
 }
-.rank-row.me {
-  background: linear-gradient(90deg, rgba(232,176,64,.26), #2a1a55 55%);
-  border-color: var(--edge);
-}
+.rank-row.me { background: linear-gradient(90deg, rgba(201,148,42,.3), var(--p-1) 60%);
+               border-color: var(--gold-3); }
 
-/* O'rin medaloni */
 .rank-no {
   flex: 0 0 30px; height: 30px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: #1d1145;
-  border: 1px solid var(--edge-2);
-  font-family: var(--serif); font-size: 14px; font-weight: 700;
-  color: var(--text-dim);
+  background: var(--p-3);
+  border: var(--line-2);
+  font-size: 14px; font-weight: 700;
+  color: var(--ink-2);
 }
-.rank-row.gold .rank-no,
-.rank-row.silver .rank-no,
-.rank-row.bronze .rank-no {
+.rank-row.gold .rank-no, .rank-row.silver .rank-no, .rank-row.bronze .rank-no {
   font-size: 17px; border: none; background: none;
 }
-/* Sovrindorlar uchun metall plastinka */
-.rank-row.gold   { background: linear-gradient(90deg, rgba(232,176,64,.3), #2a1a55 60%);
-                   border-color: rgba(232,176,64,.55); }
-.rank-row.silver { background: linear-gradient(90deg, rgba(216,228,245,.22), #2a1a55 60%);
-                   border-color: rgba(216,228,245,.4); }
-.rank-row.bronze { background: linear-gradient(90deg, rgba(214,142,86,.24), #2a1a55 60%);
-                   border-color: rgba(214,142,86,.45); }
+.rank-row.gold   { background: linear-gradient(90deg, rgba(201,148,42,.34), var(--p-1) 62%);
+                   border-color: var(--gold-2); }
+.rank-row.silver { background: linear-gradient(90deg, rgba(150,160,170,.3), var(--p-1) 62%);
+                   border-color: #8d9aa2; }
+.rank-row.bronze { background: linear-gradient(90deg, rgba(176,110,66,.3), var(--p-1) 62%);
+                   border-color: #a5673c; }
 
 .avatar {
   flex: 0 0 auto;
   width: 42px; height: 42px;
   border-radius: 50%;
-  background: linear-gradient(var(--violet-1, #b28dff), var(--rose-2));
-  border: 2px solid var(--edge);
+  background: linear-gradient(var(--seal-1), var(--seal-2));
+  border: 2px solid var(--gold-3);
   display: grid; place-items: center;
-  font-family: var(--serif);
-  font-size: 17px; font-weight: 700;
+  font-size: 17px; font-weight: 700; color: #fff2ef;
   overflow: hidden;
-  box-shadow: 0 3px 8px rgba(9,4,26,.45);
+  box-shadow: var(--shadow);
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rank-row.gold   .avatar { border-color: var(--gold-1);  box-shadow: 0 0 0 2px rgba(232,176,64,.4), 0 3px 8px rgba(9,4,26,.45); }
-.rank-row.silver .avatar { border-color: #dbe6f7; }
-.rank-row.bronze .avatar { border-color: #d68e56; }
 
-.rank-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rank-score { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; color: var(--gold-1); }
+.rank-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--ink-1);
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-score { flex: 0 0 auto; display: flex; align-items: center; gap: 5px;
+              font-size: 15px; font-weight: 700; color: var(--gold-3); }
 .coin-dot { font-size: 13px; }
 
 #my-rank {
@@ -873,111 +708,93 @@ body {
   flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 18px;
-  background: #1a1040;
-  border-top: 1px solid var(--edge-2);
+  background: linear-gradient(var(--hide-1), #3a2919);
+  border-top: 2px solid var(--gold-3);
+  color: var(--p-1);
   font-size: 14px; font-weight: 700;
 }
 #my-rank[hidden] { display: none; }
 
 /* =========================== VAZIFALAR =========================== */
 
-/* Pergament varaq */
-/*
-  Vazifa varag'i — kitobga qadalgan pergament.
-
-  Ikki qatlamli hoshiya (tashqi oltin + ichki ingichka chiziq) va
-  burchaklardagi kichik nuqtalar varaqni "qadalgan" ko'rsatadi.
-*/
+/* Varaq — ikki chiziqli ramka bilan */
 .panel {
   position: relative;
   border-radius: var(--r-lg);
-  background:
-    radial-gradient(circle at 15% 12%, rgba(255,255,255,.5), transparent 45%),
-    linear-gradient(var(--paper-1), var(--paper-2));
+  background: linear-gradient(var(--p-1), var(--p-2));
   border: 2px solid var(--gold-3);
-  box-shadow: 0 5px 0 var(--gold-4), var(--shadow);
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow);
   padding: 16px 16px 17px;
   margin-bottom: 16px;
-  color: var(--ink);
+  color: var(--ink-1);
 }
-/* Ichki ingichka ramka */
 .panel::before {
   content: "";
   position: absolute; inset: 5px;
-  border-radius: 15px;
-  border: 1px solid rgba(184,125,28,.32);
+  border-radius: 11px;
+  border: var(--line-2);
   pointer-events: none;
 }
-.panel-hero {
-  background:
-    radial-gradient(circle at 15% 12%, rgba(255,255,255,.55), transparent 45%),
-    linear-gradient(var(--paper-1), #f6dba4);
-}
+.panel-hero { background: linear-gradient(#fdf4dd, var(--p-3)); }
 .panel-glow { display: none; }
 
 .panel-head { position: relative; display: flex; gap: 13px; margin-bottom: 14px; }
-
-/* Belgi — muhr bosilgan medalyon */
 .panel-ico {
   flex: 0 0 auto;
   width: 48px; height: 48px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 28%, #fff6d8, var(--gold-2) 62%, var(--gold-3));
-  border: 2px solid var(--gold-4);
-  box-shadow: 0 3px 0 var(--gold-4), inset 0 0 12px rgba(255,255,255,.4);
+  background: radial-gradient(circle at 35% 28%, var(--gold-1), var(--gold-2) 72%);
+  border: 2px solid var(--gold-3);
+  box-shadow: 0 3px 0 var(--gold-3);
   font-size: 24px;
 }
-.panel-text h2 { margin: 0 0 3px; font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--ink); }
-.panel-text p  { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
-.panel-text b  { color: var(--ink); }
-.panel-row { display: flex; gap: 10px; }
+.panel-text h2 { margin: 0 0 3px; font-size: 17px; font-weight: 700; color: var(--ink-1); }
+.panel-text p  { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.panel-text b  { color: var(--ink-1); }
+.panel-row { position: relative; display: flex; gap: 10px; }
 .panel-row .btn { flex: 1; }
-.panel > .btn-gold { width: 100%; }
+.panel > .btn-gold { position: relative; width: 100%; }
 
-#streak-days {
-  position: relative;
-  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
-  margin-bottom: 15px;
-}
-/* Kun tangasi — pergamentga bosilgan yumaloq muhr */
+#streak-days { position: relative; display: grid; grid-template-columns: repeat(7, 1fr);
+               gap: 6px; margin-bottom: 15px; }
+/* Kun — qog'ozga bosilgan tanga */
 .day {
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 28%, #fff, var(--paper-3) 70%);
-  border: 1.5px solid rgba(120,90,40,.38);
-  box-shadow: inset 0 -3px 6px rgba(120,90,40,.18);
+  background: radial-gradient(circle at 36% 28%, #fff, var(--p-3) 72%);
+  border: var(--line-2);
+  box-shadow: inset 0 -3px 5px rgba(122,90,30,.2);
   display: grid; place-items: center; gap: 1px;
   text-align: center;
   color: var(--ink-2);
 }
-.day-n { font-family: var(--serif); font-size: 13px; font-weight: 700; line-height: 1; }
+.day-n { font-size: 13px; font-weight: 700; line-height: 1; }
 .day-k { font-size: 8px; line-height: 1; letter-spacing: -2px; }
 .day.got {
-  background: radial-gradient(circle at 36% 28%, #b6ffe2, var(--jade-2) 68%);
-  border-color: var(--jade-3);
-  box-shadow: inset 0 -3px 6px rgba(0,60,42,.25);
-  color: #04372a;
+  background: radial-gradient(circle at 36% 28%, var(--moss-1), var(--moss-2) 74%);
+  border-color: var(--moss-3);
+  color: #eaf7ee;
 }
-.day.got .day-n { color: #04372a; }
+.day.got .day-n { color: #eaf7ee; }
 .day.next {
-  background: radial-gradient(circle at 36% 26%, #fff6d0, var(--gold-2) 66%);
-  border-color: var(--gold-4);
-  color: #3e2606;
-  box-shadow: 0 0 0 3px rgba(232,176,64,.35), inset 0 -3px 6px rgba(120,70,0,.25);
+  background: radial-gradient(circle at 36% 26%, var(--gold-1), var(--gold-2) 72%);
+  border-color: var(--gold-3);
+  color: #4a3405;
+  box-shadow: 0 0 0 3px rgba(201,148,42,.28), inset 0 -3px 5px rgba(120,80,10,.2);
 }
-.day.next .day-n { color: #3e2606; }
+.day.next .day-n { color: #4a3405; }
 
 /* ============================ TABBAR ============================ */
 
+/* Charm tasma — varaq pastidagi muqova */
 #tabbar {
   position: relative; z-index: 6;
   flex: 0 0 auto;
   display: flex; gap: 6px;
   padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
-  background: #150c36;
-  border-top: 1.5px solid var(--edge-2);
+  background: linear-gradient(var(--hide-1), #33241a);
+  border-top: 2px solid var(--gold-3);
 }
 .tab {
   position: relative;
@@ -987,25 +804,25 @@ body {
   border: 1.5px solid transparent;
   border-radius: var(--r-md);
   background: transparent;
-  color: var(--text-mute);
+  color: rgba(246,232,200,.6);
   font-family: inherit;
-  font-size: 11px; font-weight: 700;
+  font-size: 11.5px; font-weight: 700;
   cursor: pointer;
   transition: color var(--ease), background var(--ease), border-color var(--ease);
 }
 .tab.active {
-  background: #2c1c5c;
-  border-color: var(--edge);
-  color: var(--paper-1);
-  box-shadow: var(--gleam);
+  background: linear-gradient(var(--p-1), var(--p-3));
+  border-color: var(--gold-2);
+  color: var(--ink-1);
+  box-shadow: var(--emboss);
 }
 .tab-ico { font-size: 20px; }
 
 .tab-dot {
   position: absolute; top: 6px; right: 50%; margin-right: -24px;
   width: 10px; height: 10px; border-radius: 50%;
-  background: var(--rose-2);
-  border: 2px solid var(--paper-1);
+  background: var(--seal-2);
+  border: 2px solid var(--p-1);
 }
 .tab-dot[hidden] { display: none; }
 
@@ -1016,26 +833,29 @@ body {
   z-index: 60;
   display: grid; place-items: center;
   padding: 20px;
-  background: rgba(9,4,26,.78);
+  background: rgba(50,34,14,.62);
 }
 .sheet {
   width: 100%; max-width: 400px; max-height: 84vh;
   display: flex; flex-direction: column;
   border-radius: var(--r-lg);
-  background: var(--panel);
-  border: 2px solid var(--gold-3);
+  background: linear-gradient(var(--p-1), var(--p-2));
+  border: 3px solid var(--gold-3);
   box-shadow: var(--shadow-2);
   overflow: hidden;
+  color: var(--ink-1);
 }
 .sheet-head {
   flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px;
-  background: var(--panel-2);
-  border-bottom: 1.5px solid var(--edge-2);
+  padding: 13px 16px;
+  background: linear-gradient(var(--hide-1), #3a2919);
+  border-bottom: 2px solid var(--gold-3);
+  color: var(--p-1);
 }
-.sheet-head h2 { margin: 0; font-family: var(--serif); font-size: 18px; font-weight: 700; }
-.sheet-body { padding: 14px 18px 22px; overflow-y: auto; contain: content; }
+.sheet-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.sheet-head .icon-round { background: linear-gradient(var(--p-1), var(--p-3)); }
+.sheet-body { padding: 16px 18px 22px; overflow-y: auto; contain: content; }
 
 .overlay.inset {
   position: absolute;
@@ -1046,53 +866,45 @@ body {
   width: 100%; height: 100%;
   max-width: none; max-height: none;
   border: none; border-radius: 0;
-  background: var(--night-2);
 }
-.overlay.inset .sheet-head { padding-top: calc(env(safe-area-inset-top, 0px) + 14px); }
 
 .rules p {
   display: flex; gap: 10px; align-items: flex-start;
-  margin: 0 0 13px; font-size: 14px; line-height: 1.55;
-  color: var(--text-dim);
+  margin: 0 0 13px; font-size: 14.5px; line-height: 1.55;
+  color: var(--ink-2);
 }
 .rule-n {
   flex: 0 0 auto;
   width: 22px; height: 22px; margin-top: 1px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: linear-gradient(var(--gold-1), var(--gold-2));
-  color: #3e2606;
-  font-family: var(--serif);
+  background: radial-gradient(circle at 35% 28%, var(--seal-1), var(--seal-2) 72%);
+  color: #fff2ef;
   font-size: 12px; font-weight: 700;
 }
-.rules b { color: var(--paper-1); }
+.rules b { color: var(--ink-1); }
 
 .build-stamp {
   margin-top: 18px; padding-top: 14px;
-  border-top: 1px solid var(--edge-2);
-  font-size: 12px; color: var(--text-mute);
+  border-top: var(--line-2);
+  font-size: 12px; color: var(--ink-3);
   justify-content: center;
 }
 
 /* --------------------------- Modallar --------------------------- */
 
-.modal {
-  align-items: center; text-align: center;
-  padding: 26px 22px 22px;
-  max-width: 330px;
-}
-.modal h2 { margin: 14px 0 4px; font-family: var(--serif); font-size: 23px; font-weight: 700; }
-.modal p  { margin: 0 0 20px; font-size: 15px; color: var(--text-dim); }
+.modal { align-items: center; text-align: center; padding: 26px 22px 22px; max-width: 330px; }
+.modal h2 { margin: 14px 0 4px; font-size: 24px; font-weight: 700; color: var(--ink-1); }
+.modal p  { margin: 0 0 20px; font-size: 15px; color: var(--ink-2); }
 
-.modal-solved  { background: linear-gradient(165deg, #3a2270, var(--night-2)); }
-.modal-chapter { background: linear-gradient(165deg, #4a2a6e, var(--night-2)); }
-.modal-solved p { color: var(--gold-1); font-weight: 700; font-size: 17px; }
+.modal-solved  { background: linear-gradient(#fdf4dd, var(--p-3)); }
+.modal-chapter { background: linear-gradient(#fdf4dd, var(--p-3)); }
+.modal-solved p { color: var(--gold-3); font-weight: 700; font-size: 17px; }
 
-/* Aylanuvchi conic-gradient olib tashlandi — juda qimmat edi.
-   O'rniga statik nur, faqat bir marta chiziladi. */
+/* Statik nur — aylanuvchi conic-gradient qimmat edi, ishlatilmaydi */
 .rays {
   position: absolute; inset: 0;
-  background: radial-gradient(circle at 50% 30%, rgba(255,217,122,.16), transparent 62%);
+  background: radial-gradient(circle at 50% 30%, rgba(201,148,42,.2), transparent 62%);
   pointer-events: none;
 }
 
@@ -1101,23 +913,23 @@ body {
   width: 82px; height: 82px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: linear-gradient(var(--paper-1), var(--paper-3));
+  background: radial-gradient(circle at 35% 28%, #fffaf0, var(--p-3) 74%);
   border: 3px solid var(--gold-3);
-  box-shadow: 0 5px 0 var(--gold-4), var(--shadow-2);
+  box-shadow: 0 4px 0 var(--gold-3), var(--shadow-2);
   font-size: 38px;
   animation: medalIn .4s cubic-bezier(.2,1.4,.5,1) backwards;
 }
 .medal.big {
   width: 94px; height: 94px; font-size: 44px;
-  background: linear-gradient(var(--gold-1), var(--gold-2) 60%, var(--gold-3));
+  background: radial-gradient(circle at 35% 28%, var(--gold-1), var(--gold-2) 74%);
 }
 @keyframes medalIn {
   from { transform: scale(.4) rotate(-18deg); opacity: 0; }
   to   { transform: scale(1) rotate(0); opacity: 1; }
 }
 
-.stars { display: flex; gap: 7px; font-size: 40px; color: var(--gold-1); }
-.stars span { animation: medalIn .35s ease-out backwards; text-shadow: 0 3px 0 var(--gold-4); }
+.stars { display: flex; gap: 7px; font-size: 40px; color: var(--gold-2); }
+.stars span { animation: medalIn .35s ease-out backwards; }
 .stars span:nth-child(2) { animation-delay: .09s; font-size: 52px; margin-top: -9px; }
 .stars span:nth-child(3) { animation-delay: .18s; }
 
@@ -1129,10 +941,10 @@ body {
 #bubble {
   position: fixed; z-index: 80;
   padding: 10px 18px;
-  border-radius: var(--r-md);
-  background: linear-gradient(var(--paper-1), var(--paper-2));
-  border: 1.5px solid var(--gold-3);
-  color: var(--ink);
+  border-radius: var(--r-sm);
+  background: linear-gradient(var(--p-1), var(--p-2));
+  border: 2px solid var(--gold-3);
+  color: var(--ink-1);
   box-shadow: var(--shadow-2);
   text-align: center;
   pointer-events: none;
@@ -1142,23 +954,24 @@ body {
 }
 #bubble.show { opacity: 1; transform: translate(-50%, 0); }
 #bubble[hidden] { display: none; }
-#bubble b { display: block; font-family: var(--serif); font-size: 12px; color: var(--rose-3); letter-spacing: 1.2px; }
+#bubble b { display: block; font-size: 12px; color: var(--seal-2); letter-spacing: 1.2px; }
 #bubble span { font-size: 15px; font-weight: 700; }
 #bubble::after {
   content: ""; position: absolute;
-  bottom: -7px; left: 50%; margin-left: -8px;
-  border: 8px solid transparent; border-top-color: var(--paper-2); border-bottom: 0;
+  bottom: -8px; left: 50%; margin-left: -8px;
+  border: 8px solid transparent; border-top-color: var(--gold-3); border-bottom: 0;
 }
 
 #toast {
   position: fixed; left: 50%; top: 16%;
   transform: translate(-50%, -10px);
   z-index: 70;
-  padding: 12px 22px;
-  border-radius: var(--r-md);
-  background: #1a1040;
-  border: 1.5px solid var(--edge);
+  padding: 11px 22px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(var(--hide-1), #3a2919);
+  border: 2px solid var(--gold-3);
   box-shadow: var(--shadow-2);
+  color: var(--p-1);
   font-size: 14.5px; font-weight: 700;
   white-space: nowrap;
   pointer-events: none; opacity: 0;
@@ -1168,10 +981,10 @@ body {
 #toast[hidden] { display: none; }
 
 .empty-note {
-  color: var(--text-dim);
+  color: var(--ink-2);
   text-align: center;
   padding: 30px 8px;
-  font-size: 14px; line-height: 1.55;
+  font-size: 14.5px; line-height: 1.55;
   white-space: pre-line;
 }
 
@@ -1182,7 +995,6 @@ body {
   100% { transform: scale(1); }
 }
 
-/* Harakatni kamaytirish so'ralgan bo'lsa — hech narsa tebranmaydi */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
