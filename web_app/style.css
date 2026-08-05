@@ -519,23 +519,29 @@ body {
 }
 .pz-mark { position: absolute; bottom: 3px; right: 7px; z-index: 2; font-size: 11px; }
 
+/* Yechilgan — yashil nefrit lavha, ichida yumshoq nur */
 .pz.done {
-  background: linear-gradient(var(--jade-1), var(--jade-2) 52%, var(--jade-3));
-  border-color: rgba(255,255,255,.5);
-  box-shadow: 0 3px 0 #0f5844, 0 4px 10px rgba(9,4,26,.35);
-  color: #04372a;
+  background:
+    radial-gradient(circle at 38% 26%, rgba(255,255,255,.4), transparent 58%),
+    linear-gradient(var(--jade-1), var(--jade-2) 52%, var(--jade-3));
+  border-color: rgba(255,255,255,.55);
+  box-shadow: 0 3px 0 #0f5844, 0 4px 12px rgba(9,4,26,.4),
+              inset 0 0 18px rgba(255,255,255,.16);
+  color: #03352a;
 }
-.pz.done .pz-mark { color: var(--gold-1); opacity: .95; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.pz.done .pz-mark { color: var(--gold-1); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 
-/* Navbatdagi — oltin muhr, atrofida nur */
+/* Navbatdagi — oltin lavha, atrofida sehrli nur */
 .pz.now {
-  background: linear-gradient(var(--gold-1), var(--gold-2) 52%, var(--gold-3));
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255,255,255,.55), transparent 58%),
+    linear-gradient(var(--gold-1), var(--gold-2) 52%, var(--gold-3));
   border-color: var(--paper-1);
-  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 3px rgba(255,217,122,.32),
-              0 0 20px rgba(232,176,64,.5), 0 4px 12px rgba(9,4,26,.4);
-  color: #3e2606;
+  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 3px rgba(255,217,122,.35),
+              0 0 24px rgba(232,176,64,.55), 0 5px 14px rgba(9,4,26,.45);
+  color: #3a2205;
 }
-.pz.now::after { border-color: rgba(255,255,255,.55); }
+.pz.now::after { border-color: rgba(255,255,255,.6); }
 
 /* Qulflangan — muhrlanmagan bo'sh katak */
 .pz.locked {
@@ -558,23 +564,32 @@ body {
 */
 .pz.milestone {
   border-color: var(--gold-2);
-  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 2px rgba(232,176,64,.28),
+  box-shadow: 0 3px 0 var(--gold-4), 0 0 0 2px rgba(232,176,64,.3),
               0 4px 12px rgba(9,4,26,.4);
 }
-.pz.milestone::after { border-color: rgba(255,217,122,.5); inset: 3px; }
-.pz.milestone .pz-no { font-size: 1.06em; }
-/* Tepa chap burchakdagi kichik oltin uchburchak — "belgilangan" nishoni */
-.pz.milestone .pz-no::before {
-  content: "";
-  position: absolute; top: 0; left: 0;
-  border: 9px solid transparent;
-  border-top-color: var(--gold-2);
-  border-left-color: var(--gold-2);
-  border-radius: var(--r-md) 0 0 0;
+.pz.milestone::after { border-color: rgba(255,217,122,.55); inset: 3px; }
+
+/* Burchak nishoni FON sifatida chiziladi.
+   Ilgari u .pz-no ustidagi ::before edi va raqamning ustiga tushib uni
+   to'sib qo'yardi (skrinshotda 30, 40, 50 shunday ko'ringan). Fon
+   qatlamida bo'lgani uchun endi hech qachon matnni bosmaydi. */
+.pz.milestone {
+  background-image:
+    linear-gradient(135deg, var(--gold-2) 0 15px, transparent 15px),
+    linear-gradient(var(--jade-1), var(--jade-2) 52%, var(--jade-3));
 }
-.pz.milestone.locked { border-color: rgba(232,176,64,.35); box-shadow: none; }
-.pz.milestone.locked .pz-no::before { border-top-color: rgba(232,176,64,.4);
-                                      border-left-color: rgba(232,176,64,.4); }
+.pz.milestone.now {
+  background-image:
+    linear-gradient(135deg, #fff3c9 0 15px, transparent 15px),
+    linear-gradient(var(--gold-1), var(--gold-2) 52%, var(--gold-3));
+}
+.pz.milestone.locked {
+  border-color: rgba(232,176,64,.3);
+  box-shadow: none;
+  background-image:
+    linear-gradient(135deg, rgba(232,176,64,.42) 0 15px, transparent 15px),
+    linear-gradient(#33225f, #241550);
+}
 
 #pack-nav {
   position: relative; z-index: 3;
@@ -595,17 +610,49 @@ body {
 
 #game-screen { padding: 0 12px calc(env(safe-area-inset-bottom, 0px) + 10px); gap: 10px; }
 
-/* To'r — ochilgan kitob sahifasi */
+/*
+  To'r — ochilgan kitob sahifasi.
+
+  Bo'sh sarg'ish to'rtburchak jonsiz edi. Endi unda:
+    - o'rtada nozik buklanish chizig'i (kitob ochilgandek)
+    - ichki ingichka ramka
+    - burchaklarda oltin gulchalar
+    - qog'ozga xos yumshoq yorug'lik
+*/
 #tray {
+  position: relative;
   flex: 1 1 auto; min-height: 0;
   border-radius: var(--r-lg);
-  background: linear-gradient(var(--paper-1), var(--paper-2));
+  background:
+    linear-gradient(90deg, transparent 49.3%, rgba(184,125,28,.16) 50%, transparent 50.7%),
+    radial-gradient(circle at 22% 12%, rgba(255,255,255,.6), transparent 45%),
+    linear-gradient(var(--paper-1), var(--paper-2) 70%, var(--paper-3));
   border: 2px solid var(--gold-3);
-  box-shadow: 0 5px 0 var(--gold-4), var(--shadow-2);
-  padding: 14px 10px;
+  box-shadow: 0 5px 0 var(--gold-4), var(--shadow-2), inset 0 0 30px rgba(184,125,28,.1);
+  padding: 16px 12px;
   overflow-y: auto;
   contain: content;
   display: flex; align-items: center; justify-content: center;
+}
+/* Ichki ramka */
+#tray::before {
+  content: "";
+  position: absolute; inset: 6px;
+  border-radius: 15px;
+  border: 1px solid rgba(184,125,28,.28);
+  pointer-events: none;
+}
+/* Burchak gulchalari — to'rtta kichik oltin nuqta */
+#tray::after {
+  content: "";
+  position: absolute; inset: 11px;
+  border-radius: 12px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0 0,     var(--gold-3) 2.5px, transparent 3px),
+    radial-gradient(circle at 100% 0,  var(--gold-3) 2.5px, transparent 3px),
+    radial-gradient(circle at 0 100%,  var(--gold-3) 2.5px, transparent 3px),
+    radial-gradient(circle at 100% 100%, var(--gold-3) 2.5px, transparent 3px);
 }
 #grid {
   display: flex; flex-wrap: wrap;
@@ -685,65 +732,137 @@ body {
 #stage-area { flex: 0 0 auto; position: relative; display: grid; place-items: center; padding: 4px 0 2px; }
 #wheel { position: relative; width: min(80vw, 310px); aspect-ratio: 1; touch-action: none; }
 
+/*
+  Sehrli doira.
+
+  Bitta oltin halqa quruq ko'rinardi. Endi uch halqa: tashqi qalin,
+  ichkarida ingichka, o'rtada esa nuqtali halqa — sehrli chizma
+  taassuroti. Markazda yumshoq yorug'lik.
+*/
 #plate {
   position: absolute; inset: 3%;
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 28%, #3f2a78, #241552 70%);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255,217,122,.14), transparent 55%),
+    radial-gradient(circle at 36% 26%, #46307f, #1f1249 72%);
   border: 3px solid var(--gold-3);
-  box-shadow: 0 8px 22px rgba(9,4,26,.55), inset 0 0 40px rgba(0,0,0,.35);
+  box-shadow: 0 10px 26px rgba(9,4,26,.6),
+              inset 0 0 44px rgba(0,0,0,.42),
+              inset 0 0 0 1px rgba(255,217,122,.18);
+}
+/* Ichki ingichka halqa */
+#plate::before {
+  content: "";
+  position: absolute; inset: 9%;
+  border-radius: 50%;
+  border: 1px solid rgba(255,217,122,.28);
+}
+/* Nuqtali halqa — sehrli belgilar o'rnida */
+#plate::after {
+  content: "";
+  position: absolute; inset: 15%;
+  border-radius: 50%;
+  border: 2px dotted rgba(255,217,122,.2);
 }
 #line { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #letters { position: absolute; inset: 0; }
 
 /* Harflar — pergament plitkalar, kitob harflari kabi */
+/* Harf — o'yilgan suyak plitka. Yuqorida yorug'lik, pastda ichki soya:
+   harf sirtdan bo'rtib chiqqandek ko'rinadi. */
 .letter {
   position: absolute;
   width: var(--tile); height: var(--tile);
   margin: calc(var(--tile) / -2) 0 0 calc(var(--tile) / -2);
-  border-radius: 12px;
-  background: linear-gradient(var(--paper-1), var(--paper-2) 60%, var(--paper-3));
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 34% 24%, #fff, transparent 60%),
+    linear-gradient(var(--paper-1), var(--paper-2) 58%, var(--paper-3));
   border: 2px solid var(--gold-3);
-  box-shadow: 0 4px 0 var(--gold-4), var(--shadow);
+  box-shadow: 0 4px 0 var(--gold-4), var(--shadow),
+              inset 0 -5px 9px rgba(150,110,45,.22);
   display: grid; place-items: center;
   font-family: var(--serif);
   font-size: 26px; font-weight: 700;
   color: var(--ink);
-  transition: transform var(--tap), box-shadow var(--tap);
+  text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  transition: transform var(--tap), box-shadow var(--tap), background var(--tap);
 }
 .letter.active {
-  transform: scale(1.14);
-  background: linear-gradient(var(--gold-1), var(--gold-2));
-  box-shadow: 0 0 0 4px rgba(255,217,122,.35), 0 4px 0 var(--gold-4);
+  transform: scale(1.16);
+  background:
+    radial-gradient(circle at 34% 24%, #fff8d6, transparent 62%),
+    linear-gradient(var(--gold-1), var(--gold-2));
+  box-shadow: 0 0 0 4px rgba(255,217,122,.4),
+              0 0 22px rgba(232,176,64,.55),
+              0 4px 0 var(--gold-4);
 }
 
 .shuffle { position: absolute; right: 2px; bottom: 6px; width: 50px; height: 50px; font-size: 24px; }
 
 /* ============================ REYTING ============================ */
 
+/*
+  Reyting qatori — kitobdagi yozuv satri.
+
+  Oddiy ro'yxat o'rniga: chapda o'yilgan raqam medaloni, o'ngda ball
+  oltin bilan. Birinchi uchtasi metall plastinka ko'rinishida — oltin,
+  kumush, bronza — shuning uchun ular ro'yxatdan darhol ajralib turadi.
+*/
 .rank-row {
+  position: relative;
   display: flex; align-items: center; gap: 11px;
-  padding: 9px 10px;
-  margin-bottom: 7px;
+  padding: 9px 12px 9px 8px;
+  margin-bottom: 8px;
   border-radius: var(--r-md);
-  background: #2a1a55;
+  background: linear-gradient(#2f1e63, #251650);
   border: 1px solid var(--edge-2);
+  box-shadow: var(--gleam);
 }
-.rank-row.me { background: linear-gradient(90deg, rgba(232,176,64,.24), #2a1a55); border-color: var(--edge); }
-.rank-no { flex: 0 0 28px; text-align: center; font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--text-dim); }
-.rank-row.gold .rank-no, .rank-row.silver .rank-no, .rank-row.bronze .rank-no { font-size: 19px; }
+.rank-row.me {
+  background: linear-gradient(90deg, rgba(232,176,64,.26), #2a1a55 55%);
+  border-color: var(--edge);
+}
+
+/* O'rin medaloni */
+.rank-no {
+  flex: 0 0 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: #1d1145;
+  border: 1px solid var(--edge-2);
+  font-family: var(--serif); font-size: 14px; font-weight: 700;
+  color: var(--text-dim);
+}
+.rank-row.gold .rank-no,
+.rank-row.silver .rank-no,
+.rank-row.bronze .rank-no {
+  font-size: 17px; border: none; background: none;
+}
+/* Sovrindorlar uchun metall plastinka */
+.rank-row.gold   { background: linear-gradient(90deg, rgba(232,176,64,.3), #2a1a55 60%);
+                   border-color: rgba(232,176,64,.55); }
+.rank-row.silver { background: linear-gradient(90deg, rgba(216,228,245,.22), #2a1a55 60%);
+                   border-color: rgba(216,228,245,.4); }
+.rank-row.bronze { background: linear-gradient(90deg, rgba(214,142,86,.24), #2a1a55 60%);
+                   border-color: rgba(214,142,86,.45); }
 
 .avatar {
   flex: 0 0 auto;
-  width: 40px; height: 40px;
+  width: 42px; height: 42px;
   border-radius: 50%;
-  background: linear-gradient(var(--rose-1), var(--rose-2));
+  background: linear-gradient(var(--violet-1, #b28dff), var(--rose-2));
   border: 2px solid var(--edge);
   display: grid; place-items: center;
-  font-size: 16px; font-weight: 700;
+  font-family: var(--serif);
+  font-size: 17px; font-weight: 700;
   overflow: hidden;
+  box-shadow: 0 3px 8px rgba(9,4,26,.45);
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rank-row.gold .avatar { border-color: var(--gold-1); }
+.rank-row.gold   .avatar { border-color: var(--gold-1);  box-shadow: 0 0 0 2px rgba(232,176,64,.4), 0 3px 8px rgba(9,4,26,.45); }
+.rank-row.silver .avatar { border-color: #dbe6f7; }
+.rank-row.bronze .avatar { border-color: #d68e56; }
 
 .rank-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rank-score { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; color: var(--gold-1); }
@@ -763,28 +882,52 @@ body {
 /* =========================== VAZIFALAR =========================== */
 
 /* Pergament varaq */
+/*
+  Vazifa varag'i — kitobga qadalgan pergament.
+
+  Ikki qatlamli hoshiya (tashqi oltin + ichki ingichka chiziq) va
+  burchaklardagi kichik nuqtalar varaqni "qadalgan" ko'rsatadi.
+*/
 .panel {
   position: relative;
   border-radius: var(--r-lg);
-  background: linear-gradient(var(--paper-1), var(--paper-2));
+  background:
+    radial-gradient(circle at 15% 12%, rgba(255,255,255,.5), transparent 45%),
+    linear-gradient(var(--paper-1), var(--paper-2));
   border: 2px solid var(--gold-3);
   box-shadow: 0 5px 0 var(--gold-4), var(--shadow);
   padding: 16px 16px 17px;
   margin-bottom: 16px;
   color: var(--ink);
 }
-.panel-hero { background: linear-gradient(var(--paper-1), #f7dfae); }
+/* Ichki ingichka ramka */
+.panel::before {
+  content: "";
+  position: absolute; inset: 5px;
+  border-radius: 15px;
+  border: 1px solid rgba(184,125,28,.32);
+  pointer-events: none;
+}
+.panel-hero {
+  background:
+    radial-gradient(circle at 15% 12%, rgba(255,255,255,.55), transparent 45%),
+    linear-gradient(var(--paper-1), #f6dba4);
+}
 .panel-glow { display: none; }
 
-.panel-head { display: flex; gap: 13px; margin-bottom: 14px; }
+.panel-head { position: relative; display: flex; gap: 13px; margin-bottom: 14px; }
+
+/* Belgi — muhr bosilgan medalyon */
 .panel-ico {
   flex: 0 0 auto;
-  width: 46px; height: 46px;
+  width: 48px; height: 48px;
   display: grid; place-items: center;
-  border-radius: var(--r-sm);
-  background: linear-gradient(var(--gold-1), var(--gold-2));
-  border: 1.5px solid var(--gold-3);
-  font-size: 23px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, #fff6d8, var(--gold-2) 62%, var(--gold-3));
+  border: 2px solid var(--gold-4);
+  box-shadow: 0 3px 0 var(--gold-4), inset 0 0 12px rgba(255,255,255,.4);
+  font-size: 24px;
 }
 .panel-text h2 { margin: 0 0 3px; font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--ink); }
 .panel-text p  { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
@@ -793,29 +936,38 @@ body {
 .panel-row .btn { flex: 1; }
 .panel > .btn-gold { width: 100%; }
 
-#streak-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 15px; }
+#streak-days {
+  position: relative;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  margin-bottom: 15px;
+}
+/* Kun tangasi — pergamentga bosilgan yumaloq muhr */
 .day {
-  border-radius: var(--r-sm);
-  padding: 9px 2px 8px;
-  background: var(--paper-3);
-  border: 1.5px solid rgba(120,90,40,.3);
-  display: grid; place-items: center; gap: 4px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, #fff, var(--paper-3) 70%);
+  border: 1.5px solid rgba(120,90,40,.38);
+  box-shadow: inset 0 -3px 6px rgba(120,90,40,.18);
+  display: grid; place-items: center; gap: 1px;
   text-align: center;
   color: var(--ink-2);
 }
-.day-n { font-family: var(--serif); font-size: 12px; font-weight: 700; }
-.day-k { font-size: 9px; line-height: 1; letter-spacing: -2px; }
+.day-n { font-family: var(--serif); font-size: 13px; font-weight: 700; line-height: 1; }
+.day-k { font-size: 8px; line-height: 1; letter-spacing: -2px; }
 .day.got {
-  background: linear-gradient(var(--jade-1), var(--jade-2));
+  background: radial-gradient(circle at 36% 28%, #b6ffe2, var(--jade-2) 68%);
   border-color: var(--jade-3);
-  color: #05372a;
+  box-shadow: inset 0 -3px 6px rgba(0,60,42,.25);
+  color: #04372a;
 }
+.day.got .day-n { color: #04372a; }
 .day.next {
-  background: linear-gradient(var(--gold-1), var(--gold-2));
+  background: radial-gradient(circle at 36% 26%, #fff6d0, var(--gold-2) 66%);
   border-color: var(--gold-4);
   color: #3e2606;
-  box-shadow: 0 0 0 2px rgba(184,125,28,.35);
+  box-shadow: 0 0 0 3px rgba(232,176,64,.35), inset 0 -3px 6px rgba(120,70,0,.25);
 }
+.day.next .day-n { color: #3e2606; }
 
 /* ============================ TABBAR ============================ */
 

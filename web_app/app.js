@@ -211,13 +211,28 @@ const Music = {
     birga yoqimli eshitiladi, shuning uchun tasodifiy tanlansa ham hech
     qachon falsh chiqmaydi.
   */
-  SCALE: [
-    523.25, 587.33, 659.25, 783.99, 880.00,      // C5 D5 E5 G5 A5
-    1046.50, 1174.66, 1318.51, 1567.98           // C6 D6 E6 G6
-  ],
-  BASS: [130.81, 146.83, 164.81, 196.00],        // C3 D3 E3 G3
+  /*
+    ERTAK VALSI.
 
-  timer: null, nextTime: 0, on: false, since: 0, prev: -1,
+    Tasodifiy notalar o'rniga haqiqiy ohang: to'rt akkordli aylanma
+    (Am – F – C – G) va uning ustida arfa arpedjiosi. Uch qadamli
+    o'lchov valsga xos silkinish beradi — bu o'yin ritmiga mos va
+    tinglaganda "kuy" bo'lib eshitiladi, ilgarigidek tasodifiy
+    tomchilar emas.
+
+    Har akkordda: pastda uzun bas, o'rtada tinch pad, tepada arfa
+    notalari. Uchtasining balandligi turlicha, shuning uchun ular
+    bir-birini bosmaydi.
+  */
+  PROG: [
+    { bass: 110.00, pad: [261.63, 329.63], harp: [440.00, 523.25, 659.25, 523.25, 659.25, 880.00] }, // Am
+    { bass:  87.31, pad: [261.63, 349.23], harp: [349.23, 440.00, 523.25, 440.00, 523.25, 698.46] }, // F
+    { bass: 130.81, pad: [329.63, 392.00], harp: [523.25, 659.25, 783.99, 659.25, 783.99, 1046.5] }, // C
+    { bass:  98.00, pad: [293.66, 392.00], harp: [392.00, 493.88, 587.33, 493.88, 587.33, 783.99] }  // G
+  ],
+  BEAT: 0.62,        // bitta zarb; uchtasi bir o'lchov (vals)
+
+  timer: null, nextTime: 0, on: false, since: 0, bar: 0,
 
   start() {
     if (this.on) return;
@@ -226,7 +241,7 @@ const Music = {
     const ctx = Sound.ready('music');
     if (!ctx) return;
     this.on = true;
-    this.since = 0;
+    this.bar = 0;
     this.nextTime = ctx.currentTime + 0.3;
     this.timer = setInterval(() => this.schedule(), 500);
     this.schedule();
@@ -242,45 +257,45 @@ const Music = {
     const ctx = Sound.ready('music');
     if (!ctx || !this.on) { this.stop(); return; }
 
-    // Uch soniya oldinga rejalashtiramiz
-    while (this.nextTime < ctx.currentTime + 3) {
-      // Ketma-ket bir xil nota tushmasin — takrorlanish darhol seziladi
-      let i = Math.floor(Math.random() * this.SCALE.length);
-      if (i === this.prev) i = (i + 1) % this.SCALE.length;
-      this.prev = i;
+    const barLen = this.BEAT * 3;              // vals: bir o'lchovda uch zarb
 
-      this.pluck(ctx, this.SCALE[i], this.nextTime, this.GAIN);
+    // Ikki o'lchov oldinga rejalashtiramiz — brauzer sekinlashsa ham uzilmaydi
+    while (this.nextTime < ctx.currentTime + barLen * 2) {
+      const c = this.PROG[this.bar % this.PROG.length];
+      const t = this.nextTime;
 
-      // Ba'zan yumshoq hamroh nota — kvinta yoki tersiya masofasida
-      if (Math.random() < 0.28) {
-        const j = Math.min(i + 2, this.SCALE.length - 1);
-        this.pluck(ctx, this.SCALE[j], this.nextTime + 0.09, this.GAIN * 0.55);
-      }
+      // 1-zarb: bas. Uzun va past, ohangning poydevori.
+      this.voice(ctx, c.bass, t, barLen * 0.95, this.GAIN * 1.15, 'triangle', 0.05);
 
-      // Har ~8 notada bitta past nota — pastki qismni ushlab turadi
-      if (this.since % 8 === 0) {
-        this.pluck(ctx, this.BASS[(this.since / 8) % this.BASS.length],
-                   this.nextTime, this.GAIN * 0.8, 3.4);
-      }
+      // 2- va 3-zarb: tinch pad akkordi — valsning "chap qo'li"
+      c.pad.forEach((f, k) => {
+        this.voice(ctx, f, t + this.BEAT * (k + 1), this.BEAT * 1.4,
+                   this.GAIN * 0.5, 'sine', 0.08);
+      });
 
-      this.since++;
-      this.nextTime += 1.5 + Math.random() * 1.5;   // siyrak va notekis
+      // Arfa: har o'lchovda oltita nota, yuqori registrda
+      c.harp.forEach((f, k) => {
+        this.voice(ctx, f, t + k * (barLen / 6), 1.5,
+                   this.GAIN * (k === 5 ? 0.85 : 0.6), 'sine', 0.004);
+      });
+
+      this.nextTime += barLen;
+      this.bar++;
     }
   },
 
-  /* Cho'zilmaydigan nota: tez uriladi, uzoq so'nadi — musiqa qutisi kabi */
-  pluck(ctx, freq, at, vol, decay) {
+  /* attack qisqa bo'lsa arfa, uzun bo'lsa pad bo'lib eshitiladi */
+  voice(ctx, freq, at, dur, vol, type, attack) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = 'sine';
+    osc.type = type;
     osc.frequency.value = freq;
-    const dur = decay || 2.6;
-    g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(vol, at + 0.006);   // deyarli bir zumda
-    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);  // sekin o'chadi
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(vol, at + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
     osc.connect(g).connect(Sound.warm);
     osc.start(at);
-    osc.stop(at + dur + 0.05);
+    osc.stop(at + dur + 0.06);
   }
 };
 
@@ -294,7 +309,7 @@ function blankProgress() {
     cur: { stage: 1, level: 1, puzzle: 0 },
     solved: {}, learned: {},
     muted: false,      // ovoz effektlari
-    music: false       // fon musiqasi — STANDART HOLATDA O'CHIQ.
+    music: true        // fon musiqasi — STANDART HOLATDA YOQIQ.
                        // Doim chalinib turgan fon tez charchatadi va
                        // ko'pchilik o'yinni jim o'ynashni afzal ko'radi.
                        // Xohlagan o'yinchi 🎵 tugmasidan yoqadi.
@@ -317,12 +332,12 @@ function normalize(p) {
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
     muted: !!p.muted,
-    /* Fon musiqasi bir marta MAJBURAN tozalanadi. Ilgari u avtomatik
-       yonib qolgan va bezor qilgan edi; musicReset bayrog'i shu tozalash
-       aynan bir marta bo'lishini kafolatlaydi, keyin o'yinchining tanlovi
-       hurmat qilinadi. */
-    music: p.musicReset ? !!p.music : false,
-    musicReset: true
+    /* Fon musiqasi endi STANDART HOLATDA YOQIQ. Eski yozuvlarda bu maydon
+       yo'q yoki oldingi majburiy tozalashdan keyin false bo'lib qolgan —
+       ikkalasida ham qaytadan yoqamiz. O'yinchi 🎵 tugmasidan o'chirsa,
+       tanlovi musicSet bayrog'i bilan eslab qolinadi. */
+    music: p.musicSet ? !!p.music : true,
+    musicSet: true
   };
 }
 
