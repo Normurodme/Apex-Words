@@ -62,8 +62,46 @@ const State = {
   esa xonada chalinayotgandek kenglik beradi. Shu ikkisi ovozni "yumshoq"
   qiladi — o'yin uzoq o'ynalganda charchatmaydi.
 */
+/*
+  CHOLG'U TOVUSHLARI.
+
+  Shu paytgacha hamma ovoz oddiy sine/triangle to'lqin edi. Notalarni
+  qancha o'zgartirmay, TEMBR bir xil qolaverdi va quloqqa doim o'sha
+  "elektron bip" bo'lib eshitildi — o'zgarish sezilmasligining sababi
+  aynan shu edi.
+
+  Endi har cholg'u o'z OBERTON tarkibiga ega (PeriodicWave). Oberton
+  nisbatlari tovushning xarakterini belgilaydi:
+
+    harp    — toq obertonlar kuchli, tez so'nadi: torli, jarangdor
+    marimba — juft obertonlar bo'g'iq: yog'och, yumshoq
+    bell    — obertonlar notekis (inharmonik): metall qo'ng'iroq
+    pad     — obertonlar kam va past: tinch fon
+
+  Shu bilan bir xil nota to'rt xil cholg'uda butunlay boshqacha
+  eshitiladi.
+*/
+const TIMBRE = {
+  //        [DC, 1-oberton, 2, 3, 4, 5, 6, 7]
+  harp:    [0, 1.00, 0.28, 0.52, 0.16, 0.24, 0.08, 0.10],
+  marimba: [0, 1.00, 0.06, 0.40, 0.04, 0.14, 0.02, 0.05],
+  bell:    [0, 1.00, 0.62, 0.18, 0.44, 0.12, 0.30, 0.20],
+  pad:     [0, 1.00, 0.42, 0.14, 0.06, 0.03, 0.01, 0.01],
+};
+
 const Sound = {
-  ctx: null, master: null, warm: null, wet: null,
+  ctx: null, master: null, warm: null, wet: null, waves: {},
+
+  /* Oberton jadvalidan to'lqin yasaydi va keshlaydi */
+  wave(name) {
+    if (this.waves[name]) return this.waves[name];
+    const h = TIMBRE[name] || TIMBRE.harp;
+    const real = new Float32Array(h.length);
+    const imag = new Float32Array(h);       // sinus tarkibi
+    const w = this.ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+    this.waves[name] = w;
+    return w;
+  },
 
   ready() {
     if (!State.progress || State.progress.muted) return null;
@@ -113,36 +151,37 @@ const Sound = {
          yalang'och eshitiladi, ikkitasi to'liq tuyuladi.
       3. Ozgina detune — ikki qatlam sekin "nafas oladi".
   */
-  note({ freq, at, dur, vol = 0.2, type = 'triangle', glide = 0 }) {
+  note({ freq, at, dur, vol = 0.2, timbre = 'harp', glide = 0, attack = 0.006 }) {
     const ctx = this.ctx;
-    const mk = (f, v, ty, det) => {
+    const mk = (f, v, det) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
-      osc.type = ty;
+      osc.setPeriodicWave(this.wave(timbre));
       osc.frequency.setValueAtTime(f, at);
       if (glide) osc.frequency.exponentialRampToValueAtTime(f * glide, at + dur * 0.8);
       if (det) osc.detune.value = det;
 
       const peak = Math.max(v, 0.0001);
       g.gain.setValueAtTime(0, at);
-      g.gain.linearRampToValueAtTime(peak, at + 0.008);          // toza hujum
-      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);     // tabiiy so'nish
+      g.gain.linearRampToValueAtTime(peak, at + attack);        // toza hujum
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);    // tabiiy so'nish
       osc.connect(g).connect(this.warm);
       osc.start(at);
       osc.stop(at + dur + 0.06);
     };
-    mk(freq, vol, type, 0);
-    mk(freq * 2, vol * 0.16, 'sine', 6);      // yorug'lik beruvchi oktava
+    mk(freq, vol, 0);
+    // Ozgina surilgan ikkinchi ovoz — tovush "tirik" bo'lib eshitiladi
+    mk(freq, vol * 0.35, 7);
   },
 
   /* seq: [chastota, boshlanish (s), davomiyligi (s), balandlik] */
-  play(seq, type, glide) {
+  play(seq, timbre, glide) {
     const ctx = this.ready();
     if (!ctx) return;
     const t0 = ctx.currentTime + 0.02;
     seq.forEach(([f, at, dur, vol]) => {
       this.note({ freq: f, at: t0 + at, dur, vol: vol || 0.18,
-                  type: type || 'triangle', glide: glide || 0 });
+                  timbre: timbre || 'marimba', glide: glide || 0 });
     });
   },
 
@@ -155,7 +194,7 @@ const Sound = {
     quloqqa tinch tuyuladi va takrorlanganda charchatmaydi.
   */
   chime() {
-    this.play([[523.25, 0, .13, .12], [698.46, .055, .26, .11]], 'triangle');
+    this.play([[523.25, 0, .13, .12], [698.46, .055, .26, .11]], 'marimba');
   },
 
   /*
@@ -167,7 +206,7 @@ const Sound = {
   */
   solved() {
     this.play([[587.33, 0, .12, .15], [739.99, .085, .12, .15],
-               [880.00, .17, .14, .16], [1174.66, .27, .55, .15]], 'triangle');
+               [880.00, .17, .14, .16], [1174.66, .27, .55, .15]], 'bell');
   },
 
   /*
@@ -185,23 +224,23 @@ const Sound = {
       // Yakuniy akkord: uch nota bir vaqtda, uzoq so'nadi
       [784, .62, 1.10, .16], [1047, .62, 1.10, .18], [1319, .62, 1.15, .16],
       [1568, .70, 1.05, .12]
-    ], 'triangle');
+    ], 'bell');
   },
 
   /* Bonus so'z — mayda shisha qo'ng'iroqcha */
   ding() {
-    this.play([[2093, 0, .07, .07], [3136, .04, .22, .045]], 'sine');
+    this.play([[2093, 0, .07, .07], [3136, .04, .22, .045]], 'bell');
   },
 
   /* Mukofot olindi — pastdan yuqoriga sirg'aluvchi uchqun */
   reward() {
     this.play([[659, 0, .09, .14], [988, .07, .09, .15],
-               [1319, .14, .11, .15], [1976, .22, .40, .13]], 'triangle');
+               [1319, .14, .11, .15], [1976, .22, .40, .13]], 'bell');
   },
 
   /* Noto'g'ri so'z — juda qisqa, pastga tushuvchi. Jazolovchi emas. */
   miss() {
-    this.play([[311, 0, .13, .10]], 'sine', 0.82);
+    this.play([[311, 0, .13, .10]], 'marimba', 0.82);
   }
 };
 
@@ -285,18 +324,18 @@ const Music = {
       const t = this.nextTime;
 
       // 1-zarb: bas. Uzun va past, ohangning poydevori.
-      this.voice(ctx, c.bass, t, barLen * 0.95, this.GAIN * 1.15, 'triangle', 0.05);
+      this.voice(ctx, c.bass, t, barLen * 0.95, this.GAIN * 1.2, 'pad', 0.06);
 
       // 2- va 3-zarb: tinch pad akkordi — valsning "chap qo'li"
       c.pad.forEach((f, k) => {
-        this.voice(ctx, f, t + this.BEAT * (k + 1), this.BEAT * 1.4,
-                   this.GAIN * 0.5, 'sine', 0.08);
+        this.voice(ctx, f, t + this.BEAT * (k + 1), this.BEAT * 1.5,
+                   this.GAIN * 0.55, 'pad', 0.10);
       });
 
       // Arfa: har o'lchovda oltita nota, yuqori registrda
       c.harp.forEach((f, k) => {
-        this.voice(ctx, f, t + k * (barLen / 6), 1.5,
-                   this.GAIN * (k === 5 ? 0.85 : 0.6), 'sine', 0.004);
+        this.voice(ctx, f, t + k * (barLen / 6), 1.6,
+                   this.GAIN * (k === 5 ? 0.95 : 0.65), 'harp', 0.004);
       });
 
       this.nextTime += barLen;
@@ -304,11 +343,12 @@ const Music = {
     }
   },
 
-  /* attack qisqa bo'lsa arfa, uzun bo'lsa pad bo'lib eshitiladi */
-  voice(ctx, freq, at, dur, vol, type, attack) {
+  /* timbre — cholg'u nomi (harp / pad). attack qisqa bo'lsa torli,
+     uzun bo'lsa fon bo'lib eshitiladi. */
+  voice(ctx, freq, at, dur, vol, timbre, attack) {
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
-    osc.type = type;
+    osc.setPeriodicWave(Sound.wave(timbre));
     osc.frequency.value = freq;
     g.gain.setValueAtTime(0, at);
     g.gain.linearRampToValueAtTime(vol, at + attack);
