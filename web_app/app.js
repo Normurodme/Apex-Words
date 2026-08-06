@@ -91,6 +91,7 @@ const TIMBRE = {
 
 const Sound = {
   ctx: null, master: null, warm: null, wet: null, waves: {},
+  musicGain: null,   // faqat fon musiqasi shu tugundan o'tadi
 
   /* Oberton jadvalidan to'lqin yasaydi va keshlaydi */
   wave(name) {
@@ -139,6 +140,20 @@ const Sound = {
     delay.connect(fb).connect(delay);
     delay.connect(this.wet).connect(this.master);
     this.warm.connect(delay);
+
+    /*
+      Fon musiqasi uchun ALOHIDA ovoz tugmasi.
+
+      Music.stop() faqat rejalashtiruvchini to'xtatadi, lekin oldindan
+      rejalashtirilgan notalar (ikki o'lchov, ~4 soniya) baribir chalinardi.
+      Tugma bosilgach ovoz shuncha vaqt davom etib, "ishlamayapti" bo'lib
+      tuyulardi. Endi musiqa shu tugundan o'tadi va uni bir zumda nolga
+      tushirish yetarli — allaqachon navbatga qo'yilgan notalar ham jim
+      bo'ladi.
+    */
+    this.musicGain = c.createGain();
+    this.musicGain.gain.value = 1;
+    this.musicGain.connect(this.warm);
   },
 
   /*
@@ -205,8 +220,13 @@ const Sound = {
     qo'ng'iroqday cho'ziladi — "sahifa yopildi" hissi.
   */
   solved() {
-    this.play([[587.33, 0, .12, .15], [739.99, .085, .12, .15],
-               [880.00, .17, .14, .16], [1174.66, .27, .55, .15]], 'bell');
+    // Arfa bo'ylab tez yugurish, so'ng tepada yumshoq qo'ng'iroq.
+    // Ilgari to'rttala nota ham qo'ng'iroq edi va bonus ovoziga
+    // o'xshab ketardi; endi ikki cholg'u aralashadi va aniq farq qiladi.
+    this.play([[440.00, 0, .55, .10], [587.33, .05, .5, .10],
+               [739.99, .10, .45, .11], [880.00, .15, .4, .11],
+               [1108.73, .20, .35, .10]], 'harp');
+    this.play([[1479.98, .30, .75, .12]], 'bell');
   },
 
   /*
@@ -297,11 +317,16 @@ const Music = {
     if (this.on) return;
     // Faqat ATAYLAB yoqilgan bo'lsa chalinadi
     if (!State.progress || !State.progress.music) return;
-    const ctx = Sound.ready('music');
+    const ctx = Sound.ready();
     if (!ctx) return;
     this.on = true;
     this.bar = 0;
     this.nextTime = ctx.currentTime + 0.3;
+    // Ovozni qaytaramiz (o'chirilganda nolga tushirilgan bo'lishi mumkin)
+    const g = Sound.musicGain.gain;
+    g.cancelScheduledValues(ctx.currentTime);
+    g.setValueAtTime(g.value, ctx.currentTime);
+    g.linearRampToValueAtTime(1, ctx.currentTime + 0.25);
     this.timer = setInterval(() => this.schedule(), 500);
     this.schedule();
   },
@@ -310,10 +335,19 @@ const Music = {
     this.on = false;
     clearInterval(this.timer);
     this.timer = null;
+    // Navbatdagi notalarni ham jim qilamiz — aks holda ovoz yana
+    // to'rt soniya davom etardi
+    if (Sound.ctx && Sound.musicGain) {
+      const t = Sound.ctx.currentTime;
+      const g = Sound.musicGain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(0, t + 0.12);
+    }
   },
 
   schedule() {
-    const ctx = Sound.ready('music');
+    const ctx = Sound.ready();
     if (!ctx || !this.on) { this.stop(); return; }
 
     const barLen = this.BEAT * 3;              // vals: bir o'lchovda uch zarb
@@ -353,7 +387,8 @@ const Music = {
     g.gain.setValueAtTime(0, at);
     g.gain.linearRampToValueAtTime(vol, at + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-    osc.connect(g).connect(Sound.warm);
+    // Musiqa ALOHIDA tugundan o'tadi — bir zumda jim qilish uchun
+    osc.connect(g).connect(Sound.musicGain);
     osc.start(at);
     osc.stop(at + dur + 0.06);
   }
@@ -1639,15 +1674,26 @@ function avatar(name, photo) {
   return a;
 }
 
+/*
+  Ovoz tugmalarining holati.
+
+  Ilgari faqat shaffoflik o'zgarardi va yoniq/o'chiq ekani bilinmasdi.
+  Endi uch belgi birdan: BOSHQA belgi, ustidan qizil chiziq va yoniqda
+  oltin gardish. Bir qarashda ko'rinadi.
+*/
 function updateSoundBtn() {
   const p = State.progress || {};
+
   const s = $('btn-sound');
   s.textContent = p.muted ? '🔇' : '🔊';
   s.classList.toggle('off', !!p.muted);
+  s.classList.toggle('on', !p.muted);
+  s.setAttribute('aria-pressed', p.muted ? 'false' : 'true');
 
   const m = $('btn-music');
-  m.textContent = '🎵';
+  m.textContent = p.music ? '🎵' : '🎶';
   m.classList.toggle('off', !p.music);
+  m.classList.toggle('on', !!p.music);
   m.setAttribute('aria-pressed', p.music ? 'true' : 'false');
 }
 

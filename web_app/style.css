@@ -70,6 +70,22 @@
 
   --tile: 50px;
   --node: 62px;
+
+  /* Mum muhr shakli: markaziy doira + atrofida 16 ta kichik doira.
+     Ular birlashib qirrali chekka hosil qiladi. */
+  --seal-mask: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>\
+<g fill='%23fff'>\
+<circle cx='50' cy='50' r='40'/>\
+<circle cx='90' cy='50' r='8'/><circle cx='86.9' cy='65.3' r='8'/>\
+<circle cx='78.3' cy='78.3' r='8'/><circle cx='65.3' cy='86.9' r='8'/>\
+<circle cx='50' cy='90' r='8'/><circle cx='34.7' cy='86.9' r='8'/>\
+<circle cx='21.7' cy='78.3' r='8'/><circle cx='13.1' cy='65.3' r='8'/>\
+<circle cx='10' cy='50' r='8'/><circle cx='13.1' cy='34.7' r='8'/>\
+<circle cx='21.7' cy='21.7' r='8'/><circle cx='34.7' cy='13.1' r='8'/>\
+<circle cx='50' cy='10' r='8'/><circle cx='65.3' cy='13.1' r='8'/>\
+<circle cx='78.3' cy='21.7' r='8'/><circle cx='86.9' cy='34.7' r='8'/>\
+</g></svg>");
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -194,7 +210,24 @@ body {
 }
 .icon-round::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; }
 .icon-round:active { transform: scale(.9); }
-.icon-round.off { opacity: .45; }
+
+/* Ovoz tugmalari: holat uch belgi bilan ko'rsatiladi — shaffoflik,
+   ustidan qizil chiziq va yoniqda oltin gardish. */
+.icon-round.off { opacity: .5; }
+.icon-round.off::after {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 26px; height: 2.5px;
+  margin: -1px 0 0 -13px;
+  background: var(--seal-2);
+  border-radius: 2px;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.7);
+}
+.icon-round.on {
+  border-color: var(--gold-2);
+  box-shadow: var(--emboss), 0 0 0 2px rgba(201,148,42,.3), var(--shadow);
+}
 
 /* Muhr tugma — asosiy harakatlar */
 .icon-round.solid {
@@ -437,67 +470,99 @@ body {
 }
 .pz:active { transform: scale(.9) rotate(-3deg); }
 
-/* Muhrning o'zi — sakkiz qirrali jism */
+/*
+  Muhrning shakli — QIRRALI MUM DOG'I.
+
+  Sakkiz burchakli ko'pburchak juda "geometrik" edi. Endi shakl mask
+  orqali beriladi: markazda katta doira va uning atrofida o'n oltita
+  kichik doira. Ular birlashib mum bosilganda hosil bo'ladigan notekis,
+  qirrali chekkani beradi — kitobga bosilgan muhr aynan shunday
+  ko'rinadi. Bitta mask uch holat uchun ham ishlaydi, rang esa
+  gradient bilan beriladi.
+*/
 .pz::before {
   content: "";
   position: absolute; inset: 0;
-  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%,
-                     30% 100%, 0 70%, 0 30%);
-  box-shadow: inset 0 -6px 10px rgba(0,0,0,.2), inset 0 3px 6px rgba(255,255,255,.35);
+  -webkit-mask-image: var(--seal-mask);
+  mask-image: var(--seal-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  box-shadow: inset 0 -7px 12px rgba(0,0,0,.22), inset 0 4px 7px rgba(255,255,255,.4);
 }
-/* Ichki tishli halqa */
+
+/* O'yilgan ichki halqa — muhr qolipining izi */
 .pz::after {
   content: "";
-  position: absolute; inset: 5px;
-  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%,
-                     30% 100%, 0 70%, 0 30%);
-  border: 1px dashed rgba(255,255,255,.4);
+  position: absolute; inset: 14%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.35);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
   pointer-events: none;
+  z-index: 2;
 }
 
-.pz .pz-no { position: relative; z-index: 3; }
+/*
+  Bosqich belgisi.
 
-/* Bosqich belgisi — muhr ortidagi suv nishoni */
+  Ilgari u 26% shaffoflikda edi va deyarli ko'rinmasdi. Endi ancha
+  aniq (65%) va kattaroq. Raqam ustida qolishi uchun unga qalin
+  kontur berildi — ikkalasi ham bir vaqtda o'qiladi.
+*/
 .pz-emblem {
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  font-size: 30px;
-  opacity: .26;
+  font-size: 34px;
+  opacity: .65;
   z-index: 1;
   pointer-events: none;
 }
-.pz-mark { position: absolute; bottom: 4px; right: 8px; z-index: 3; font-size: 11px; }
+
+.pz .pz-no {
+  position: relative; z-index: 3;
+  font-size: 1.05em;
+  text-shadow:
+     0 2px 3px rgba(0,0,0,.45),
+     0 0 4px rgba(0,0,0,.35),
+    -1px -1px 0 rgba(255,255,255,.35);
+}
+
+.pz-mark { position: absolute; bottom: 5px; right: 9px; z-index: 3; font-size: 11px; }
 
 /* Yechilgan — yashil mum */
-.pz.done { color: #f2fbf5; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
-.pz.done::before { background: radial-gradient(circle at 36% 26%, var(--moss-1), var(--moss-2) 62%, var(--moss-3)); }
-.pz.done .pz-emblem { opacity: .34; }
+.pz.done { color: #f4fdf7; }
+.pz.done::before { background: radial-gradient(circle at 36% 26%, var(--moss-1), var(--moss-2) 58%, var(--moss-3)); }
+.pz.done .pz-emblem { opacity: .7; }
 
 /* Navbatdagi — oltin mum, atrofida nur */
-.pz.now { color: #4a3405; }
+.pz.now { color: #3b2803; }
 .pz.now::before {
-  background: radial-gradient(circle at 36% 24%, #fff2c4, var(--gold-1) 45%, var(--gold-2) 75%, var(--gold-3));
-  filter: drop-shadow(0 0 10px rgba(201,148,42,.55));
+  background: radial-gradient(circle at 36% 24%, #fff6d4, var(--gold-1) 42%, var(--gold-2) 72%, var(--gold-3));
+  filter: drop-shadow(0 0 12px rgba(201,148,42,.6));
 }
-.pz.now .pz-emblem { opacity: .42; }
+.pz.now .pz-emblem { opacity: .8; }
+.pz.now .pz-no { text-shadow: 0 2px 3px rgba(120,80,10,.5), -1px -1px 0 rgba(255,255,255,.6); }
 
-/* Qulflangan — hali bosilmagan, bo'sh joy */
-.pz.locked { color: rgba(35,48,31,.3); cursor: not-allowed; }
+/* Qulflangan — hali muhr bosilmagan joy */
+.pz.locked { color: rgba(35,48,31,.42); cursor: not-allowed; }
 .pz.locked::before {
   background: linear-gradient(var(--p-2), var(--p-4));
-  box-shadow: inset 0 2px 6px rgba(90,60,20,.25);
+  box-shadow: inset 0 3px 7px rgba(90,60,20,.28);
 }
-.pz.locked::after { border-color: rgba(122,90,30,.28); }
-.pz.locked .pz-emblem { opacity: .12; }
+.pz.locked::after { border-color: rgba(122,90,30,.3); }
+.pz.locked .pz-emblem { opacity: .3; }
+.pz.locked .pz-no { text-shadow: 0 1px 0 rgba(255,255,255,.5); }
 
-/* Har o'ninchi — kattaroq va oltin gardishli bosqich toshi */
-.pz.milestone .pz-no { font-size: 1.12em; }
+/* Har o'ninchi — oltin gardishli bosqich toshi */
 .pz.milestone::after {
-  inset: 3px;
-  border: 2px solid var(--gold-2);
-  border-style: solid;
+  inset: 11%;
+  border: 2.5px solid var(--gold-2);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.3), 0 0 8px rgba(201,148,42,.45);
 }
-.pz.milestone.locked::after { border-color: rgba(201,148,42,.45); }
+.pz.milestone .pz-no { font-size: 1.14em; }
+.pz.milestone.locked::after {
+  border-color: rgba(201,148,42,.5);
+  box-shadow: none;
+}
 
 /* Pastki navigatsiya — charm tasma */
 #pack-nav {
