@@ -195,6 +195,10 @@ TOP_LIMIT = 100
 
 MEDALS = ("🥇", "🥈", "🥉")
 
+# Bo'tning havolasi. Ishga tushishda haqiqiy username bilan almashtiriladi;
+# inline javoblarda har safar bot.me() ga murojaat qilmaslik uchun.
+BOT_LINK = "https://t.me/ApexWordsBot"
+
 # Guruh reytingi uchun nechta yuqori o'yinchi tekshiriladi.
 # Har biri uchun Telegram'ga alohida so'rov ketadi, shuning uchun son
 # cheklangan — aks holda katta bazada javob sekinlashadi.
@@ -777,30 +781,55 @@ async def on_inline(query: InlineQuery):
 
     Bo'tning inline rejimi BotFather'da yoqilgan bo'lsa ham, kodda
     ishlovchi bo'lmasa Telegram hech narsa ko'rsatmaydi — foydalanuvchi
-    bot nomini yozganda ro'yxat bo'sh chiqadi. Aynan shu bo'lgan edi.
+    bot nomini yozganda ro'yxat bo'sh chiqadi.
 
-    Endi ikki natija qaytariladi: o'yinga taklif va joriy reyting.
+    Ishlovchi ichida xato chiqsa ham natija BERILMAY qoladi va tashqaridan
+    "bot chiqmayapti" bo'lib ko'rinadi — farqi bilinmaydi. Shuning uchun
+    hamma narsa try ichida va eng yomon holatda ham bitta natija
+    qaytariladi. So'rov kelgani logga yoziladi: shunda muammo
+    BotFather sozlamasidami yoki koddami — darhol ajratiladi.
     """
+    log.info("Inline so'rov: user=%s chat_type=%s matn=%r",
+             query.from_user.id, getattr(query, "chat_type", "?"), query.query)
+    try:
+        await _answer_inline(query)
+    except Exception as e:
+        log.exception("Inline so'rovga javob berilmadi: %s", e)
+        try:
+            await query.answer([_inline_play_card(BOT_LINK)], cache_time=5,
+                               is_personal=True)
+        except Exception:
+            pass
+
+
+def _inline_play_card(link: str) -> InlineQueryResultArticle:
+    return InlineQueryResultArticle(
+        id="play",
+        title="🎮 Play Apex Words",
+        description="Swipe letters into words and grow your English",
+        input_message_content=InputTextMessageContent(
+            message_text=(
+                "🎮 <b>Apex Words</b>\n"
+                "Swipe letters into words and grow your English.\n\n"
+                f"{link}"
+            ),
+            parse_mode=ParseMode.HTML,
+        ),
+    )
+
+
+async def _answer_inline(query: InlineQuery):
     rows = await db.top_rows()
     top_line = ""
     if rows:
         top_line = " · ".join(f"{n or 'Player'} {s}" for n, _p, s, _u in rows[:3])
 
-    link = f"https://t.me/{(await query.bot.me()).username}"
+    # Havola ishga tushishda bir marta aniqlanadi — har so'rovda
+    # bot.me() ga murojaat qilish keraksiz kechikish beradi va u
+    # yiqilsa butun javob yo'qolardi.
+    link = BOT_LINK
     results = [
-        InlineQueryResultArticle(
-            id="play",
-            title="🎮 Play Apex Words",
-            description="Swipe letters into words and grow your English",
-            input_message_content=InputTextMessageContent(
-                message_text=(
-                    "🎮 <b>Apex Words</b>\n"
-                    "Swipe letters into words and grow your English.\n\n"
-                    f"{link}"
-                ),
-                parse_mode=ParseMode.HTML,
-            ),
-        ),
+        _inline_play_card(link),
         InlineQueryResultArticle(
             id="top",
             title="🏆 Top players",
@@ -871,6 +900,14 @@ async def main():
     try:
         me = await bot.get_me()
         log.info("Bot ulandi: @%s (%s)", me.username, me.full_name)
+        # Inline javoblarda ishlatiladigan havola
+        global BOT_LINK
+        if me.username:
+            BOT_LINK = f"https://t.me/{me.username}"
+        # Inline rejim BotFather'da yoqilganini bilib bo'lmaydi (API bermaydi),
+        # shuning uchun eslatib qo'yamiz — bu eng ko'p uchraydigan sabab.
+        log.info("Inline rejim: BotFather -> /setinline yoqilgan bo'lishi kerak. "
+                 "So'rov kelganda logda 'Inline so'rov:' qatori chiqadi.")
     except Exception as e:
         await bot.session.close()
         raise SystemExit(
