@@ -579,11 +579,22 @@ const Store = {
 
 /* ------------------------ Ma'lumotlarni yuklash --------------------------- */
 
-/* Ma'lumot fayllari uchun versiya belgisi.
-   index.json va stage_*.json da ?v= yo'q edi, shuning uchun yangi
-   bosqichlar chiqarilganda brauzer eski nusxani keshdan olib qolardi
-   va o'yinchi faqat eski bosqichlarni ko'rardi. */
-const DATA_V = '23';
+/*
+  Ma'lumot fayllari uchun versiya belgisi.
+
+  index.json va stage_*.json da ?v= yo'q edi, shuning uchun yangi
+  bosqichlar chiqarilganda brauzer eski nusxani keshdan olib qolardi.
+
+  Raqam QO'LDA yozilmaydi — shu skriptning o'z manzilidan olinadi.
+  Ilgari u alohida turgan va orqada qolib ketgan edi (kod v25, ma'lumot
+  v23), ya'ni yangi puzzlelar chiqarilsa ham eski nusxa ochilaverardi.
+  Endi ikkalasi bir manbadan keladi va hech qachon ayrilmaydi.
+*/
+const DATA_V = (() => {
+  const src = (document.currentScript && document.currentScript.src) || '';
+  const m = src.match(/[?&]v=(\d+)/);
+  return m ? m[1] : '1';
+})();
 
 async function loadIndex() {
   State.index = await (await fetch('data/index.json?v=' + DATA_V)).json();

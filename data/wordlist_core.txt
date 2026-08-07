@@ -117,7 +117,6 @@ aircraft
 airplane
 airport
 aisle
-aka
 akin
 alarm
 albeit
@@ -365,7 +364,6 @@ balance
 balcony
 bald
 bale
-bali
 ball
 ballet
 balloon
@@ -375,7 +373,6 @@ ban
 banana
 band
 bang
-bangkok
 bank
 banker
 bankrupt
@@ -490,7 +487,6 @@ bizarre
 black
 bladder
 blade
-blah
 blame
 blank
 blanket
@@ -761,7 +757,6 @@ champ
 champagne
 champion
 chance
-chang
 change
 channel
 chant
@@ -1259,7 +1254,6 @@ detective
 detector
 detention
 determine
-dev
 develop
 developer
 device
@@ -1602,7 +1596,6 @@ exam
 examine
 example
 exceed
-excel
 excellent
 except
 exception
@@ -2022,7 +2015,6 @@ governor
 gown
 grab
 grace
-grad
 grade
 gradual
 gradually
@@ -2131,7 +2123,6 @@ harmful
 harmless
 harmony
 harness
-harper
 harsh
 harvest
 hash
@@ -2929,7 +2920,6 @@ monk
 monkey
 monopoly
 monster
-montana
 month
 monthly
 monument
@@ -3007,7 +2997,6 @@ narrative
 narrator
 narrow
 narrowly
-nash
 nasty
 nation
 national
@@ -3837,7 +3826,6 @@ replica
 reply
 report
 reporter
-repost
 represent
 reproduce
 republic
@@ -4226,7 +4214,6 @@ sincere
 sincerely
 sing
 singer
-singh
 single
 singular
 sinister
@@ -4468,7 +4455,6 @@ stint
 stir
 stitch
 stock
-stoke
 stomach
 stone
 stop

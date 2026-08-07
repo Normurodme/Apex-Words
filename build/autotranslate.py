@@ -96,9 +96,16 @@ def main() -> int:
             if not uz:
                 continue
             uz = uz.strip().lower()
-            # Tarjima o'zgarmagan bo'lsa foydasi yo'q — yozmaymiz
-            if uz and uz != w.lower():
-                cache[w] = uz
+            if not uz:
+                continue
+            # Tarjima inglizchaga TENG bo'lsa ham yozamiz.
+            #
+            # Ilgari bunday so'zlar tashlab yuborilardi va ular hech qachon
+            # keshga tushmasdi — har ishga tushirishda qaytadan so'ralardi
+            # va o'yinchi "tarjima topilmadi" ko'rardi. Aslida ko'p so'z
+            # o'zbekchada ham xuddi shunday yoziladi (radio, taksi, futbol),
+            # ya'ni bu haqiqiy tarjima. Yozib qo'ygan afzal.
+            cache[w] = uz
         done += len(chunk)
 
         # Har bo'lakdan keyin saqlaymiz: uzilib qolsa ish yo'qolmaydi

@@ -137,6 +137,24 @@ MANUAL_DROP = {
     "tum", "vis", "wen", "wight", "wis", "yah", "yan", "yee", "zac", "alp",
     "carr", "fiat", "apa", "bain", "bose", "dum", "hah", "hud", "lux",
     "napa", "pap", "pow", "soma",
+
+    # --- Atoqli otlar, brendlar, joy nomlari ---
+    # Bular chastota bo'yicha o'tib ketadi (matnlarda ko'p uchraydi), lekin
+    # o'quv o'yinida ularning o'rni yo'q: o'yinchi lug'at emas, ism o'rganadi.
+    "aka", "alba", "alfa", "apache", "ascot", "bafta", "bali", "bangkok",
+    "borg", "bundy", "cisco", "draper", "excel", "fuji", "gable", "harper",
+    "hasan", "huron", "kemp", "kraft", "levant", "massa", "montana", "muir",
+    "nash", "pau", "pell", "portman", "prius", "rohan", "romero", "ryder",
+    "singh", "taft", "timor", "tonga", "ulster", "chang", "cheng", "kang",
+    "liang", "meng", "ming", "ling", "ting", "tung",
+
+    # --- Sleng, qisqartma va chala shakllar ---
+    "biz", "blah", "bop", "boomer", "brill", "coz", "dada", "demi", "dev",
+    "diss", "duff", "dun", "gator", "glam", "grad", "playa", "prob", "quot",
+    "wiz", "zee", "shiv", "skit", "stoke", "topper", "repost",
+
+    # --- Boshqa tillardan kirib qolgan bo'laklar ---
+    "bien", "blanc", "blanco", "mater", "pax", "salle", "sera", "uva",
 }
 
 # Brown korpusi qamrab olmaydigan joy nomlari, brendlar va boshqa atoqli otlar.

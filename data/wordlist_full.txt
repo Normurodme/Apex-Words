@@ -193,11 +193,9 @@ airport
 airway
 airy
 aisle
-aka
 akin
 alamo
 alarm
-alba
 albeit
 albino
 album
@@ -208,7 +206,6 @@ alcoholic
 alderman
 ale
 alert
-alfa
 algae
 algebra
 algebraic
@@ -374,7 +371,6 @@ anything
 anyway
 anywhere
 aortic
-apache
 apart
 apartheid
 apartment
@@ -477,7 +473,6 @@ ascend
 ascension
 ascent
 ascertain
-ascot
 ash
 ashore
 aside
@@ -633,7 +628,6 @@ badge
 badger
 badly
 badminton
-bafta
 bag
 bagel
 baggage
@@ -646,7 +640,6 @@ balance
 balcony
 bald
 bale
-bali
 ball
 ballad
 ballast
@@ -665,7 +658,6 @@ bandage
 bandit
 bane
 bang
-bangkok
 banish
 banjo
 bank
@@ -813,7 +805,6 @@ biceps
 bicycle
 bid
 bidder
-bien
 biennial
 big
 bigger
@@ -853,7 +844,6 @@ bit
 bite
 bitter
 bitterly
-biz
 bizarre
 black
 blackjack
@@ -862,10 +852,7 @@ blackness
 blackout
 bladder
 blade
-blah
 blame
-blanc
-blanco
 bland
 blank
 blanket
@@ -950,7 +937,6 @@ booklet
 bookshop
 bookstore
 boom
-boomer
 boomerang
 boon
 boost
@@ -959,11 +945,9 @@ boot
 booth
 bootleg
 booze
-bop
 border
 bore
 boredom
-borg
 born
 borne
 borough
@@ -1053,7 +1037,6 @@ brigadier
 bright
 brighten
 brightly
-brill
 brilliant
 brim
 brine
@@ -1129,7 +1112,6 @@ bumpy
 bun
 bunch
 bundle
-bundy
 bungalow
 bunk
 bunker
@@ -1376,7 +1358,6 @@ champagne
 champaign
 champion
 chance
-chang
 change
 changer
 channel
@@ -1422,7 +1403,6 @@ chef
 chemical
 chemist
 chemistry
-cheng
 cheque
 cherish
 chess
@@ -1485,7 +1465,6 @@ circuit
 circular
 circulate
 circus
-cisco
 citadel
 citation
 cite
@@ -1879,7 +1858,6 @@ cowardly
 cowboy
 coy
 coyote
-coz
 cozy
 crab
 crack
@@ -2046,7 +2024,6 @@ cypress
 cyst
 cystic
 dab
-dada
 daddy
 daft
 dagger
@@ -2167,7 +2144,6 @@ delve
 demand
 demeanor
 dementia
-demi
 demise
 democracy
 demolish
@@ -2243,7 +2219,6 @@ determine
 deterrent
 detour
 detriment
-dev
 develop
 developer
 deviate
@@ -2376,7 +2351,6 @@ dispose
 dispute
 disregard
 disrupt
-diss
 dissent
 dissident
 dissolve
@@ -2486,7 +2460,6 @@ drain
 drainage
 drama
 dramatic
-draper
 drastic
 draught
 draw
@@ -2532,13 +2505,11 @@ dude
 due
 duel
 duet
-duff
 dull
 duly
 dumb
 dummy
 dump
-dun
 dune
 dung
 dungeon
@@ -2847,7 +2818,6 @@ examine
 examiner
 example
 exceed
-excel
 excellent
 except
 exception
@@ -3367,7 +3337,6 @@ fry
 fudge
 fuel
 fugitive
-fuji
 fulfill
 fulham
 full
@@ -3403,7 +3372,6 @@ future
 fuzz
 fuzzy
 gabby
-gable
 gadget
 gag
 gain
@@ -3443,7 +3411,6 @@ gastric
 gate
 gateway
 gather
-gator
 gauge
 gauntlet
 gaze
@@ -3512,7 +3479,6 @@ glacier
 glad
 gladiator
 gladly
-glam
 glamorous
 glamour
 glance
@@ -3582,7 +3548,6 @@ grab
 grace
 graceful
 gracious
-grad
 grade
 grader
 gradient
@@ -3776,12 +3741,10 @@ harmonic
 harmony
 harness
 harp
-harper
 harrow
 harsh
 harshly
 harvest
-hasan
 hash
 hassle
 haste
@@ -4051,7 +4014,6 @@ hungry
 hunk
 hunt
 hurdle
-huron
 hurricane
 hurry
 hurst
@@ -4446,7 +4408,6 @@ justice
 justify
 juvenile
 kale
-kang
 kangaroo
 karaoke
 karate
@@ -4458,7 +4419,6 @@ keenly
 keep
 keeper
 keg
-kemp
 kernel
 ketchup
 kettle
@@ -4511,7 +4471,6 @@ knuckle
 kodak
 koi
 kosher
-kraft
 kudos
 kung
 lab
@@ -4659,7 +4618,6 @@ lethal
 letter
 lettuce
 leukemia
-levant
 level
 lever
 leverage
@@ -4670,7 +4628,6 @@ lexicon
 liability
 liable
 liaison
-liang
 liar
 libel
 liberal
@@ -4719,7 +4676,6 @@ linear
 lineman
 linen
 liner
-ling
 linger
 lingerie
 link
@@ -4972,7 +4928,6 @@ mash
 mask
 masonry
 mass
-massa
 massacre
 massage
 masse
@@ -4985,7 +4940,6 @@ mastery
 mat
 match
 mate
-mater
 material
 maternal
 maternity
@@ -5055,7 +5009,6 @@ memorize
 memory
 menace
 mend
-meng
 menopause
 menstrual
 mental
@@ -5136,7 +5089,6 @@ mindless
 mine
 miner
 mineral
-ming
 mingle
 miniature
 minimal
@@ -5234,7 +5186,6 @@ monsoon
 monster
 monstrous
 montage
-montana
 month
 monthly
 monument
@@ -5302,7 +5253,6 @@ mucus
 mud
 muddy
 mug
-muir
 mulberry
 mule
 mulligan
@@ -5369,7 +5319,6 @@ narrower
 narrowly
 nasal
 nascent
-nash
 nasty
 natal
 nation
@@ -5905,14 +5854,12 @@ patrol
 patron
 patronage
 pattern
-pau
 pause
 pave
 pavement
 pavilion
 paw
 pawn
-pax
 pay
 payable
 payday
@@ -5944,7 +5891,6 @@ peep
 peer
 peg
 pelican
-pell
 pellet
 pelvic
 pelvis
@@ -6114,7 +6060,6 @@ platoon
 platter
 plausible
 play
-playa
 playable
 playback
 playbook
@@ -6216,7 +6161,6 @@ portable
 portal
 portfolio
 portion
-portman
 portrait
 portray
 portrayal
@@ -6336,7 +6280,6 @@ prism
 prison
 prisoner
 pristine
-prius
 privacy
 private
 privately
@@ -6344,7 +6287,6 @@ privilege
 privy
 prize
 pro
-prob
 probable
 probably
 probate
@@ -6537,7 +6479,6 @@ quit
 quite
 quiz
 quorum
-quot
 quota
 quotation
 quote
@@ -6834,7 +6775,6 @@ replicate
 reply
 report
 reporter
-repost
 represent
 reprint
 reproduce
@@ -6998,13 +6938,11 @@ rodent
 rodeo
 roe
 rogue
-rohan
 role
 roll
 roller
 romance
 romantic
-romero
 roof
 rook
 rookie
@@ -7072,7 +7010,6 @@ rustic
 rusty
 rut
 ruthless
-ryder
 rye
 sabbath
 saber
@@ -7107,7 +7044,6 @@ salesman
 salient
 saline
 saliva
-salle
 salmon
 salon
 saloon
@@ -7304,7 +7240,6 @@ separate
 septic
 sequel
 sequence
-sera
 serene
 serenity
 serial
@@ -7406,7 +7341,6 @@ shipyard
 shire
 shirt
 shirtless
-shiv
 shiver
 shock
 shocker
@@ -7498,7 +7432,6 @@ sine
 sinful
 sing
 singer
-singh
 single
 singleton
 singular
@@ -7543,7 +7476,6 @@ skinny
 skip
 skirmish
 skirt
-skit
 skull
 skunk
 sky
@@ -7948,7 +7880,6 @@ stir
 stitch
 stock
 stockpile
-stoke
 stomach
 stomp
 stone
@@ -8205,7 +8136,6 @@ tact
 tactic
 tactical
 tactile
-taft
 tag
 tail
 take
@@ -8430,10 +8360,8 @@ timely
 timer
 timetable
 timid
-timor
 tin
 tinder
-ting
 tinker
 tint
 tiny
@@ -8470,7 +8398,6 @@ tonal
 tone
 toner
 tong
-tonga
 tongue
 tonic
 tonight
@@ -8482,7 +8409,6 @@ topic
 topical
 topless
 topology
-topper
 torah
 torch
 torment
@@ -8645,7 +8571,6 @@ tumor
 tuna
 tundra
 tune
-tung
 tungsten
 tunic
 tunnel
@@ -8691,7 +8616,6 @@ tyranny
 tyrant
 tyre
 ugly
-ulster
 ultimate
 ultimatum
 ultra
@@ -8852,7 +8776,6 @@ utmost
 utopian
 utter
 utterly
-uva
 vacancy
 vacant
 vacate
@@ -9248,7 +9171,6 @@ without
 withstand
 witness
 witty
-wiz
 wizard
 woe
 wolf
@@ -9346,7 +9268,6 @@ yuck
 yummy
 zeal
 zebra
-zee
 zenith
 zeppelin
 zero

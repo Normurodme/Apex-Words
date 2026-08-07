@@ -445,7 +445,23 @@ def main():
             auto = {}
 
     merged = {**existing, **auto, **UZ}
-    merged = {k: v for k, v in sorted(merged.items())}
+
+    # Faqat HOZIRGI puzzlelarda uchraydigan so'zlar qoldiriladi.
+    #
+    # Ilgari fayl faqat o'sardi: eski yozuvlar hech qachon o'chmasdi.
+    # Natijada lug'atdan chiqarilgan so'zlar (atoqli otlar, sleng)
+    # dict.json da qolib ketgan va tekshiruvda qayta chiqib turgan edi.
+    # Bundan tashqari o'yinchi keraksiz kilobaytlarni yuklab olardi.
+    used = set()
+    for f in sorted((ROOT / "data" / "puzzles").glob("stage_*.json")):
+        data = json.loads(f.read_text(encoding="utf-8"))
+        for lvl in data["levels"]:
+            for p in lvl["puzzles"]:
+                used.update(p["words"])
+                used.update(p.get("bonus", []))
+
+    dropped = len(merged) - len(used & set(merged))
+    merged = {k: v for k, v in sorted(merged.items()) if k in used}
     out.write_text(json.dumps(merged, ensure_ascii=False, indent=0), encoding="utf-8")
 
     # data/ ichiga ham nusxa (manba sifatida)
@@ -454,6 +470,7 @@ def main():
 
     print(f"Qo'lda yozilgan : {len(UZ):,} so'z")
     print(f"Avtomatik       : {len(auto):,} so'z")
+    print(f"Ishlatilmagani tozalandi: {dropped:,}")
     print(f"dict.json ga yozildi: {len(merged):,} so'z")
     return 0
 
