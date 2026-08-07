@@ -199,6 +199,11 @@ MEDALS = ("🥇", "🥈", "🥉")
 # inline javoblarda har safar bot.me() ga murojaat qilmaslik uchun.
 BOT_LINK = "https://t.me/ApexWordsBot"
 
+# Mini App'ning to'g'ridan-to'g'ri havolasi (BotFather -> /newapp qisqa nomi).
+# Guruh va inline tugmalarida shu ishlatiladi.
+MINIAPP_SHORT = os.getenv("MINIAPP_SHORT", "Play").strip()
+MINIAPP_LINK = f"{BOT_LINK}/{MINIAPP_SHORT}"
+
 # Telegram'dan qaysi turdagi yangilanishlar so'raladi.
 #
 # ATAYLAB qo'lda yozilgan. aiogram bu ro'yxatni ishlovchilardan o'zi
@@ -703,10 +708,26 @@ def play_url() -> str:
 
 
 def play_keyboard() -> InlineKeyboardMarkup | None:
+    """Shaxsiy chat uchun: Mini App'ni to'g'ridan-to'g'ri ochadigan tugma."""
     if not WEBAPP_URL.startswith("https://"):
         return None      # Telegram WebApp tugmasi faqat https bilan ishlaydi
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="🎮 Play", web_app=WebAppInfo(url=play_url()))
+    ]])
+
+
+def link_keyboard() -> InlineKeyboardMarkup:
+    """
+    Guruh va inline natijalar uchun tugma.
+
+    web_app turidagi tugma FAQAT shaxsiy chatda ishlaydi. Guruhga yoki
+    inline natijaga qo'yilsa Telegram xabarni butunlay rad etadi
+    (BUTTON_TYPE_INVALID) — ya'ni javob umuman ko'rinmaydi. Shuning
+    uchun bu yerda oddiy havola tugmasi ishlatiladi: u Mini App'ning
+    to'g'ridan-to'g'ri manziliga olib boradi va hamma joyda ishlaydi.
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎮 Play Apex Words", url=MINIAPP_LINK)
     ]])
 
 
@@ -778,7 +799,7 @@ async def cmd_top(message: Message):
     if not members:
         await message.answer(
             "Nobody in this group plays Apex Words yet.\n"
-            "Tap Play and be the first!", reply_markup=play_keyboard())
+            "Tap Play and be the first!", reply_markup=link_keyboard())
         return
 
     lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
@@ -786,7 +807,7 @@ async def cmd_top(message: Message):
              for i, (name, _photo, score, _uid) in enumerate(members[:20])]
     await message.answer(
         f"🏆 <b>Top players in {html_escape(chat.title or 'this group')}</b>\n\n"
-        + "\n".join(lines), reply_markup=play_keyboard())
+        + "\n".join(lines), reply_markup=link_keyboard())
 
 
 @dp.inline_query()
@@ -825,11 +846,13 @@ def _inline_play_card(link: str) -> InlineQueryResultArticle:
         input_message_content=InputTextMessageContent(
             message_text=(
                 "🎮 <b>Apex Words</b>\n"
-                "Swipe letters into words and grow your English.\n\n"
-                f"{link}"
+                "Swipe letters into words and grow your English."
             ),
             parse_mode=ParseMode.HTML,
         ),
+        # Xabar ostidagi tugma. Ilgari faqat oddiy havola matn bo'lib
+        # turardi — bosiladigan tugma yo'q edi.
+        reply_markup=link_keyboard(),
     )
 
 
@@ -857,10 +880,10 @@ async def _answer_inline(query: InlineQuery):
                         f"<b>{html_escape(n or 'Player')}</b> — {s} 💎"
                         for i, (n, _p, s, _u) in enumerate(rows[:10]))
                        or "No players yet.")
-                    + f"\n\n{link}"
                 ),
                 parse_mode=ParseMode.HTML,
             ),
+            reply_markup=link_keyboard(),
         ),
     ]
     # cache_time past — reyting tez yangilanadi
@@ -916,9 +939,11 @@ async def main():
         me = await bot.get_me()
         log.info("Bot ulandi: @%s (%s)", me.username, me.full_name)
         # Inline javoblarda ishlatiladigan havola
-        global BOT_LINK
+        global BOT_LINK, MINIAPP_LINK
         if me.username:
             BOT_LINK = f"https://t.me/{me.username}"
+            MINIAPP_LINK = f"{BOT_LINK}/{MINIAPP_SHORT}"
+        log.info("Mini App havolasi: %s", MINIAPP_LINK)
         # Inline rejim BotFather'da yoqilganini API bermaydi, shuning uchun
         # kamida BIZ nima so'rayotganimizni ko'rsatib qo'yamiz. Agar bu
         # ro'yxatda inline_query bor, lekin "Inline so'rov:" qatori hech

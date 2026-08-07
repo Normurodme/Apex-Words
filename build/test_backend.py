@@ -111,6 +111,18 @@ async def main():
     ok.append(("html_escape teglarni zararsizlantiradi",
                B.html_escape("<b>x</b>&") == "&lt;b&gt;x&lt;/b&gt;&amp;"))
 
+    # web_app tugmasi FAQAT shaxsiy chatda ishlaydi. Guruh va inline
+    # javoblarda u xabarni butunlay rad ettiradi, shuning uchun u yerda
+    # oddiy havola tugmasi bo'lishi shart.
+    lk = B.link_keyboard().inline_keyboard[0][0]
+    ok.append(("guruh tugmasi havola turida (web_app emas)",
+               lk.url is not None and lk.web_app is None))
+    ok.append(("havola Mini App'ga ishora qiladi", "/" in lk.url.split("t.me/")[1]))
+    card = B._inline_play_card(B.BOT_LINK)
+    ok.append(("inline natijada tugma bor", card.reply_markup is not None))
+    ok.append(("inline tugmasi ham havola turida",
+               card.reply_markup.inline_keyboard[0][0].url is not None))
+
     # --- Kunlik zanjir ---
     r = await client.post("/api/tasks", json={"initData": good})
     t0 = await r.json()
