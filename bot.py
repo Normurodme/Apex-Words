@@ -199,6 +199,21 @@ MEDALS = ("🥇", "🥈", "🥉")
 # inline javoblarda har safar bot.me() ga murojaat qilmaslik uchun.
 BOT_LINK = "https://t.me/ApexWordsBot"
 
+# Telegram'dan qaysi turdagi yangilanishlar so'raladi.
+#
+# ATAYLAB qo'lda yozilgan. aiogram bu ro'yxatni ishlovchilardan o'zi
+# hisoblaydi, lekin natijasi ko'rinmaydi va inline undan tushib qolsa
+# Telegram inline so'rovlarni UMUMAN yubormaydi — tashqaridan bu
+# "bot chiqmayapti" bo'lib ko'rinadi, sababi esa hech qayerda bilinmaydi.
+# Ro'yxatni qo'lda berib, logga chiqaramiz: shubha qolmaydi.
+ALLOWED_UPDATES = [
+    "message",
+    "callback_query",
+    "inline_query",
+    "chosen_inline_result",
+    "my_chat_member",
+]
+
 # Guruh reytingi uchun nechta yuqori o'yinchi tekshiriladi.
 # Har biri uchun Telegram'ga alohida so'rov ketadi, shuning uchun son
 # cheklangan — aks holda katta bazada javob sekinlashadi.
@@ -904,10 +919,13 @@ async def main():
         global BOT_LINK
         if me.username:
             BOT_LINK = f"https://t.me/{me.username}"
-        # Inline rejim BotFather'da yoqilganini bilib bo'lmaydi (API bermaydi),
-        # shuning uchun eslatib qo'yamiz — bu eng ko'p uchraydigan sabab.
-        log.info("Inline rejim: BotFather -> /setinline yoqilgan bo'lishi kerak. "
-                 "So'rov kelganda logda 'Inline so'rov:' qatori chiqadi.")
+        # Inline rejim BotFather'da yoqilganini API bermaydi, shuning uchun
+        # kamida BIZ nima so'rayotganimizni ko'rsatib qo'yamiz. Agar bu
+        # ro'yxatda inline_query bor, lekin "Inline so'rov:" qatori hech
+        # qachon chiqmasa — sabab aniq: BotFather'da /setinline yoqilmagan.
+        log.info("So'raladigan yangilanishlar: %s", ", ".join(ALLOWED_UPDATES))
+        log.info("Inline so'rov kelsa logda \"Inline so'rov:\" qatori chiqadi. "
+                 "Chiqmasa — BotFather -> /setinline yoqilmagan.")
     except Exception as e:
         await bot.session.close()
         raise SystemExit(
@@ -940,7 +958,8 @@ async def main():
                     "Brauzerda http://localhost:%d ochib sinang.", WEBAPP_URL, PORT)
 
     try:
-        await dp.start_polling(bot, handle_signals=False)
+        await dp.start_polling(bot, handle_signals=False,
+                               allowed_updates=ALLOWED_UPDATES)
     finally:
         await runner.cleanup()
         await bot.session.close()
