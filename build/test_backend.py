@@ -89,6 +89,28 @@ async def main():
                                              "progress": {"x": "y" * 300000}})
     ok.append(("juda katta progress rad etildi", r.status == 413))
 
+    # --- Reyting keshi ---
+    import time as _t
+    B.db._top_cache = None
+    t0 = _t.perf_counter()
+    r1 = await B.db.top_rows()
+    cold = _t.perf_counter() - t0
+    t0 = _t.perf_counter()
+    r2 = await B.db.top_rows()
+    warm = _t.perf_counter() - t0
+    ok.append(("reyting keshdan qaytadi (natija bir xil)", r1 == r2))
+    ok.append(("keshdan olish bazadan tezroq", warm <= cold))
+    B.db.invalidate_top()
+    ok.append(("kesh bekor qilinadi", B.db._top_cache is None))
+
+    # --- Inline rejim va guruh reytingi ro'yxatdan o'tganmi ---
+    handlers = B.dp.inline_query.handlers
+    ok.append(("inline rejim ishlovchisi bor", len(handlers) >= 1))
+    msg_src = "".join(str(h.callback.__name__) for h in B.dp.message.handlers)
+    ok.append(("/top buyrug'i ro'yxatdan o'tgan", "cmd_top" in msg_src))
+    ok.append(("html_escape teglarni zararsizlantiradi",
+               B.html_escape("<b>x</b>&") == "&lt;b&gt;x&lt;/b&gt;&amp;"))
+
     # --- Kunlik zanjir ---
     r = await client.post("/api/tasks", json={"initData": good})
     t0 = await r.json()

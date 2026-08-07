@@ -750,8 +750,22 @@ body {
   transition: transform var(--tap), box-shadow var(--tap);
 }
 .key-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--gold-3); }
-.key-btn .key-ico { font-size: 24px; line-height: 1; color: var(--gold-3); }
-.key-btn .key-n { font-size: 15px; font-weight: 700; line-height: 1; }
+
+/* Kalit — chizilgan SVG. Shrift glifi juda mayda chiqardi va
+   qurilmaga qarab o'zgarardi; SVG hamma joyda bir xil va aniq. */
+.key-btn .key-ico {
+  width: 30px; height: 30px;
+  color: var(--gold-3);
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,.7));
+  transform: rotate(-45deg);
+}
+.key-btn .key-n {
+  font-size: 16px; font-weight: 700; line-height: 1;
+  color: var(--ink-1);
+}
+/* Kalit qolmaganda tugma so'nadi — bosishdan oldin bilinadi */
+.key-btn.empty { opacity: .55; }
+.key-btn.empty .key-ico { color: var(--ink-3); }
 
 /* ============================ REYTING ============================ */
 

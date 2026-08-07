@@ -34,6 +34,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InlineQuery,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
     Message,
     MenuButtonWebApp,
     WebAppInfo,
@@ -189,6 +192,13 @@ INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_players_score ON players(score DESC)
 
 # Reytingda ko'rsatiladigan o'yinchilar soni
 TOP_LIMIT = 100
+
+MEDALS = ("🥇", "🥈", "🥉")
+
+# Guruh reytingi uchun nechta yuqori o'yinchi tekshiriladi.
+# Har biri uchun Telegram'ga alohida so'rov ketadi, shuning uchun son
+# cheklangan — aks holda katta bazada javob sekinlashadi.
+GROUP_SCAN_LIMIT = 60
 
 
 class DB:
@@ -396,12 +406,22 @@ class DB:
             await db.commit()
         return True
 
-    async def leaderboard(self, uid: int) -> dict:
-        """
-        Eng yuqori ballli TOP_LIMIT o'yinchi va so'rovchining o'z o'rni.
+    # Reyting keshi: (vaqt, ro'yxat). Har so'rovda baza qayta o'qilmasin.
+    _top_cache: tuple[float, list] | None = None
+    _TOP_TTL = 20.0        # soniya
 
-        Tashqariga faqat ism, rasm va ball chiqadi — user_id va username emas.
+    async def top_rows(self) -> list:
         """
+        Eng yuqori ballli o'yinchilar. Natija qisqa muddatga keshlanadi.
+
+        Reyting hamma uchun BIR XIL, shuning uchun uni har so'rovda
+        bazadan o'qishning ma'nosi yo'q. Yigirma soniyalik kesh javobni
+        bir zumda qaytaradi va ro'yxat baribir deyarli jonli qoladi.
+        """
+        now = time.monotonic()
+        if self._top_cache and now - self._top_cache[0] < self._TOP_TTL:
+            return self._top_cache[1]
+
         async with aiosqlite.connect(self.path) as db:
             async with db.execute(
                 "SELECT first_name, photo_url, score, user_id FROM players "
@@ -409,7 +429,21 @@ class DB:
                 (TOP_LIMIT,),
             ) as cur:
                 rows = await cur.fetchall()
+        self._top_cache = (now, rows)
+        return rows
 
+    def invalidate_top(self):
+        self._top_cache = None
+
+    async def leaderboard(self, uid: int) -> dict:
+        """
+        Eng yuqori ballli TOP_LIMIT o'yinchi va so'rovchining o'z o'rni.
+
+        Tashqariga faqat ism, rasm va ball chiqadi — user_id va username emas.
+        """
+        rows = await self.top_rows()          # keshdan, deyarli bir zumda
+
+        async with aiosqlite.connect(self.path) as db:
             async with db.execute(
                 "SELECT score FROM players WHERE user_id=?", (uid,)
             ) as cur:
@@ -616,6 +650,11 @@ def make_app(bot=None) -> web.Application:
 dp = Dispatcher()
 
 
+def html_escape(s: str) -> str:
+    """Foydalanuvchi ismi HTML tegi bo'lib ketmasin."""
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def build_tag() -> str:
     """
     Har deployda o'zgaradigan qisqa belgi.
@@ -673,6 +712,115 @@ async def cmd_start(message: Message):
             text + "\n\n⚠️ WEBAPP_URL is not set to an https address yet — "
             "the play button stays hidden."
         )
+
+
+@dp.message(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders"))
+async def cmd_top(message: Message):
+    """
+    Guruhdagi o'yinchilar reytingi.
+
+    Telegram bo'tga guruh a'zolarini sanab berishga ruxsat bermaydi.
+    Shuning uchun teskarisini qilamiz: umumiy reytingdan yuqoridagi
+    o'yinchilarni olib, har biri SHU GURUHDA bormi deb so'raymiz.
+    Tekshiruvlar parallel ketadi va soni cheklangan — aks holda katta
+    bazada javob sekinlashadi.
+    """
+    chat = message.chat
+    if chat.type == "private":
+        rows = await db.top_rows()
+        if not rows:
+            await message.answer("No players yet. Be the first!")
+            return
+        lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
+                 f"<b>{html_escape(name or 'Player')}</b> — {score} 💎"
+                 for i, (name, _photo, score, _uid) in enumerate(rows[:10])]
+        await message.answer("🏆 <b>Top players</b>\n\n" + "\n".join(lines),
+                             reply_markup=play_keyboard())
+        return
+
+    rows = await db.top_rows()
+    if not rows:
+        await message.answer("No players yet. Be the first!")
+        return
+
+    bot = message.bot
+    candidates = rows[:GROUP_SCAN_LIMIT]
+
+    async def in_chat(uid: int) -> bool:
+        try:
+            m = await bot.get_chat_member(chat.id, uid)
+            return m.status in ("creator", "administrator", "member", "restricted")
+        except Exception:
+            return False
+
+    flags = await asyncio.gather(*(in_chat(r[3]) for r in candidates))
+    members = [r for r, ok in zip(candidates, flags) if ok]
+
+    if not members:
+        await message.answer(
+            "Nobody in this group plays Apex Words yet.\n"
+            "Tap Play and be the first!", reply_markup=play_keyboard())
+        return
+
+    lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
+             f"<b>{html_escape(name or 'Player')}</b> — {score} 💎"
+             for i, (name, _photo, score, _uid) in enumerate(members[:20])]
+    await message.answer(
+        f"🏆 <b>Top players in {html_escape(chat.title or 'this group')}</b>\n\n"
+        + "\n".join(lines), reply_markup=play_keyboard())
+
+
+@dp.inline_query()
+async def on_inline(query: InlineQuery):
+    """
+    Inline rejim.
+
+    Bo'tning inline rejimi BotFather'da yoqilgan bo'lsa ham, kodda
+    ishlovchi bo'lmasa Telegram hech narsa ko'rsatmaydi — foydalanuvchi
+    bot nomini yozganda ro'yxat bo'sh chiqadi. Aynan shu bo'lgan edi.
+
+    Endi ikki natija qaytariladi: o'yinga taklif va joriy reyting.
+    """
+    rows = await db.top_rows()
+    top_line = ""
+    if rows:
+        top_line = " · ".join(f"{n or 'Player'} {s}" for n, _p, s, _u in rows[:3])
+
+    link = f"https://t.me/{(await query.bot.me()).username}"
+    results = [
+        InlineQueryResultArticle(
+            id="play",
+            title="🎮 Play Apex Words",
+            description="Swipe letters into words and grow your English",
+            input_message_content=InputTextMessageContent(
+                message_text=(
+                    "🎮 <b>Apex Words</b>\n"
+                    "Swipe letters into words and grow your English.\n\n"
+                    f"{link}"
+                ),
+                parse_mode=ParseMode.HTML,
+            ),
+        ),
+        InlineQueryResultArticle(
+            id="top",
+            title="🏆 Top players",
+            description=top_line or "Nobody has scored yet",
+            input_message_content=InputTextMessageContent(
+                message_text=(
+                    "🏆 <b>Apex Words — top players</b>\n\n"
+                    + ("\n".join(
+                        f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
+                        f"<b>{html_escape(n or 'Player')}</b> — {s} 💎"
+                        for i, (n, _p, s, _u) in enumerate(rows[:10]))
+                       or "No players yet.")
+                    + f"\n\n{link}"
+                ),
+                parse_mode=ParseMode.HTML,
+            ),
+        ),
+    ]
+    # cache_time past — reyting tez yangilanadi
+    await query.answer(results, cache_time=30, is_personal=True)
 
 
 @dp.message(lambda m: m.text and m.text.startswith("/stats"))

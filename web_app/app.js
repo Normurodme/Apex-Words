@@ -1360,6 +1360,9 @@ function updateCoins() {
   ['key-count', 'map-keys', 'pack-keys', 'task-keys'].forEach((id) => {
     const e = $(id); if (e) e.textContent = k;
   });
+  // Kalit tugagani tugmadan ko'rinib tursin
+  const kb = $('btn-hint');
+  if (kb) kb.classList.toggle('empty', k < 1);
 }
 
 
