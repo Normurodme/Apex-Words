@@ -14,6 +14,30 @@
 
 const TG = window.Telegram && window.Telegram.WebApp;
 
+/*
+  Bitta qurilmada bir nechta Telegram akkaunti ishlatilishi mumkin, ammo
+  localStorage ular uchun umumiy. Shuning uchun kalit o'yinchi ID'siga
+  bog'lanadi. Aks holda ikkinchi akkaunt birinchisining progressini o'qib
+  oladi va load() uni server javobi bilan birlashtirib, keyingi saqlashda
+  o'ziniki sifatida serverga yozib yuboradi.
+*/
+const UID = (() => {
+  try {
+    return (TG && TG.initDataUnsafe && TG.initDataUnsafe.user &&
+            TG.initDataUnsafe.user.id) || 0;
+  } catch (_) { return 0; }
+})();
+const LS_KEY = UID ? 'apexwords:' + UID : 'apexwords';
+
+/*
+  Eski umumiy kalit tashlab yuboriladi, egasi kimligini bilishning iloji
+  yo'q. Progress serverda saqlanadi, shuning uchun kirgan o'yinchi uni
+  baribir qaytarib oladi.
+*/
+if (UID) {
+  try { localStorage.removeItem('apexwords'); } catch (_) {}
+}
+
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -494,7 +518,7 @@ const Store = {
 
   local() {
     try {
-      const raw = localStorage.getItem('apexwords');
+      const raw = localStorage.getItem(LS_KEY);
       if (raw) return JSON.parse(raw);
     } catch (_) {}
     return null;
@@ -541,7 +565,7 @@ const Store = {
   async _flush() {
     const p = State.progress;
     this.pending = false;
-    try { localStorage.setItem('apexwords', JSON.stringify(p)); } catch (_) {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify(p)); } catch (_) {}
     if (!this.online || !(TG && TG.initData)) return;
     try {
       await fetch('/api/save', {
@@ -559,7 +583,7 @@ const Store = {
   */
   flushOnExit() {
     const p = State.progress;
-    try { localStorage.setItem('apexwords', JSON.stringify(p)); } catch (_) {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify(p)); } catch (_) {}
     if (!this.online || !(TG && TG.initData)) return;
     const body = JSON.stringify({ initData: TG.initData, progress: p });
     let sent = false;
