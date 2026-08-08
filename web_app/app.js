@@ -41,6 +41,7 @@ const State = {
   progress: null,
   levels: [],           // barcha darajalar tekis ro'yxat sifatida
   levelIndex: 0,        // hozir o'ynalayotgan darajaning tartib raqami
+  unlimited: false,     // cheksiz kalit (serverdan keladi)
   puzzle: null,
   found: new Set(),
   foundBonus: new Set()
@@ -481,6 +482,9 @@ const Store = {
       });
       if (!r.ok) throw new Error(r.status);
       const d = await r.json();
+      // Cheksiz kalit bayrog'i SERVERDAN keladi — u progress ichida
+      // saqlanmaydi, shuning uchun qurilmalar orasida ko'chmaydi
+      State.unlimited = !!(d && d.unlimited);
       return d ? d.progress : null;
     } catch (_) {
       this.online = false;
@@ -1357,8 +1361,10 @@ function updateCoins() {
   ['coin-count', 'map-coins', 'pack-coins'].forEach((id) => {
     const e = $(id); if (e) e.textContent = c;
   });
+  // Cheksiz bo'lsa raqam o'rniga cheksizlik belgisi
+  const keyText = State.unlimited ? '∞' : String(k);
   ['key-count', 'map-keys', 'pack-keys', 'task-keys'].forEach((id) => {
-    const e = $(id); if (e) e.textContent = k;
+    const e = $(id); if (e) e.textContent = keyText;
   });
   // Kalit tugagani tugmadan ko'rinib tursin
   const kb = $('btn-hint');
@@ -1487,7 +1493,8 @@ function showStageDone(stage, next, i) {
 
 function useHint() {
   if (!State.puzzle) return;
-  if (State.progress.keys < 1) {
+  // Cheksiz kalitli o'yinchida chegara tekshirilmaydi
+  if (!State.unlimited && State.progress.keys < 1) {
     toast('🗝️ Out of keys — collect more in Rewards');
     haptic('err');
     return;
@@ -1499,7 +1506,7 @@ function useHint() {
     if (cell) {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
-      addKeys(-1);
+      if (!State.unlimited) addKeys(-1);
       toast('🗝️ Letter revealed');
       // Kalit kamayganini o'yinchi ko'rishi kerak
       $('key-count').classList.remove('spend');

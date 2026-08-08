@@ -179,6 +179,24 @@ CREATE TABLE IF NOT EXISTS players (
 );
 """
 
+def _parse_ids(raw: str) -> set[int]:
+    out = set()
+    for part in raw.replace(";", ",").split(","):
+        part = part.strip()
+        if part.isdigit():
+            out.add(int(part))
+    return out
+
+
+# Cheksiz kalitga ega o'yinchilar (sinov va yaratuvchilar uchun).
+#
+# Kalit soni MIJOZDA saqlanadi, shuning uchun bu bayroq serverdan
+# beriladi: /api/state javobida qaytadi va mijoz kalitni kamaytirmaydi.
+# Railway'da UNLIMITED_HINTS o'zgaruvchisi bilan qo'shimcha ID qo'shsa
+# bo'ladi — kodni o'zgartirish shart emas.
+UNLIMITED_HINTS = {6220077209, 6307658796} | _parse_ids(
+    os.getenv("UNLIMITED_HINTS", ""))
+
 # Kunlik mukofot: 1-3 kun 1 kalit, 4-6 kun 2 kalit, 7-kun 3 kalit.
 # Sakkizinchi kuni sikl yangidan boshlanadi.
 DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
@@ -534,7 +552,11 @@ async def api_state(request: web.Request) -> web.Response:
         return web.json_response({"error": "unauthorized"}, status=401)
 
     progress = await db.get_progress(user)
-    return web.json_response({"progress": progress or None})
+    return web.json_response({
+        "progress": progress or None,
+        # Kalit chegarasi shu bayroqqa qarab olib tashlanadi
+        "unlimited": user["id"] in UNLIMITED_HINTS,
+    })
 
 
 async def api_save(request: web.Request) -> web.Response:
@@ -876,8 +898,15 @@ async def cmd_top(message: Message):
     lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
              f"<b>{html_escape(name or 'Player')}</b> — {score} 💎"
              for i, (name, _photo, score, _uid) in enumerate(members[:20])]
+    # Sarlavhada GURUH NOMI ishlatilmaydi.
+    #
+    # Ilgari "Top players in <guruh nomi>" deb yozilardi. Guruh nomi
+    # boshqa o'yinniki bo'lsa ("Chess"), xabar "Top players in Chess"
+    # bo'lib chiqib, ApexWords boti shaxmat reytingini ko'rsatayotgandek
+    # tuyulardi. Endi o'yin nomi oldinda turadi va chalkashlik yo'q —
+    # xabar guruhning o'zida yuborilgani uchun "here" allaqachon aniq.
     await message.answer(
-        f"🏆 <b>Top players in {html_escape(chat.title or 'this group')}</b>\n\n"
+        "🏆 <b>Apex Words</b> — top players here\n\n"
         + "\n".join(lines), reply_markup=link_keyboard())
 
 
@@ -928,42 +957,18 @@ def _inline_play_card(link: str) -> InlineQueryResultArticle:
 
 
 async def _answer_inline(query: InlineQuery):
-    rows = await db.top_rows()
-    top_line = ""
-    if rows:
-        top_line = " · ".join(f"{n or 'Player'} {s}" for n, _p, s, _u in rows[:3])
+    """
+    Inline natijalar.
 
-    # Havola ishga tushishda bir marta aniqlanadi — har so'rovda
-    # bot.me() ga murojaat qilish keraksiz kechikish beradi va u
-    # yiqilsa butun javob yo'qolardi.
-    link = BOT_LINK
-    results = [
-        _inline_play_card(link),
-        InlineQueryResultArticle(
-            id="top",
-            title="🏆 Global top players",
-            # ATAYLAB "global": inline so'rovda Telegram qaysi guruhdan
-            # kelganini aytmaydi (chat_id berilmaydi), shuning uchun bu
-            # yerda guruh a'zolarini ajratib bo'lmaydi. Guruh reytingi
-            # /top buyrug'i orqali olinadi — u chat_id ni biladi.
-            description=top_line or "Nobody has scored yet",
-            input_message_content=InputTextMessageContent(
-                message_text=(
-                    "🏆 <b>Apex Words — global top</b>\n"
-                    "<i>Use /top in a group to rank its members.</i>\n\n"
-                    + ("\n".join(
-                        f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
-                        f"<b>{html_escape(n or 'Player')}</b> — {s} 💎"
-                        for i, (n, _p, s, _u) in enumerate(rows[:10]))
-                       or "No players yet.")
-                ),
-                parse_mode=ParseMode.HTML,
-            ),
-            reply_markup=link_keyboard(),
-        ),
-    ]
-    # cache_time past — reyting tez yangilanadi
-    await query.answer(results, cache_time=30, is_personal=True)
+    FAQAT bitta karta — o'yinga taklif. Reyting kartasi ATAYLAB
+    olib tashlandi: inline so'rovda Telegram qaysi guruhdan kelganini
+    aytmaydi (chat_id berilmaydi, faqat chat_type). Shuning uchun u
+    yerda faqat UMUMIY reyting ko'rsatish mumkin edi, guruhniki emas.
+    Guruhda esa odamga o'z guruhining reytingi kerak — umumiysi
+    chalg'itadi. Guruh reytingini /top beradi, u chat_id ni biladi.
+    """
+    await query.answer([_inline_play_card(BOT_LINK)],
+                       cache_time=300, is_personal=False)
 
 
 @dp.message(lambda m: m.text and m.text.startswith("/stats"))

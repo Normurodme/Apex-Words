@@ -6,7 +6,7 @@ Polling ishga tushmaydi, shuning uchun botning haqiqiy hisobiga tegmaydi.
 Ishga tushirish:
     python build/test_backend.py
 """
-import asyncio, hashlib, hmac, json, os, sys, time, urllib.parse
+import asyncio, hashlib, hmac, inspect, json, os, sys, time, urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,7 +31,7 @@ async def main():
     tok = B.BOT_TOKEN
     ok = []
 
-    # Har safar toza bazadan boshlaymiz — aks holda oldingi ishga tushirishdan
+    # Har safar toza bazadan boshlaymiz â€” aks holda oldingi ishga tushirishdan
     # qolgan yozuvlar "yangi o'yinchi" testini yiqitadi.
     for suffix in ("", "-wal", "-shm"):
         Path(os.environ["DB_PATH"] + suffix).unlink(missing_ok=True)
@@ -120,8 +120,32 @@ async def main():
     ok.append(("havola Mini App'ga ishora qiladi", "/" in lk.url.split("t.me/")[1]))
     card = B._inline_play_card(B.BOT_LINK)
     ok.append(("inline natijada tugma bor", card.reply_markup is not None))
+
+    # Inline'da reyting kartasi BO'LMASLIGI kerak: inline so'rovda
+    # chat_id berilmaydi, ya'ni guruh reytingini ko'rsatib bo'lmaydi,
+    # umumiysi esa guruhda chalg'itadi.
+    src = inspect.getsource(B._answer_inline)
+    ok.append(("inline'da reyting kartasi yo'q",
+               "_inline_play_card" in src and "id=\"top\"" not in src))
+    ok.append(("guruh sarlavhasida guruh nomi ishlatilmaydi",
+               "chat.title" not in inspect.getsource(B.cmd_top).split("private")[-1]))
     ok.append(("inline tugmasi ham havola turida",
                card.reply_markup.inline_keyboard[0][0].url is not None))
+
+    # --- Cheksiz kalit ---
+    # Bayroq SERVERDAN kelishi kerak: kalit soni mijozda saqlanadi va
+    # unga ishonib bo'lmaydi.
+    r = await client.post("/api/state", json={"initData": good})
+    body = await r.json()
+    ok.append(("oddiy o'yinchida cheksiz kalit yo'q", body.get("unlimited") is False))
+
+    vip = make_init_data(sorted(B.UNLIMITED_HINTS)[0], tok)
+    r = await client.post("/api/state", json={"initData": vip})
+    ok.append(("ro'yxatdagi ID cheksiz kalit oladi",
+               (await r.json()).get("unlimited") is True))
+    ok.append(("ikkita ID kiritilgan", len(B.UNLIMITED_HINTS) >= 2))
+    ok.append(("o'zgaruvchi orqali qo'shsa bo'ladi",
+               B._parse_ids("111, 222;333") == {111, 222, 333}))
 
     # --- Guruh a'zoligini aniqlash ---
     # Telegram 429 qaytarsa yoki tarmoq uzilsa, bu "a'zo emas" degani EMAS.
