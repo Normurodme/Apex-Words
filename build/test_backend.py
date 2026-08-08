@@ -320,6 +320,7 @@ async def main():
         await d.commit()
     old = B.DB(str(old_db))
     await old.init()
+    await old.close()      # ulanish oqimlari qolib ketmasin
     async with aiosqlite.connect(old_db) as d:
         async with d.execute("PRAGMA table_info(players)") as cur:
             cols = {row[1] for row in await cur.fetchall()}
@@ -332,11 +333,15 @@ async def main():
     ok.append(("buzilgan json migratsiyani yiqitmadi", scores.get(3) == 0))
 
     # Migratsiya ikkinchi marta ishlaganda ham xato bermasligi kerak
-    await B.DB(str(old_db)).init()
+    again = B.DB(str(old_db))
+    await again.init()
+    await again.close()
     ok.append(("migratsiya takroran ishlayveradi", True))
     old_db.unlink(missing_ok=True)
 
     await client.close()
+    # Havzadagi ulanishlar yopilmasa jarayon tugamaydi (oqimlar daemon emas)
+    await B.db.close()
     Path(os.environ["DB_PATH"]).unlink(missing_ok=True)
 
     bad = [n for n, v in ok if not v]

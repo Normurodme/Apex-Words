@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from contextlib import asynccontextmanager
 import hmac
 import json
 import logging
@@ -256,9 +257,52 @@ MEMBER_TTL = 600
 _member_cache: dict[tuple[int, int], tuple[bool, float]] = {}
 
 
+# Bazaga nechta doimiy ulanish ochiladi.
+#
+# WAL rejimida SQLite bir vaqtda KO'P O'QUVCHI va bitta yozuvchini
+# qo'llaydi, shuning uchun bir nechta ulanish o'qishni parallellashtiradi.
+# To'rtta — kichik konteyner uchun muvozanatli son: ko'proq ochish
+# yozuvchi navbatini uzaytiradi, foyda bermaydi.
+POOL_SIZE = 4
+
+
 class DB:
     def __init__(self, path: str):
         self.path = path
+        self._pool: asyncio.Queue | None = None
+
+    async def _open(self):
+        """
+        Bitta tayyor ulanish ochadi.
+
+        PRAGMA lar HAR ULANISHDA qayta qo'yiladi — ular ulanishga tegishli,
+        faylga emas (journal_mode bundan mustasno, u faylda saqlanadi).
+          busy_timeout — yozuvchi band bo'lsa xato o'rniga kutadi
+          synchronous=NORMAL — WAL bilan xavfsiz va ancha tez
+        """
+        conn = await aiosqlite.connect(self.path)
+        await conn.execute("PRAGMA journal_mode=WAL")
+        await conn.execute("PRAGMA synchronous=NORMAL")
+        await conn.execute("PRAGMA busy_timeout=5000")
+        await conn.commit()
+        return conn
+
+    @asynccontextmanager
+    async def conn(self):
+        """
+        Havzadan ulanish oladi va qaytaradi.
+
+        Ilgari HAR SO'ROVDA yangi ulanish ochilardi. Yuk sinovi buni
+        aniq ko'rsatdi: 50 ta bir vaqtdagi o'yinchida javob sekinlashib,
+        100 tada xatolar boshlanardi, /api/state mediana 9 soniyaga
+        chiqardi. Ulanish ochish — fayl ochish va alohida oqim yaratish
+        demak, ya'ni eng qimmat qism aynan shu edi.
+        """
+        conn = await self._pool.get()
+        try:
+            yield conn
+        finally:
+            self._pool.put_nowait(conn)
 
     async def init(self):
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
@@ -268,6 +312,29 @@ class DB:
             await self._migrate(db)      # yetishmayotgan ustunlarni qo'shadi
             await db.execute(INDEX_SQL)  # keyin indeks — ustun endi mavjud
             await db.commit()
+
+        # Doimiy ulanishlar havzasi
+        self._pool = asyncio.Queue()
+        for _ in range(POOL_SIZE):
+            self._pool.put_nowait(await self._open())
+
+    async def close(self):
+        """
+        Havzadagi ulanishlarni yopadi.
+
+        Har ulanish o'z OQIMIDA ishlaydi va u daemon emas — yopilmasa
+        jarayon tugamaydi. Sinovlarda buni sezdik: hamma test o'tgan
+        bo'lsa ham skript qaytmay osilib qolardi.
+        """
+        if not self._pool:
+            return
+        while not self._pool.empty():
+            conn = self._pool.get_nowait()
+            try:
+                await conn.close()
+            except Exception:
+                pass
+        self._pool = None
         if self.path.startswith("/data"):
             log.info("📁 Baza DOIMIY diskda: %s", self.path)
         elif Path("/data").is_dir():
@@ -342,7 +409,7 @@ class DB:
     async def get_progress(self, user: dict) -> dict:
         uid = user["id"]
         now = int(time.time())
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT progress FROM players WHERE user_id = ?", (uid,)
             ) as cur:
@@ -378,7 +445,7 @@ class DB:
             score = max(0, int(progress.get("coins", 0)))
         except (TypeError, ValueError):
             score = 0
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             await db.execute(
                 "UPDATE players SET progress=?, score=?, updated_at=? WHERE user_id=?",
                 (json.dumps(progress, ensure_ascii=False), score, int(time.time()), uid),
@@ -387,7 +454,7 @@ class DB:
 
     async def task_state(self, uid: int) -> dict:
         """Vazifalar bo'limi uchun holat."""
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT last_daily, streak_day, channel_ok FROM players WHERE user_id=?",
                 (uid,),
@@ -413,7 +480,7 @@ class DB:
         o'zgartirib bir kunda bir necha marta olishning oldi olinadi.
         """
         today = date.today()
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT last_daily, streak_day FROM players WHERE user_id=?", (uid,)
             ) as cur:
@@ -447,7 +514,7 @@ class DB:
 
     async def claim_channel(self, uid: int) -> bool:
         """Kanal mukofotini bir marta belgilaydi. True — endi berildi."""
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT channel_ok FROM players WHERE user_id=?", (uid,)
             ) as cur:
@@ -477,7 +544,7 @@ class DB:
         if self._top_cache and now - self._top_cache[0] < self._TOP_TTL:
             return self._top_cache[1]
 
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT first_name, photo_url, score, user_id FROM players "
                 "WHERE score > 0 ORDER BY score DESC, updated_at ASC LIMIT ?",
@@ -498,7 +565,7 @@ class DB:
         """
         rows = await self.top_rows()          # keshdan, deyarli bir zumda
 
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute(
                 "SELECT score FROM players WHERE user_id=?", (uid,)
             ) as cur:
@@ -524,7 +591,7 @@ class DB:
         return {"top": top, "me": {"rank": my_rank, "score": my_score}}
 
     async def stats(self) -> tuple[int, int]:
-        async with aiosqlite.connect(self.path) as db:
+        async with self.conn() as db:
             async with db.execute("SELECT COUNT(*) FROM players") as cur:
                 total = (await cur.fetchone())[0]
             day = int(time.time()) - 86400
@@ -1069,6 +1136,7 @@ async def main():
     finally:
         await runner.cleanup()
         await bot.session.close()
+        await db.close()
 
 
 if __name__ == "__main__":
