@@ -123,6 +123,46 @@ async def main():
     ok.append(("inline tugmasi ham havola turida",
                card.reply_markup.inline_keyboard[0][0].url is not None))
 
+    # --- Guruh a'zoligini aniqlash ---
+    # Telegram 429 qaytarsa yoki tarmoq uzilsa, bu "a'zo emas" degani EMAS.
+    # Ilgari ikkalasi ham False edi va ro'yxat bo'sh chiqib, "hech kim
+    # o'ynamaydi" deb yozilardi.
+    class FakeBot:
+        def __init__(self, mode):
+            self.mode, self.calls, self.peak, self.live = mode, 0, 0, 0
+
+        async def get_chat_member(self, chat_id, uid):
+            self.calls += 1
+            self.live += 1
+            self.peak = max(self.peak, self.live)
+            await asyncio.sleep(0.01)
+            self.live -= 1
+            if self.mode == "error":
+                raise RuntimeError("tarmoq uzildi")
+            class M:
+                status = "member" if uid % 2 == 0 else "left"
+            return M()
+
+    cands = [("N" + str(i), "", 100 - i, i) for i in range(20)]
+
+    fb = FakeBot("ok")
+    B._member_cache.clear()
+    mem, failed = await B.members_of(fb, -100, cands)
+    ok.append(("faqat a'zolar qoladi", len(mem) == 10 and failed == 0))
+    ok.append((f"so'rovlar cheklangan (eng ko'pi {fb.peak})",
+               fb.peak <= B.GROUP_SCAN_CONCURRENCY))
+
+    before = fb.calls
+    mem2, _ = await B.members_of(fb, -100, cands)
+    ok.append(("natija keshlanadi (takror so'rov yo'q)",
+               fb.calls == before and len(mem2) == 10))
+
+    fe = FakeBot("error")
+    B._member_cache.clear()
+    mem3, failed3 = await B.members_of(fe, -200, cands)
+    ok.append(("xato 'a'zo emas' deb hisoblanmaydi",
+               mem3 == [] and failed3 == len(cands)))
+
     # --- Kunlik zanjir ---
     r = await client.post("/api/tasks", json={"initData": good})
     t0 = await r.json()

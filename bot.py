@@ -30,6 +30,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardButton,
@@ -222,7 +223,19 @@ ALLOWED_UPDATES = [
 # Guruh reytingi uchun nechta yuqori o'yinchi tekshiriladi.
 # Har biri uchun Telegram'ga alohida so'rov ketadi, shuning uchun son
 # cheklangan — aks holda katta bazada javob sekinlashadi.
-GROUP_SCAN_LIMIT = 60
+# Guruh reytingi uchun umumiy ro'yxatdan nechta o'yinchi tekshiriladi.
+# Ko'paytirildi (60 -> 250): ilgari 61-o'rindagi guruh a'zosi umuman
+# ko'rinmasdi. Tekshiruvlar keshlanadi va sekin yuboriladi, shuning
+# uchun bu javob vaqtiga sezilarli ta'sir qilmaydi.
+GROUP_SCAN_LIMIT = 250
+
+# Bir vaqtda nechta so'rov. Telegram sekundiga ~30 tadan ko'pini
+# qabul qilmaydi; beshta bir vaqtda xavfsiz chegara.
+GROUP_SCAN_CONCURRENCY = 5
+
+# A'zolik natijasi shuncha soniya eslab qolinadi
+MEMBER_TTL = 600
+_member_cache: dict[tuple[int, int], tuple[bool, float]] = {}
 
 
 class DB:
@@ -754,6 +767,67 @@ async def cmd_start(message: Message):
         )
 
 
+async def members_of(bot, chat_id: int, candidates: list):
+    """
+    Berilgan o'yinchilardan qaysilari SHU guruhda a'zo ekanini aniqlaydi.
+
+    Telegram bo'tga guruh a'zolarini sanab berishga ruxsat bermaydi,
+    shuning uchun teskarisini qilamiz: har o'yinchi uchun alohida
+    so'raymiz. Uch narsa muhim:
+
+      1. SO'ROVLAR SONI CHEKLANADI. Ilgari hammasi bir vaqtda
+         yuborilardi (60 ta). Telegram sekundiga ~30 so'rovdan ko'pini
+         qabul qilmaydi va ortig'iga 429 qaytaradi. Xato esa "a'zo emas"
+         deb talqin qilinardi — natijada ro'yxat bo'sh chiqib,
+         "bu guruhda hech kim o'ynamaydi" deb yozilardi. Aynan shu
+         "yaxshi ishlamayapti" edi.
+
+      2. XATO va "A'ZO EMAS" AJRATILADI. Ilgari ikkalasi ham False
+         edi va farqi yo'qolardi.
+
+      3. NATIJA KESHLANADI. Bir guruhda /top qayta-qayta chaqirilsa
+         Telegram'ni bekorga charchatmaymiz.
+    """
+    now = time.time()
+    sem = asyncio.Semaphore(GROUP_SCAN_CONCURRENCY)
+    failed = 0
+
+    async def check(uid: int):
+        nonlocal failed
+        key = (chat_id, uid)
+        hit = _member_cache.get(key)
+        if hit and now - hit[1] < MEMBER_TTL:
+            return hit[0]
+        async with sem:
+            for attempt in (1, 2):
+                try:
+                    m = await bot.get_chat_member(chat_id, uid)
+                    ok = m.status in ("creator", "administrator",
+                                      "member", "restricted")
+                    _member_cache[key] = (ok, now)
+                    return ok
+                except TelegramRetryAfter as e:
+                    await asyncio.sleep(min(e.retry_after, 3))
+                except TelegramBadRequest:
+                    # "user not found" — haqiqatan a'zo emas
+                    _member_cache[key] = (False, now)
+                    return False
+                except Exception:
+                    if attempt == 2:
+                        failed += 1
+                    else:
+                        await asyncio.sleep(0.4)
+            return False
+
+    flags = await asyncio.gather(*(check(r[3]) for r in candidates))
+
+    # Kesh cheksiz o'smasin
+    if len(_member_cache) > 5000:
+        _member_cache.clear()
+
+    return [r for r, ok in zip(candidates, flags) if ok], failed
+
+
 @dp.message(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders"))
 async def cmd_top(message: Message):
     """
@@ -785,18 +859,15 @@ async def cmd_top(message: Message):
 
     bot = message.bot
     candidates = rows[:GROUP_SCAN_LIMIT]
-
-    async def in_chat(uid: int) -> bool:
-        try:
-            m = await bot.get_chat_member(chat.id, uid)
-            return m.status in ("creator", "administrator", "member", "restricted")
-        except Exception:
-            return False
-
-    flags = await asyncio.gather(*(in_chat(r[3]) for r in candidates))
-    members = [r for r, ok in zip(candidates, flags) if ok]
+    members, failed = await members_of(bot, chat.id, candidates)
 
     if not members:
+        # Hamma so'rov xato bergan bo'lsa, "hech kim o'ynamaydi" deyish
+        # NOTO'G'RI bo'ladi — biz shunchaki bilmaymiz. Farqini aytamiz.
+        if failed:
+            await message.answer(
+                "Couldn't check the members right now. Please try again in a moment.")
+            return
         await message.answer(
             "Nobody in this group plays Apex Words yet.\n"
             "Tap Play and be the first!", reply_markup=link_keyboard())
@@ -870,11 +941,16 @@ async def _answer_inline(query: InlineQuery):
         _inline_play_card(link),
         InlineQueryResultArticle(
             id="top",
-            title="🏆 Top players",
+            title="🏆 Global top players",
+            # ATAYLAB "global": inline so'rovda Telegram qaysi guruhdan
+            # kelganini aytmaydi (chat_id berilmaydi), shuning uchun bu
+            # yerda guruh a'zolarini ajratib bo'lmaydi. Guruh reytingi
+            # /top buyrug'i orqali olinadi — u chat_id ni biladi.
             description=top_line or "Nobody has scored yet",
             input_message_content=InputTextMessageContent(
                 message_text=(
-                    "🏆 <b>Apex Words — top players</b>\n\n"
+                    "🏆 <b>Apex Words — global top</b>\n"
+                    "<i>Use /top in a group to rank its members.</i>\n\n"
                     + ("\n".join(
                         f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
                         f"<b>{html_escape(n or 'Player')}</b> — {s} 💎"
