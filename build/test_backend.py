@@ -103,11 +103,44 @@ async def main():
     B.db.invalidate_top()
     ok.append(("kesh bekor qilinadi", B.db._top_cache is None))
 
-    # --- Inline rejim va guruh reytingi ro'yxatdan o'tganmi ---
+    # --- Admin reytingga kirmaydi ---
+    #
+    # Admin sinov paytida ko'p ball to'playdi. U reytingda qolsa haqiqiy
+    # o'yinchilarni birinchi o'rindan surib qo'yardi.
+    admin_id = next(iter(B.ADMINS))
+    admin_u = {"id": admin_id, "first_name": "Admin", "username": "adm",
+               "photo_url": None}
+    await B.db.get_progress(admin_u)
+    await B.db.save_progress(admin_id, {"coins": 999999, "solved": {"1-1": 50}})
+    B.db.invalidate_top()
+    top_names = [r[0] for r in await B.db.top_rows()]
+    ok.append(("admin reytingda ko'rinmaydi", "Admin" not in top_names))
+    ok.append(("boshqa o'yinchilar reytingda qoladi", len(top_names) >= 1))
+
+    # O'rin ham adminsiz sanaladi, aks holda ro'yxatdagi joy bilan
+    # ko'rsatilgan raqam bir-biriga to'g'ri kelmay qolardi.
+    lb = await B.db.leaderboard(555001)
+    ok.append(("o'rin adminni sanamaydi", lb["me"]["rank"] == 1))
+
+    r = await client.post("/api/state", json={"initData": good})
+    ok.append(("oddiy o'yinchida admin bayrog'i yo'q",
+               (await r.json()).get("admin") is False))
+
+    # Yuqoridagi top_rows() chaqiruvi keshni 20 soniyaga to'ldirdi.
+    # Tozalanmasa, quyidagi reyting testlari keyin qo'shilgan
+    # o'yinchini ko'rmay qoladi.
+    B.db.invalidate_top()
+
+    # --- Inline rejim, guruh va kanal reytingi ro'yxatdan o'tganmi ---
     handlers = B.dp.inline_query.handlers
     ok.append(("inline rejim ishlovchisi bor", len(handlers) >= 1))
     msg_src = "".join(str(h.callback.__name__) for h in B.dp.message.handlers)
     ok.append(("/top buyrug'i ro'yxatdan o'tgan", "cmd_top" in msg_src))
+    ch_src = "".join(str(h.callback.__name__) for h in B.dp.channel_post.handlers)
+    ok.append(("kanalda /top ishlovchisi bor", "channel_top" in ch_src))
+    # Ishlovchi bo'lsa ham, bu tur so'ralmasa Telegram uni yubormaydi.
+    ok.append(("channel_post so'raladigan turlar ichida",
+               "channel_post" in B.ALLOWED_UPDATES))
     ok.append(("html_escape teglarni zararsizlantiradi",
                B.html_escape("<b>x</b>&") == "&lt;b&gt;x&lt;/b&gt;&amp;"))
 

@@ -66,6 +66,7 @@ const State = {
   levels: [],           // barcha darajalar tekis ro'yxat sifatida
   levelIndex: 0,        // hozir o'ynalayotgan darajaning tartib raqami
   unlimited: false,     // cheksiz kalit (serverdan keladi)
+  admin: false,         // barcha bosqichlar ochiq, ball reytingga kirmaydi
   puzzle: null,
   found: new Set(),
   foundBonus: new Set()
@@ -509,6 +510,7 @@ const Store = {
       // Cheksiz kalit bayrog'i SERVERDAN keladi — u progress ichida
       // saqlanmaydi, shuning uchun qurilmalar orasida ko'chmaydi
       State.unlimited = !!(d && d.unlimited);
+      State.admin = !!(d && d.admin);
       return d ? d.progress : null;
     } catch (_) {
       this.online = false;
@@ -657,6 +659,7 @@ const key = (stage, level) => stage + '-' + level;
 const solvedIn = (stage, level) => State.progress.solved[key(stage, level)] || 0;
 
 function isUnlocked(i) {
+  if (State.admin) return true;   // sinov uchun hamma bosqich ochiq
   if (i === 0) return true;
   const prev = State.levels[i - 1];
   return solvedIn(prev.stage, prev.level) >= prev.puzzles;
@@ -930,6 +933,7 @@ function openLevel(i) {
 
 /* Puzzle ochiqmi: yechilganlari va navbatdagisi ochiq, qolgani qulf */
 function puzzleUnlocked(idx) {
+  if (State.admin) return true;
   return idx <= solvedIn(State.levels[State.levelIndex].stage,
                          State.levels[State.levelIndex].level);
 }
@@ -970,8 +974,10 @@ function renderPack() {
     // Har bosqichning o'z belgisi katak ustida suv nishoni bo'lib turadi:
     // Kanadada chinor bargi, Misrda tuya, Yaponiyada sakura...
     if (icon) b.appendChild(el('span', 'pz-emblem', icon));
-    if (state === 'locked') b.appendChild(el('span', 'pz-mark', '🔒'));
-    if (state !== 'locked') {
+    // Adminda qulf yo'q: katak o'sha ko'rinishda qoladi, lekin ochiladi.
+    const open = state !== 'locked' || State.admin;
+    if (!open) b.appendChild(el('span', 'pz-mark', '🔒'));
+    if (open) {
       b.onclick = () => { haptic('tap'); openPuzzleAt(k); };
     }
     frag.appendChild(b);

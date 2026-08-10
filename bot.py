@@ -198,6 +198,16 @@ def _parse_ids(raw: str) -> set[int]:
 UNLIMITED_HINTS = {6220077209, 6307658796} | _parse_ids(
     os.getenv("UNLIMITED_HINTS", ""))
 
+# Adminlar. Ular uchun barcha bosqichlar ochiq va bali REYTINGGA
+# KIRMAYDI — sinov paytida to'plangan ball haqiqiy o'yinchilarni
+# birinchi o'rindan surib qo'ymasin.
+#
+# Ro'yxat bo'sh bo'lishi ham mumkin, shuning uchun SQL shartini
+# qo'lda yasaymiz: "NOT IN ()" yozuvi SQLite'da xato beradi.
+ADMINS = {6220077209} | _parse_ids(os.getenv("ADMIN_IDS", ""))
+_ADMIN_SQL = (" AND user_id NOT IN (%s)" % ",".join(str(i) for i in sorted(ADMINS))
+              if ADMINS else "")
+
 # Kunlik mukofot: 1-3 kun 1 kalit, 4-6 kun 2 kalit, 7-kun 3 kalit.
 # Sakkizinchi kuni sikl yangidan boshlanadi.
 DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
@@ -233,6 +243,7 @@ MINIAPP_LINK = f"{BOT_LINK}/{MINIAPP_SHORT}"
 # Ro'yxatni qo'lda berib, logga chiqaramiz: shubha qolmaydi.
 ALLOWED_UPDATES = [
     "message",
+    "channel_post",          # kanalda /top ishlashi uchun
     "callback_query",
     "inline_query",
     "chosen_inline_result",
@@ -547,7 +558,8 @@ class DB:
         async with self.conn() as db:
             async with db.execute(
                 "SELECT first_name, photo_url, score, user_id FROM players "
-                "WHERE score > 0 ORDER BY score DESC, updated_at ASC LIMIT ?",
+                "WHERE score > 0" + _ADMIN_SQL +
+                " ORDER BY score DESC, updated_at ASC LIMIT ?",
                 (TOP_LIMIT,),
             ) as cur:
                 rows = await cur.fetchall()
@@ -572,9 +584,12 @@ class DB:
                 r = await cur.fetchone()
             my_score = r[0] if r else 0
 
-            # O'z o'rnim: mendan ko'p ballga ega o'yinchilar soni + 1
+            # O'z o'rnim: mendan ko'p ballga ega o'yinchilar soni + 1.
+            # Adminlar bu yerda ham sanalmaydi, aks holda ro'yxatdagi
+            # o'rin bilan raqam bir-biriga to'g'ri kelmay qolardi.
             async with db.execute(
-                "SELECT COUNT(*) FROM players WHERE score > ?", (my_score,)
+                "SELECT COUNT(*) FROM players WHERE score > ?" + _ADMIN_SQL,
+                (my_score,)
             ) as cur:
                 my_rank = (await cur.fetchone())[0] + 1
 
@@ -623,6 +638,8 @@ async def api_state(request: web.Request) -> web.Response:
         "progress": progress or None,
         # Kalit chegarasi shu bayroqqa qarab olib tashlanadi
         "unlimited": user["id"] in UNLIMITED_HINTS,
+        # Admin: barcha bosqichlar ochiq
+        "admin": user["id"] in ADMINS,
     })
 
 
@@ -844,7 +861,10 @@ async def cmd_start(message: Message):
         "• Real words that aren't listed earn a <b>bonus</b>\n"
         "• Tap 💡 on any word you found to see what it means\n"
         "• Collect free keys every day in <b>Rewards</b>\n\n"
-        "2 chapters, 10 levels and 500 puzzles are ready to play."
+        "<b>12 chapters · 60 levels · 3,000 puzzles</b> — from three-letter "
+        "warm-ups to nine-letter challenges.\n"
+        "Climb the <b>Top 100</b>, or send /top in any group to see who "
+        "leads among your friends."
     )
     kb = play_keyboard()
     if kb:
@@ -917,7 +937,11 @@ async def members_of(bot, chat_id: int, candidates: list):
     return [r for r, ok in zip(candidates, flags) if ok], failed
 
 
-@dp.message(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders"))
+@dp.message(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders")
+            # Kanal posti bog'langan muhokama guruhiga o'zi ko'chadi.
+            # U ham "/top" matni bilan keladi va javob IKKI marta
+            # yuborilardi — biri kanalda, biri guruhda.
+            and not getattr(m, "is_automatic_forward", False))
 async def cmd_top(message: Message):
     """
     Guruhdagi o'yinchilar reytingi.
@@ -941,6 +965,21 @@ async def cmd_top(message: Message):
                              reply_markup=play_keyboard())
         return
 
+    await send_scoped_top(message)
+
+
+async def send_scoped_top(message: Message):
+    """
+    Shu chatdagi (guruh yoki kanaldagi) o'yinchilar reytingi.
+
+    Guruh va kanal uchun mantiq bir xil: umumiy reytingdan yuqoridagi
+    o'yinchilarni olamiz va har biri shu chatda bormi deb so'raymiz.
+    Farqi faqat so'zlashda — kanalda "a'zo" emas, "obunachi" deyiladi.
+    """
+    chat = message.chat
+    is_channel = chat.type == "channel"
+    who = "subscribers" if is_channel else "members"
+
     rows = await db.top_rows()
     if not rows:
         await message.answer("No players yet. Be the first!")
@@ -955,11 +994,13 @@ async def cmd_top(message: Message):
         # NOTO'G'RI bo'ladi — biz shunchaki bilmaymiz. Farqini aytamiz.
         if failed:
             await message.answer(
-                "Couldn't check the members right now. Please try again in a moment.")
+                f"Couldn't check the {who} right now. "
+                "Please try again in a moment.")
             return
         await message.answer(
-            "Nobody in this group plays Apex Words yet.\n"
-            "Tap Play and be the first!", reply_markup=link_keyboard())
+            f"Nobody in this {'channel' if is_channel else 'group'} plays "
+            "Apex Words yet.\nTap Play and be the first!",
+            reply_markup=link_keyboard())
         return
 
     lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
@@ -975,6 +1016,20 @@ async def cmd_top(message: Message):
     await message.answer(
         "🏆 <b>Apex Words</b> — top players here\n\n"
         + "\n".join(lines), reply_markup=link_keyboard())
+
+
+@dp.channel_post(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders"))
+async def channel_top(message: Message):
+    """
+    Kanaldagi obunachilar reytingi.
+
+    Ikki shart bor va ikkalasi ham bo'tga bog'liq emas:
+      1. Bot kanalda ADMIN bo'lishi kerak — aks holda Telegram
+         channel_post yangilanishini umuman yubormaydi.
+      2. ALLOWED_UPDATES ichida "channel_post" turishi shart, aks holda
+         yangilanish so'ralmaydi va buyruq javobsiz qoladi.
+    """
+    await send_scoped_top(message)
 
 
 @dp.inline_query()
