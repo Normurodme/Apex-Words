@@ -131,6 +131,101 @@ async def main():
     # o'yinchini ko'rmay qoladi.
     B.db.invalidate_top()
 
+    # --- Taklif tizimi ---
+    host = 700000
+    await B.db.get_progress({"id": host, "first_name": "Host",
+                             "username": "h", "photo_url": None})
+
+    # O'zini o'zi taklif qilib bo'lmaydi
+    r = await B.db.add_referral(host, host)
+    ok.append(("o'zini taklif qilish rad etildi", r["ok"] is False))
+
+    # Bazada yo'q odam taklif qila olmaydi
+    await B.db.get_progress({"id": 700001, "first_name": "F1",
+                             "username": "f1", "photo_url": None})
+    r = await B.db.add_referral(700001, 999999999)
+    ok.append(("noma'lum taklifchi rad etildi", r["ok"] is False))
+
+    # Birinchi ikki do'st — mukofot yo'q
+    r1 = await B.db.add_referral(700001, host)
+    await B.db.get_progress({"id": 700002, "first_name": "F2",
+                             "username": "f2", "photo_url": None})
+    r2 = await B.db.add_referral(700002, host)
+    ok.append(("birinchi do'st hisoblandi", r1["ok"] and r1["count"] == 1))
+    ok.append(("2 do'stda mukofot yo'q", r2["granted"] == 0))
+
+    # Bir odam ikki marta hisoblanmaydi — aks holda havolani qayta-qayta
+    # bosib cheksiz kalit yig'sa bo'lardi
+    again = await B.db.add_referral(700001, host)
+    ok.append(("bitta do'st ikki marta sanalmaydi", again["ok"] is False))
+
+    # Uchinchi do'st — mukofot
+    await B.db.get_progress({"id": 700003, "first_name": "F3",
+                             "username": "f3", "photo_url": None})
+    r3 = await B.db.add_referral(700003, host)
+    ok.append(("3-do'stda mukofot berildi", r3["granted"] == B.REF_KEYS))
+
+    # Eskidan o'ynab yurgan odam taklif sifatida sanalmaydi
+    old_uid = 700009
+    await B.db.get_progress({"id": old_uid, "first_name": "Old",
+                             "username": "o", "photo_url": None})
+    async with B.db.conn() as _d:
+        await _d.execute("UPDATE players SET created_at=? WHERE user_id=?",
+                         (int(time.time()) - B.REF_NEW_WINDOW - 60, old_uid))
+        await _d.commit()
+    r_old = await B.db.add_referral(old_uid, host)
+    ok.append(("eski o'yinchi taklif sifatida sanalmaydi",
+               r_old["ok"] is False and r_old["reason"] == "not_new"))
+
+    count, left = await B.db.ref_state(host)
+    ok.append(("taklif hisobi to'g'ri", count == 3))
+    ok.append(("keyingi mukofotgacha qoldi", left == B.REF_PER))
+
+    # Kutayotgan kalit bir marta beriladi
+    got = await B.db.take_pending_keys(host)
+    ok.append(("kutayotgan kalitlar berildi", got == B.REF_KEYS))
+    twice = await B.db.take_pending_keys(host)
+    ok.append(("kalitlar ikkinchi marta berilmaydi", twice == 0))
+
+    host_init = make_init_data(host, tok)
+    r = await client.post("/api/claim-keys", json={"initData": host_init})
+    ok.append(("/api/claim-keys 200", r.status == 200))
+    ok.append(("bo'sh bo'lsa 0 kalit", (await r.json())["keys"] == 0))
+    r = await client.post("/api/claim-keys", json={"initData": "soxta"})
+    ok.append(("imzosiz /api/claim-keys 401", r.status == 401))
+
+    r = await client.post("/api/tasks", json={"initData": host_init})
+    ts = await r.json()
+    ok.append(("vazifalarda taklif havolasi bor",
+               ts.get("ref_link", "").endswith("start=ref_%d" % host)))
+    ok.append(("vazifalarda taklif hisobi bor", ts.get("ref_count") == 3))
+
+    # --- /post sehrgari ---
+    msg_names = [h.callback.__name__ for h in B.dp.message.handlers]
+    ok.append(("/post buyrug'i bor", "cmd_post" in msg_names))
+    ok.append(("/post tasdiq tugmasi bor",
+               "post_confirm" in [h.callback.__name__
+                                  for h in B.dp.callback_query.handlers]))
+    # Sehrgar bosqichlari UMUMIY buyruqlardan OLDIN turishi shart, aks
+    # holda /post ichida "/top" yozilsa reyting chiqib, sehrgar buzilardi.
+    ok.append(("sehrgar bosqichlari /top dan oldin",
+               msg_names.index("post_got_text") < msg_names.index("cmd_top")))
+
+    # --- Kanal reytingi ---
+    ok.append(("chat_member ishlovchisi bor",
+               len(B.dp.chat_member.handlers) >= 1))
+    ok.append(("chat_member so'raladigan turlar ichida",
+               "chat_member" in B.ALLOWED_UPDATES))
+    # "A'zo emas" javobi qisqa saqlanishi SHART: odam qo'shilgandan keyin
+    # ham eski javob keshda tursa, u ro'yxatda ko'rinmay qolardi.
+    ok.append(("salbiy kesh qisqa muddatli",
+               B.MEMBER_TTL_NEG < B.MEMBER_TTL))
+    # Guruh reytingi umumiy 100 talik ro'yxat bilan cheklanmasligi kerak
+    ok.append(("guruh skaneri kengroq ro'yxat oladi",
+               B.SCAN_LIMIT > B.TOP_LIMIT))
+    ok.append(("scan_rows ishlaydi", isinstance(await B.db.scan_rows(), list)))
+    B.db.invalidate_top()
+
     # --- Inline rejim, guruh va kanal reytingi ro'yxatdan o'tganmi ---
     handlers = B.dp.inline_query.handlers
     ok.append(("inline rejim ishlovchisi bor", len(handlers) >= 1))

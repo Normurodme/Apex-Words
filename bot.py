@@ -24,6 +24,7 @@ import sys
 import time
 from datetime import date
 from pathlib import Path
+import urllib.parse
 from urllib.parse import parse_qsl
 
 import aiosqlite
@@ -32,8 +33,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State as FState, StatesGroup
 from aiogram.types import (
+    CallbackQuery,
+    ChatMemberUpdated,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQuery,
@@ -175,6 +180,10 @@ CREATE TABLE IF NOT EXISTS players (
     last_daily TEXT,
     streak_day INTEGER NOT NULL DEFAULT 0,
     channel_ok INTEGER NOT NULL DEFAULT 0,
+    ref_by     INTEGER,
+    ref_count  INTEGER NOT NULL DEFAULT 0,
+    ref_paid   INTEGER NOT NULL DEFAULT 0,
+    pend_keys  INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -212,6 +221,12 @@ _ADMIN_SQL = (" AND user_id NOT IN (%s)" % ",".join(str(i) for i in sorted(ADMIN
 # Sakkizinchi kuni sikl yangidan boshlanadi.
 DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
 CHANNEL_KEYS = 5
+
+# Taklif tizimi: har REF_PER do'st uchun REF_KEYS kalit.
+REF_PER = 3
+REF_KEYS = 5
+# Taklif faqat shuncha soniya ichida yaratilgan yangi yozuvga tegishli
+REF_NEW_WINDOW = 300
 CHANNEL = os.getenv("CHANNEL_USERNAME", "@apexwords").strip()
 
 # Indeks ALOHIDA turadi va migratsiyadan KEYIN yaratiladi.
@@ -222,6 +237,11 @@ INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_players_score ON players(score DESC)
 
 # Reytingda ko'rsatiladigan o'yinchilar soni
 TOP_LIMIT = 100
+
+# Guruh/kanal reytingi uchun bazadan olinadigan o'yinchilar soni.
+# TOP_LIMIT dan kattaroq: kichik guruhdagi a'zo umumiy jadvalda
+# 100-o'rindan pastda bo'lishi mumkin, lekin guruhda birinchi bo'lishi.
+SCAN_LIMIT = 500
 
 MEDALS = ("🥇", "🥈", "🥉")
 
@@ -244,6 +264,7 @@ MINIAPP_LINK = f"{BOT_LINK}/{MINIAPP_SHORT}"
 ALLOWED_UPDATES = [
     "message",
     "channel_post",          # kanalda /top ishlashi uchun
+    "chat_member",           # qo'shilish/chiqishni darhol bilish uchun
     "callback_query",
     "inline_query",
     "chosen_inline_result",
@@ -263,8 +284,23 @@ GROUP_SCAN_LIMIT = 250
 # qabul qilmaydi; beshta bir vaqtda xavfsiz chegara.
 GROUP_SCAN_CONCURRENCY = 5
 
-# A'zolik natijasi shuncha soniya eslab qolinadi
-MEMBER_TTL = 600
+# Kanaldagi jonli reyting: shuncha soniyada bir yangilanadi va shuncha
+# marta takrorlanadi (30 s × 60 = yarim soat). Cheksiz emas — aks holda
+# har /top dan keyin abadiy ishlaydigan vazifa qolib ketardi.
+LIVE_EVERY = 30
+LIVE_TICKS = 60
+_live_boards: dict[int, asyncio.Task] = {}
+
+# A'zolik natijasi shuncha soniya eslab qolinadi.
+#
+# IJOBIY va SALBIY javob uchun muddat HAR XIL, va bu ataylab.
+# Ilgari ikkalasi ham 600 soniya edi va aynan shu xatoga olib kelardi:
+# odam /top dan keyin kanalga qo'shilsa, "a'zo emas" javobi o'n
+# daqiqagacha keshda turar, u esa ro'yxatda umuman ko'rinmasdi.
+# Qo'shilish — tez-tez bo'ladigan va kutilgan hodisa, chiqib ketish
+# esa kamdan-kam. Shuning uchun "yo'q" javobi qisqa muddat saqlanadi.
+MEMBER_TTL = 600          # "a'zo" — uzoq
+MEMBER_TTL_NEG = 45       # "a'zo emas" — qisqa
 _member_cache: dict[tuple[int, int], tuple[bool, float]] = {}
 
 
@@ -385,6 +421,10 @@ class DB:
             ("last_daily", "ALTER TABLE players ADD COLUMN last_daily TEXT"),
             ("streak_day", "ALTER TABLE players ADD COLUMN streak_day INTEGER NOT NULL DEFAULT 0"),
             ("channel_ok", "ALTER TABLE players ADD COLUMN channel_ok INTEGER NOT NULL DEFAULT 0"),
+            ("ref_by", "ALTER TABLE players ADD COLUMN ref_by INTEGER"),
+            ("ref_count", "ALTER TABLE players ADD COLUMN ref_count INTEGER NOT NULL DEFAULT 0"),
+            ("ref_paid", "ALTER TABLE players ADD COLUMN ref_paid INTEGER NOT NULL DEFAULT 0"),
+            ("pend_keys", "ALTER TABLE players ADD COLUMN pend_keys INTEGER NOT NULL DEFAULT 0"),
         ):
             if name not in cols:
                 await db.execute(ddl)
@@ -473,7 +513,13 @@ class DB:
                 row = await cur.fetchone()
         last, streak, ch = row if row else (None, 0, 0)
         today = date.today().isoformat()
+        ref_count, ref_left = await self.ref_state(uid)
         return {
+            "ref_count": ref_count,
+            "ref_left": ref_left,
+            "ref_per": REF_PER,
+            "ref_keys": REF_KEYS,
+            "ref_link": f"{BOT_LINK}?start=ref_{uid}",
             "streak": streak or 0,
             "claimed_today": last == today,
             "next_keys": DAILY_KEYS[min(streak or 0, 6)] if last != today
@@ -523,6 +569,112 @@ class DB:
             await db.commit()
         return {"ok": True, "streak": streak, "keys": keys}
 
+    async def add_referral(self, new_uid: int, ref_uid: int) -> dict:
+        """
+        Taklifni qayd etadi va kerak bo'lsa mukofot yozib qo'yadi.
+
+        Mukofot DARHOL berilmaydi: kalitlar soni progress JSON ichida,
+        mijozda saqlanadi. Shuning uchun server "kutayotgan kalit"ni
+        pend_keys ustuniga yozadi, Mini App esa ochilganda uni oladi.
+
+        Qaytadi: {"ok": bool, "count": int, "granted": int}
+        """
+        if new_uid == ref_uid:
+            return {"ok": False, "reason": "self"}
+
+        async with self.conn() as db:
+            # Taklif qiluvchi bazada bormi
+            async with db.execute(
+                "SELECT 1 FROM players WHERE user_id=?", (ref_uid,)
+            ) as cur:
+                if not await cur.fetchone():
+                    return {"ok": False, "reason": "no_referrer"}
+
+            # Bir odam faqat BIR MARTA hisoblanadi. Aks holda havolani
+            # qayta-qayta bosib cheksiz kalit yig'sa bo'lardi.
+            async with db.execute(
+                "SELECT ref_by, created_at FROM players WHERE user_id=?", (new_uid,)
+            ) as cur:
+                row = await cur.fetchone()
+            if row is None:
+                return {"ok": False, "reason": "no_player"}
+            if row[0] is not None:
+                return {"ok": False, "reason": "already"}
+
+            now = int(time.time())
+            # FAQAT YANGI o'yinchi hisoblanadi. Busiz allaqachon o'ynab
+            # yurgan odamga havola yuborib ham mukofot olsa bo'lardi —
+            # taklif esa yangi o'yinchi olib kelgani uchun beriladi.
+            # Yozuv /start ishlovchisida shu zahoti yaratiladi, shuning
+            # uchun haqiqiy yangi o'yinchi bu oynadan chiqib ketmaydi.
+            if now - (row[1] or 0) > REF_NEW_WINDOW:
+                return {"ok": False, "reason": "not_new"}
+            await db.execute(
+                "UPDATE players SET ref_by=?, updated_at=? WHERE user_id=?",
+                (ref_uid, now, new_uid),
+            )
+            await db.execute(
+                "UPDATE players SET ref_count=ref_count+1, updated_at=? WHERE user_id=?",
+                (now, ref_uid),
+            )
+            async with db.execute(
+                "SELECT ref_count, ref_paid FROM players WHERE user_id=?", (ref_uid,)
+            ) as cur:
+                count, paid = await cur.fetchone()
+
+            # Har REF_PER do'stga bir marta to'lanadi. Sikl ishlatilgan:
+            # eski bazada bir nechta to'lanmagan bosqich qolgan bo'lishi mumkin.
+            granted = 0
+            while count - paid >= REF_PER:
+                paid += REF_PER
+                granted += REF_KEYS
+            if granted:
+                await db.execute(
+                    "UPDATE players SET ref_paid=?, pend_keys=pend_keys+?, "
+                    "updated_at=? WHERE user_id=?",
+                    (paid, granted, now, ref_uid),
+                )
+            await db.commit()
+        return {"ok": True, "count": count, "granted": granted}
+
+    async def ref_state(self, uid: int) -> tuple[int, int]:
+        """(nechta do'st taklif qilingan, keyingi mukofotgacha nechta qoldi)"""
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT ref_count FROM players WHERE user_id=?", (uid,)
+            ) as cur:
+                row = await cur.fetchone()
+        count = (row[0] if row else 0) or 0
+        return count, REF_PER - (count % REF_PER)
+
+    async def take_pending_keys(self, uid: int) -> int:
+        """
+        Kutayotgan kalitlarni beradi va hisobni nolga tushiradi.
+
+        O'qish va nolga tushirish BITTA yozuv tranzaksiyasi ichida ketadi.
+        BEGIN IMMEDIATE darhol yozuv qulfini oladi, shuning uchun ikkita
+        qurilma bir vaqtda ochilsa ham kalit ikki marta berilmaydi:
+        ikkinchisi birinchisini kutadi va noldan boshqa narsa ko'rmaydi.
+        """
+        async with self.conn() as db:
+            await db.execute("BEGIN IMMEDIATE")
+            try:
+                async with db.execute(
+                    "SELECT pend_keys FROM players WHERE user_id=?", (uid,)
+                ) as cur:
+                    row = await cur.fetchone()
+                keys = (row[0] if row else 0) or 0
+                if keys:
+                    await db.execute(
+                        "UPDATE players SET pend_keys=0, updated_at=? WHERE user_id=?",
+                        (int(time.time()), uid),
+                    )
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                raise
+        return keys
+
     async def claim_channel(self, uid: int) -> bool:
         """Kanal mukofotini bir marta belgilaydi. True — endi berildi."""
         async with self.conn() as db:
@@ -566,8 +718,35 @@ class DB:
         self._top_cache = (now, rows)
         return rows
 
+    _scan_cache: tuple[float, list] | None = None
+
+    async def scan_rows(self) -> list:
+        """
+        Guruh/kanal reytingi uchun kengroq ro'yxat.
+
+        top_rows() faqat TOP_LIMIT (100) tani beradi. Guruh reytingi
+        o'sha ro'yxatdan qidirgani uchun umumiy jadvalda 100-o'rindan
+        pastdagi a'zo HECH QACHON ko'rinmasdi — guruh kichik bo'lsa ham.
+        Bu yerda chegara kengroq: skanerlash baribir GROUP_SCAN_LIMIT
+        bilan cheklanadi.
+        """
+        now = time.monotonic()
+        if self._scan_cache and now - self._scan_cache[0] < self._TOP_TTL:
+            return self._scan_cache[1]
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT first_name, photo_url, score, user_id FROM players "
+                "WHERE score > 0" + _ADMIN_SQL +
+                " ORDER BY score DESC, updated_at ASC LIMIT ?",
+                (SCAN_LIMIT,),
+            ) as cur:
+                rows = await cur.fetchall()
+        self._scan_cache = (now, rows)
+        return rows
+
     def invalidate_top(self):
         self._top_cache = None
+        self._scan_cache = None
 
     async def leaderboard(self, uid: int) -> dict:
         """
@@ -704,6 +883,25 @@ async def api_claim_daily(request: web.Request) -> web.Response:
     return web.json_response(await db.claim_daily(user["id"]))
 
 
+async def api_claim_keys(request: web.Request) -> web.Response:
+    """
+    Taklif uchun kutayotgan kalitlarni beradi.
+
+    Kalitlar soni progress ichida, MIJOZDA saqlanadi. Bot esa do'st
+    qo'shilganini server tomonda biladi. Shuning uchun mukofot avval
+    pend_keys ga yoziladi, Mini App ochilganda esa shu yerdan olinadi
+    va progressga qo'shiladi.
+    """
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    return web.json_response({"keys": await db.take_pending_keys(user["id"])})
+
+
 async def api_claim_channel(request: web.Request) -> web.Response:
     """
     Kanalga a'zolikni tekshiradi va bir marta kalit beradi.
@@ -783,6 +981,7 @@ def make_app(bot=None) -> web.Application:
     app.router.add_post("/api/tasks", api_tasks)
     app.router.add_post("/api/claim-daily", api_claim_daily)
     app.router.add_post("/api/claim-channel", api_claim_channel)
+    app.router.add_post("/api/claim-keys", api_claim_keys)
     app.router.add_get("/", index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
@@ -850,8 +1049,67 @@ def link_keyboard() -> InlineKeyboardMarkup:
     ]])
 
 
+def _user_row(u) -> dict:
+    return {"id": u.id, "username": u.username, "first_name": u.first_name,
+            "photo_url": None}
+
+
+async def handle_referral(message: Message, payload: str):
+    """
+    /start ref_<id> havolasini qayta ishlaydi.
+
+    Taklif SHU YERDA hisoblanadi, Mini App'da emas: havolani bosgan
+    odam o'yinni umuman ochmasligi ham mumkin, lekin bo'tga kirgani
+    aniq. Mukofot esa taklif QILUVCHIga tegadi.
+    """
+    if not payload.startswith("ref_"):
+        return
+    try:
+        ref_uid = int(payload[4:])
+    except ValueError:
+        return
+
+    me = message.from_user
+    await db.get_progress(_user_row(me))      # yozuv borligiga ishonch
+    res = await db.add_referral(me.id, ref_uid)
+    if not res.get("ok"):
+        return
+
+    # Taklif qiluvchiga xabar beramiz. U bo'tni bloklagan bo'lishi
+    # mumkin — bu butun /start ni yiqitmasligi kerak.
+    count = res["count"]
+    try:
+        text = (f"🎉 <b>{html_escape(me.first_name or 'A friend')}</b> "
+                f"joined through your link!\n\n"
+                f"Invited friends: <b>{count}</b>")
+        if res["granted"]:
+            text += (f"\n\n🗝️ <b>+{res['granted']} keys</b> are waiting — "
+                     "open the game to collect them.")
+        else:
+            left = REF_PER - (count % REF_PER)
+            text += f"\n{left} more to earn <b>{REF_KEYS} 🗝️</b>."
+        await message.bot.send_message(ref_uid, text,
+                                       reply_markup=play_keyboard())
+    except Exception as e:
+        log.info("Taklif qiluvchiga xabar bormadi (%s): %s", ref_uid, e)
+
+
 @dp.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, state: FSMContext):
+    # /start har doim ishlaydi va yarim qolgan sehrgarni tozalaydi —
+    # aks holda /post ichida qolib ketgan admin chiqib keta olmasdi.
+    if await state.get_state():
+        _drafts.pop(message.from_user.id, None)
+        await state.clear()
+
+    # Havolaning "?start=" qismi: /start ref_12345
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) > 1:
+        try:
+            await handle_referral(message, parts[1].strip())
+        except Exception as e:
+            log.warning("Taklifni qayd etib bo'lmadi: %s", e)
+
     name = message.from_user.first_name or "friend"
     text = (
         f"Hey <b>{name}</b>! 👋\n\n"
@@ -864,7 +1122,8 @@ async def cmd_start(message: Message):
         "<b>12 chapters · 60 levels · 3,000 puzzles</b> — from three-letter "
         "warm-ups to nine-letter challenges.\n"
         "Climb the <b>Top 100</b>, or send /top in any group to see who "
-        "leads among your friends."
+        "leads among your friends.\n"
+        f"Invite {REF_PER} friends with /invite and get <b>{REF_KEYS} 🗝️</b>."
     )
     kb = play_keyboard()
     if kb:
@@ -874,6 +1133,218 @@ async def cmd_start(message: Message):
             text + "\n\n⚠️ WEBAPP_URL is not set to an https address yet — "
             "the play button stays hidden."
         )
+
+
+# ------------------------ Kanalga post yuborish -------------------------------
+#
+# Faqat adminlar uchun. Ketma-ketlik:
+#   /post @kanal -> matn -> rasm/video yoki /skip -> ko'rib chiqish ->
+#   tasdiq -> kanalga ketadi.
+#
+# TASDIQ BOSQICHI ATAYLAB QO'SHILGAN. Kanalga yuborilgan post ochiq va
+# uni orqaga qaytarib bo'lmaydi, shuning uchun oxirgi qadamda admin
+# postni AYNAN kanalda ko'rinadigan holida ko'radi va bir marta
+# tasdiqlaydi. Adashib yuborilgan post obunachilarga darhol boradi.
+
+
+class PostFlow(StatesGroup):
+    text = FState()
+    media = FState()
+    confirm = FState()
+
+
+# Tayyorlangan postlar: admin_id -> {chat, text, media, kind}
+_drafts: dict[int, dict] = {}
+
+
+def _post_kb() -> InlineKeyboardMarkup:
+    """Kanaldagi post ostidagi tugma."""
+    return link_keyboard()
+
+
+@dp.message(Command("post"), lambda m: m.chat.type == "private")
+async def cmd_post(message: Message, state: FSMContext):
+    uid = message.from_user.id
+    if uid not in ADMINS:
+        return                      # adminlarga tegishli emas — jimgina
+
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer(
+            "Usage: <code>/post @channel</code>\n\n"
+            "Example: <code>/post @ApexWords</code>")
+        return
+
+    target = parts[1].strip().split()[0]
+    if not target.startswith("@") and not target.lstrip("-").isdigit():
+        target = "@" + target
+
+    # Kanal bor va bot u yerga yoza oladimi — DARHOL tekshiramiz.
+    # Aks holda xato butun sehrgar oxirida, matn yozilgandan keyin
+    # chiqar va mehnat bekorga ketardi.
+    try:
+        chat = await message.bot.get_chat(target)
+    except Exception as e:
+        await message.answer(
+            f"Can't reach <code>{html_escape(target)}</code>.\n"
+            f"Make sure the bot is an admin there.\n\n<code>{html_escape(str(e))}</code>")
+        return
+
+    _drafts[uid] = {"chat": chat.id, "title": chat.title or target,
+                    "text": "", "media": None, "kind": None}
+    await state.set_state(PostFlow.text)
+    await message.answer(
+        f"📢 Posting to <b>{html_escape(chat.title or target)}</b>\n\n"
+        "Send me the <b>post text</b>.\n"
+        "<i>/cancel to stop</i>")
+
+
+@dp.message(Command("cancel"), StateFilter(PostFlow.text, PostFlow.media,
+                                           PostFlow.confirm))
+async def cmd_post_cancel(message: Message, state: FSMContext):
+    _drafts.pop(message.from_user.id, None)
+    await state.clear()
+    await message.answer("Cancelled.")
+
+
+@dp.message(PostFlow.text)
+async def post_got_text(message: Message, state: FSMContext):
+    draft = _drafts.get(message.from_user.id)
+    if not draft:
+        await state.clear()
+        return
+    # HTML formatlash saqlansin: Telegram bergan entity'lardan qayta quramiz
+    body = message.html_text if message.text else (message.caption or "")
+    if not body.strip():
+        await message.answer("Please send the post text.")
+        return
+    draft["text"] = body
+    await state.set_state(PostFlow.media)
+    await message.answer(
+        "Got it. Now send a <b>photo</b> or <b>video</b> for the post.\n"
+        "<i>/skip to post text only · /cancel to stop</i>")
+
+
+@dp.message(Command("skip"), PostFlow.media)
+async def post_skip_media(message: Message, state: FSMContext):
+    await _show_preview(message, state)
+
+
+@dp.message(PostFlow.media)
+async def post_got_media(message: Message, state: FSMContext):
+    draft = _drafts.get(message.from_user.id)
+    if not draft:
+        await state.clear()
+        return
+
+    if message.photo:
+        # photo — bir necha o'lchamdagi ro'yxat, oxirgisi eng kattasi
+        draft["media"] = message.photo[-1].file_id
+        draft["kind"] = "photo"
+    elif message.video:
+        draft["media"] = message.video.file_id
+        draft["kind"] = "video"
+    elif message.animation:
+        draft["media"] = message.animation.file_id
+        draft["kind"] = "animation"
+    else:
+        await message.answer(
+            "That's not a photo or video. Send one, or /skip.")
+        return
+
+    # Rasm/video bilan yuborilganda matn "caption" bo'ladi va uning
+    # chegarasi 1024 belgi — oddiy xabarnikidan (4096) ancha kam.
+    if len(draft["text"]) > 1024:
+        await message.answer(
+            f"⚠️ With media the caption limit is <b>1024</b> characters, "
+            f"your text is <b>{len(draft['text'])}</b>.\n"
+            "Send /skip to post it as text only, or /cancel and shorten it.")
+        return
+
+    await _show_preview(message, state)
+
+
+async def _show_preview(message: Message, state: FSMContext):
+    draft = _drafts.get(message.from_user.id)
+    if not draft:
+        await state.clear()
+        return
+    await state.set_state(PostFlow.confirm)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="✅ Send", callback_data="post:go"),
+        InlineKeyboardButton(text="✖️ Cancel", callback_data="post:no"),
+    ]])
+    await message.answer(
+        f"Preview for <b>{html_escape(draft['title'])}</b> — "
+        f"{'with ' + draft['kind'] if draft['kind'] else 'text only'}:")
+    await _deliver(message.bot, message.chat.id, draft)
+    await message.answer("Send this to the channel?", reply_markup=kb)
+
+
+async def _deliver(bot, chat_id: int, draft: dict):
+    """Postni berilgan chatga yuboradi (ko'rib chiqish ham, kanal ham)."""
+    kb = _post_kb()
+    if draft["kind"] == "photo":
+        return await bot.send_photo(chat_id, draft["media"],
+                                    caption=draft["text"], reply_markup=kb)
+    if draft["kind"] == "video":
+        return await bot.send_video(chat_id, draft["media"],
+                                    caption=draft["text"], reply_markup=kb)
+    if draft["kind"] == "animation":
+        return await bot.send_animation(chat_id, draft["media"],
+                                        caption=draft["text"], reply_markup=kb)
+    return await bot.send_message(chat_id, draft["text"], reply_markup=kb)
+
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("post:"))
+async def post_confirm(cq: CallbackQuery, state: FSMContext):
+    uid = cq.from_user.id
+    draft = _drafts.get(uid)
+    if cq.data == "post:no" or not draft:
+        _drafts.pop(uid, None)
+        await state.clear()
+        await cq.message.edit_text("Cancelled.")
+        await cq.answer()
+        return
+
+    try:
+        await _deliver(cq.bot, draft["chat"], draft)
+        await cq.message.edit_text(
+            f"✅ Posted to <b>{html_escape(draft['title'])}</b>.")
+    except Exception as e:
+        log.warning("Postni kanalga yuborib bo'lmadi: %s", e)
+        await cq.message.edit_text(
+            f"❌ Could not post.\n\n<code>{html_escape(str(e))}</code>")
+    finally:
+        _drafts.pop(uid, None)
+        await state.clear()
+    await cq.answer()
+
+
+@dp.message(lambda m: m.text and m.text.split("@")[0] in ("/invite", "/ref")
+            and m.chat.type == "private")
+async def cmd_invite(message: Message):
+    """Taklif havolasi va hisobi."""
+    uid = message.from_user.id
+    await db.get_progress(_user_row(message.from_user))
+    count, left = await db.ref_state(uid)
+    link = f"{BOT_LINK}?start=ref_{uid}"
+
+    share = ("https://t.me/share/url?url=" + urllib.parse.quote(link) +
+             "&text=" + urllib.parse.quote(
+                 "Learn English by playing Apex Words with me!"))
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="📤 Share with friends", url=share)
+    ]])
+    await message.answer(
+        f"👥 <b>Invite friends</b>\n\n"
+        f"Every <b>{REF_PER}</b> friends who join through your link "
+        f"earn you <b>{REF_KEYS} 🗝️</b>.\n\n"
+        f"Invited so far: <b>{count}</b>\n"
+        f"Next reward in: <b>{left}</b>\n\n"
+        f"Your link:\n<code>{link}</code>",
+        reply_markup=kb)
 
 
 async def members_of(bot, chat_id: int, candidates: list):
@@ -905,7 +1376,7 @@ async def members_of(bot, chat_id: int, candidates: list):
         nonlocal failed
         key = (chat_id, uid)
         hit = _member_cache.get(key)
-        if hit and now - hit[1] < MEMBER_TTL:
+        if hit and now - hit[1] < (MEMBER_TTL if hit[0] else MEMBER_TTL_NEG):
             return hit[0]
         async with sem:
             for attempt in (1, 2):
@@ -968,40 +1439,34 @@ async def cmd_top(message: Message):
     await send_scoped_top(message)
 
 
-async def send_scoped_top(message: Message):
+async def scoped_top_text(bot, chat_id: int, is_channel: bool) -> str:
     """
-    Shu chatdagi (guruh yoki kanaldagi) o'yinchilar reytingi.
+    Shu chatdagi (guruh yoki kanaldagi) reyting matnini quradi.
 
-    Guruh va kanal uchun mantiq bir xil: umumiy reytingdan yuqoridagi
-    o'yinchilarni olamiz va har biri shu chatda bormi deb so'raymiz.
-    Farqi faqat so'zlashda — kanalda "a'zo" emas, "obunachi" deyiladi.
+    Yuborishdan ALOHIDA turadi, chunki kanalda o'sha matn bir necha
+    marta qayta hisoblanib, mavjud xabarni tahrirlashda ishlatiladi.
+
+    Umumiy reytingdan yuqoridagi o'yinchilarni olamiz va har biri shu
+    chatda bormi deb so'raymiz — Telegram a'zolarni sanab berishga
+    ruxsat bermaydi, shuning uchun teskarisidan boramiz.
     """
-    chat = message.chat
-    is_channel = chat.type == "channel"
     who = "subscribers" if is_channel else "members"
+    where = "channel" if is_channel else "group"
 
-    rows = await db.top_rows()
+    rows = await db.scan_rows()
     if not rows:
-        await message.answer("No players yet. Be the first!")
-        return
+        return "No players yet. Be the first!"
 
-    bot = message.bot
-    candidates = rows[:GROUP_SCAN_LIMIT]
-    members, failed = await members_of(bot, chat.id, candidates)
+    members, failed = await members_of(bot, chat_id, rows[:GROUP_SCAN_LIMIT])
 
     if not members:
         # Hamma so'rov xato bergan bo'lsa, "hech kim o'ynamaydi" deyish
         # NOTO'G'RI bo'ladi — biz shunchaki bilmaymiz. Farqini aytamiz.
         if failed:
-            await message.answer(
-                f"Couldn't check the {who} right now. "
-                "Please try again in a moment.")
-            return
-        await message.answer(
-            f"Nobody in this {'channel' if is_channel else 'group'} plays "
-            "Apex Words yet.\nTap Play and be the first!",
-            reply_markup=link_keyboard())
-        return
+            return (f"Couldn't check the {who} right now. "
+                    "Please try again in a moment.")
+        return (f"Nobody in this {where} plays Apex Words yet.\n"
+                "Tap Play and be the first!")
 
     lines = [f"{MEDALS[i] if i < 3 else f'{i + 1}.'} "
              f"<b>{html_escape(name or 'Player')}</b> — {score} 💎"
@@ -1013,9 +1478,16 @@ async def send_scoped_top(message: Message):
     # bo'lib chiqib, ApexWords boti shaxmat reytingini ko'rsatayotgandek
     # tuyulardi. Endi o'yin nomi oldinda turadi va chalkashlik yo'q —
     # xabar guruhning o'zida yuborilgani uchun "here" allaqachon aniq.
-    await message.answer(
-        "🏆 <b>Apex Words</b> — top players here\n\n"
-        + "\n".join(lines), reply_markup=link_keyboard())
+    head = "🏆 <b>Apex Words</b> — top players here"
+    if is_channel:
+        head += f"\n<i>live · updated {time.strftime('%H:%M')} UTC</i>"
+    return head + "\n\n" + "\n".join(lines)
+
+
+async def send_scoped_top(message: Message):
+    """Guruh uchun: reytingni bir marta yuboradi."""
+    text = await scoped_top_text(message.bot, message.chat.id, False)
+    await message.answer(text, reply_markup=link_keyboard())
 
 
 @dp.channel_post(lambda m: m.text and m.text.split("@")[0] in ("/top", "/rank", "/leaders"))
@@ -1028,8 +1500,83 @@ async def channel_top(message: Message):
          channel_post yangilanishini umuman yubormaydi.
       2. ALLOWED_UPDATES ichida "channel_post" turishi shart, aks holda
          yangilanish so'ralmaydi va buyruq javobsiz qoladi.
+
+    Buyruqning o'zi o'chiriladi va ro'yxat bir muddat jonli yangilanib
+    turadi — kanalda "/top" yozuvi qolib ketmasligi kerak.
     """
-    await send_scoped_top(message)
+    bot, chat_id = message.bot, message.chat.id
+
+    # Buyruq postini o'chiramiz. Bot "delete messages" huquqiga ega
+    # bo'lmasa bu ishlamaydi — reyting baribir chiqsin.
+    try:
+        await message.delete()
+    except Exception as e:
+        log.info("Kanalda /top xabarini o'chirib bo'lmadi: %s", e)
+
+    # Oldingi jonli ro'yxat to'xtatiladi: bitta kanalda ikkita
+    # yangilanuvchi xabar qolib ketmasin.
+    old = _live_boards.pop(chat_id, None)
+    if old:
+        old.cancel()
+
+    text = await scoped_top_text(bot, chat_id, True)
+    sent = await message.answer(text, reply_markup=link_keyboard())
+    _live_boards[chat_id] = asyncio.create_task(
+        live_board(bot, chat_id, sent.message_id))
+
+
+async def live_board(bot, chat_id: int, message_id: int):
+    """
+    Kanaldagi reytingni davriy yangilab turadi.
+
+    Matn o'zgarmagan bo'lsa tahrirlash YUBORILMAYDI: Telegram bir xil
+    matnga "message is not modified" xatosini qaytaradi va bu bekorga
+    so'rov sarflagan bo'lardi.
+    """
+    last = None
+    try:
+        for _ in range(LIVE_TICKS):
+            await asyncio.sleep(LIVE_EVERY)
+            try:
+                text = await scoped_top_text(bot, chat_id, True)
+            except Exception as e:
+                log.warning("Jonli reyting hisoblanmadi (%s): %s", chat_id, e)
+                continue
+            if text == last:
+                continue
+            try:
+                await bot.edit_message_text(
+                    text, chat_id=chat_id, message_id=message_id,
+                    reply_markup=link_keyboard())
+                last = text
+            except TelegramBadRequest as e:
+                # Xabar o'chirilgan yoki tahrirlab bo'lmaydi — to'xtaymiz
+                log.info("Jonli reyting to'xtadi (%s): %s", chat_id, e)
+                return
+            except TelegramRetryAfter as e:
+                await asyncio.sleep(min(e.retry_after, 30))
+    except asyncio.CancelledError:
+        raise
+    finally:
+        if _live_boards.get(chat_id) is asyncio.current_task():
+            _live_boards.pop(chat_id, None)
+
+
+@dp.chat_member()
+async def on_chat_member(ev: ChatMemberUpdated):
+    """
+    Kimdir guruh/kanalga qo'shildi yoki chiqdi.
+
+    A'zolik keshi SHU YERDA darhol yangilanadi. Busiz odam qo'shilgandan
+    keyin ham eski javob keshda turar va u reytingda ko'rinmasdi —
+    aynan shu xato sezilgan edi.
+    """
+    try:
+        ok = ev.new_chat_member.status in (
+            "creator", "administrator", "member", "restricted")
+        _member_cache[(ev.chat.id, ev.new_chat_member.user.id)] = (ok, time.time())
+    except Exception as e:
+        log.info("chat_member yangilanishi o'qilmadi: %s", e)
 
 
 @dp.inline_query()

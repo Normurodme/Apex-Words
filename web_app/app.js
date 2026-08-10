@@ -1662,7 +1662,65 @@ function renderTasks() {
     ch.textContent = 'Verify';
   }
 
+  renderReferral();
   refreshTaskDot();
+}
+
+/* Taklif paneli: nechta do'st qo'shilgani va mukofotgacha qancha qolgani */
+function renderReferral() {
+  const s = taskState;
+  const per = (s && s.ref_per) || 3;
+  const keys = (s && s.ref_keys) || 5;
+  const count = s ? (s.ref_count || 0) : 0;
+  const left = s ? (s.ref_left != null ? s.ref_left : per) : per;
+
+  $('ref-note').innerHTML = count
+    ? 'Invited: <b>' + count + '</b> · ' + left +
+      ' more for <b>' + keys + ' 🗝️</b>'
+    : 'Every ' + per + ' friends earn you <b>' + keys + ' 🗝️</b>';
+
+  // Joriy bosqichdagi ilgarilash: har mukofotdan keyin nuqtalar
+  // yangidan to'la boshlaydi.
+  const done = count % per;
+  const box = $('ref-dots');
+  box.innerHTML = '';
+  for (let i = 0; i < per; i++) {
+    box.appendChild(el('span', 'ref-dot' + (i < done ? ' got' : '')));
+  }
+
+  $('btn-invite').disabled = !(TG && TG.initData && s && s.ref_link);
+}
+
+function shareInvite() {
+  const s = taskState;
+  if (!(s && s.ref_link)) return;
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent(s.ref_link) +
+              '&text=' + encodeURIComponent(
+                'Learn English by playing Apex Words with me!');
+  haptic('tap');
+  if (TG && TG.openTelegramLink) TG.openTelegramLink(url);
+  else window.open(url, '_blank');
+}
+
+/*
+  Taklif uchun kutayotgan kalitlarni oladi.
+
+  Kalitlar soni progress ichida, ya'ni MIJOZDA saqlanadi, do'st
+  qo'shilganini esa faqat server biladi. Shuning uchun server mukofotni
+  "kutayotgan" qilib yozib qo'yadi, ilova ochilganda shu yerda olinadi.
+  So'rov kalitlarni bir martada beradi va darhol nolga tushiradi,
+  shuning uchun natija DARHOL saqlanadi — aks holda ilova yopilib
+  qolsa mukofot yo'qolardi.
+*/
+async function collectPendingKeys() {
+  if (!(TG && TG.initData)) return;
+  const r = await api('/api/claim-keys');
+  if (!r || r.error || !r.keys) return;
+  addKeys(r.keys);
+  Store.saveNow();
+  Sound.reward();
+  haptic('ok');
+  toast('🗝️ +' + r.keys + ' keys from your invites!');
 }
 
 async function claimDaily() {
@@ -1877,6 +1935,7 @@ async function boot() {
   $('tab-task').onclick = () => { haptic('tap'); openTasks(); };
   $('btn-claim-daily').onclick = claimDaily;
   $('btn-claim-channel').onclick = claimChannel;
+  $('btn-invite').onclick = shareInvite;
   $('btn-open-channel').onclick = () => {
     const url = 'https://t.me/apexwords';
     if (TG && TG.openTelegramLink) TG.openTelegramLink(url);
@@ -1915,6 +1974,11 @@ async function boot() {
   // Vazifa va reyting ma'lumotini darhol so'raymiz — o'yinchi bo'limga
   // o'tgunicha javob kelib ulguradi va kutish sezilmaydi
   prefetchSections();
+
+  // Do'st taklif qilgani uchun kutayotgan kalitlar bo'lsa, shu yerda
+  // qo'shiladi. Progress allaqachon yuklangan, shuning uchun qo'shish
+  // xavfsiz — aks holda saqlash uni bosib ketardi.
+  collectPendingKeys();
 
   /* Fon musiqasi o'z-o'zidan boshlanmaydi — faqat o'yinchi 🎵 tugmasidan
      yoqqan bo'lsa. Yoqilgan bo'lsa ham brauzer birinchi teginishgacha
