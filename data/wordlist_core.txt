@@ -132,7 +132,6 @@ align
 alignment
 alike
 alive
-all
 allegedly
 allergic
 allergy
@@ -203,10 +202,6 @@ anthem
 antique
 anxiety
 anxious
-any
-anybody
-anyone
-anything
 anyway
 anywhere
 apart
@@ -532,7 +527,6 @@ borne
 borough
 borrow
 boss
-both
 bother
 bottle
 bottom
@@ -1428,7 +1422,6 @@ dwarf
 dye
 dynamic
 dynasty
-each
 eager
 eagle
 ear
@@ -1470,7 +1463,6 @@ eight
 eighteen
 eighth
 eighty
-either
 elaborate
 elbow
 elder
@@ -1581,9 +1573,7 @@ event
 eventual
 ever
 every
-everybody
 everyday
-everyone
 evidence
 evident
 evidently
@@ -1736,7 +1726,6 @@ fetch
 fetus
 feud
 fever
-few
 fiber
 fiction
 fictional
@@ -2162,7 +2151,6 @@ help
 helpful
 helpless
 hence
-her
 herd
 here
 hereby
@@ -2171,8 +2159,6 @@ heritage
 hero
 heroic
 heroin
-hers
-herself
 hesitate
 hey
 hide
@@ -2187,12 +2173,9 @@ highway
 hike
 hilarious
 hill
-him
-himself
 hint
 hip
 hire
-his
 historian
 historic
 history
@@ -2449,8 +2432,6 @@ isolate
 isolation
 issue
 item
-its
-itself
 ivory
 jacket
 jail
@@ -2749,7 +2730,6 @@ manor
 mansion
 manual
 manually
-many
 map
 maple
 marathon
@@ -2866,7 +2846,6 @@ milk
 mill
 million
 mind
-mine
 mineral
 miniature
 minimal
@@ -2942,7 +2921,6 @@ mortar
 mortgage
 mosque
 mosquito
-most
 mostly
 motel
 mother
@@ -2982,7 +2960,6 @@ mutation
 mute
 mutual
 mutually
-myself
 mystery
 mystic
 myth
@@ -3024,7 +3001,6 @@ negative
 neglect
 negotiate
 neighbor
-neither
 neon
 nephew
 nerve
@@ -3053,14 +3029,12 @@ ninety
 ninth
 nitrogen
 noble
-nobody
 nod
 node
 noise
 noisy
 nominal
 nominee
-none
 nonprofit
 nonsense
 noon
@@ -3081,7 +3055,6 @@ notably
 notch
 note
 notebook
-nothing
 notice
 notify
 notion
@@ -3142,7 +3115,6 @@ older
 olive
 omega
 once
-one
 ongoing
 onion
 only
@@ -3186,8 +3158,6 @@ other
 otherwise
 ought
 ounce
-our
-ours
 out
 outbreak
 outcome
@@ -4116,7 +4086,6 @@ seven
 seventeen
 seventh
 seventy
-several
 severe
 severely
 severity
@@ -4141,7 +4110,6 @@ shark
 sharp
 sharply
 shave
-she
 shed
 sheep
 sheer
@@ -4309,12 +4277,8 @@ solitary
 solo
 solution
 solve
-some
-somebody
 someday
 somehow
-someone
-something
 sometime
 somewhat
 somewhere
@@ -4687,12 +4651,8 @@ texture
 than
 thank
 thankful
-that
-the
 theater
 theft
-their
-them
 theme
 then
 theology
@@ -4705,9 +4665,7 @@ thereby
 therefore
 thereof
 thermal
-these
 thesis
-they
 thick
 thickness
 thief
@@ -4720,9 +4678,7 @@ thirst
 thirsty
 thirteen
 thirty
-this
 thorough
-those
 though
 thought
 thousand
@@ -5159,8 +5115,6 @@ well
 western
 wet
 whale
-what
-whatever
 wheat
 wheel
 when
@@ -5171,8 +5125,6 @@ whereby
 wherein
 wherever
 whether
-which
-whichever
 while
 whilst
 whip
@@ -5181,14 +5133,10 @@ whisky
 whisper
 whistle
 white
-who
 whoa
-whoever
 whole
 wholesale
 wholly
-whom
-whose
 why
 wicked
 wide
@@ -5278,12 +5226,8 @@ yesterday
 yet
 yield
 yoga
-you
 young
 younger
-your
-yours
-yourself
 youth
 yuan
 zero

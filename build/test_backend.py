@@ -200,6 +200,52 @@ async def main():
                ts.get("ref_link", "").endswith("start=ref_%d" % host)))
     ok.append(("vazifalarda taklif hisobi bor", ts.get("ref_count") == 3))
 
+    # --- Stars bilan to'lov ---
+    ok.append(("pre_checkout ishlovchisi bor",
+               len(B.dp.pre_checkout_query.handlers) >= 1))
+    # Busiz Telegram so'rovni yubormaydi va to'lov 10 soniyada bekor bo'ladi
+    ok.append(("pre_checkout_query so'raladigan turlar ichida",
+               "pre_checkout_query" in B.ALLOWED_UPDATES))
+    ok.append(("to'lov ishlovchisi bor",
+               "on_paid" in [h.callback.__name__ for h in B.dp.message.handlers]))
+    r = await client.post("/api/buy-hints", json={"initData": "soxta"})
+    ok.append(("imzosiz /api/buy-hints 401", r.status == 401))
+    # Testda bot yo'q — hisob-faktura yaratib bo'lmaydi, lekin bu
+    # 500 emas, tushunarli 503 bo'lishi kerak
+    r = await client.post("/api/buy-hints", json={"initData": host_init})
+    ok.append(("botsiz /api/buy-hints 503", r.status == 503))
+
+    # Sotib olingan kalit ham kutayotganlar orqali beriladi
+    await B.db.grant_keys(host, B.STARS_KEYS)
+    ok.append(("sotib olingan kalitlar yozildi",
+               await B.db.take_pending_keys(host) == B.STARS_KEYS))
+
+    # --- Puzzle ma'lumotlari: olmoshlar ---
+    #
+    # Olmosh yechim bo'lib qolsa, o'yin lug'at emas grammatika mashqiga
+    # aylanadi. Ular faqat bonus bo'lishi kerak.
+    import glob
+    PRON = {w.upper() for w in (
+        "i me my mine myself you your yours yourself yourselves he him his "
+        "himself she her hers herself it its itself we us our ours ourselves "
+        "they them their theirs themselves who whom whose whoever whatever "
+        "whichever which what that this these those anyone anybody anything "
+        "someone somebody something everyone everybody everything nobody "
+        "nothing none oneself one each either neither both few many several "
+        "all any most some the an a").split()}
+    as_sol = as_bonus = n_pz = 0
+    for f in sorted(glob.glob(str(ROOT / "data" / "puzzles" / "stage_*.json"))):
+        with open(f, encoding="utf-8") as fh:
+            data = json.load(fh)
+        for lvl in data["levels"]:
+            for pz in lvl["puzzles"]:
+                n_pz += 1
+                as_sol += sum(1 for w in pz["words"] if w in PRON)
+                as_bonus += sum(1 for w in pz["bonus"] if w in PRON)
+    ok.append(("3000 puzzle joyida", n_pz == 3000))
+    ok.append(("olmosh yechim sifatida ishlatilmagan", as_sol == 0))
+    ok.append(("olmoshlar bonus sifatida qabul qilinadi", as_bonus > 0))
+
     # --- /post sehrgari ---
     msg_names = [h.callback.__name__ for h in B.dp.message.handlers]
     ok.append(("/post buyrug'i bor", "cmd_post" in msg_names))

@@ -423,12 +423,14 @@ const Music = {
 const START_COINS = 0;
 const START_KEYS = 5;        // har yangi o'yinchiga beriladigan kalitlar
 const BUBBLE_MS = 3500;      // tarjima necha soniya ko'rinadi
+const BONUS_PER_KEY = 5;     // shuncha bonus so'z bitta kalitga teng
 
 function blankProgress() {
   return {
     coins: START_COINS, keys: START_KEYS,
     cur: { stage: 1, level: 1, puzzle: 0 },
     solved: {}, learned: {},
+    bonusN: 0,         // topilgan bonus so'zlar soni (kalit hisobi uchun)
     muted: false,      // ovoz effektlari
     music: true        // fon musiqasi — STANDART HOLATDA YOQIQ.
                        // Doim chalinib turgan fon tez charchatadi va
@@ -449,6 +451,7 @@ function normalize(p) {
     // Kalit tushunchasi keyinroq qo'shilgan: eski yozuvda bo'lmasa
     // boshlang'ich miqdor beriladi, aks holda o'yinchi kalitsiz qolardi.
     keys: Number.isFinite(p.keys) ? p.keys : b.keys,
+    bonusN: Number.isFinite(p.bonusN) ? p.bonusN : 0,
     cur: (p.cur && typeof p.cur === 'object') ? p.cur : b.cur,
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
@@ -475,6 +478,7 @@ function mergeProgress(a, b) {
   const out = {
     coins: Math.max(a.coins, b.coins),
     keys: Math.max(a.keys, b.keys),
+    bonusN: Math.max(a.bonusN, b.bonusN),
     solved: Object.assign({}, a.solved),
     learned: Object.assign({}, a.learned),
     muted: b.muted,           // ovoz — shu qurilmaning sozlamasi
@@ -874,6 +878,31 @@ function watchMapSize() {
   }).observe(scroll);
 }
 
+/*
+  Taxta o'lchami o'zgarganda kataklarni qayta moslaydi.
+
+  ResizeObserver'ga TAYANMAYDI: #tray ustida u ishonchsiz ishlaydi
+  (sinovda umuman chaqirilmadi), chunki element ekran almashganda
+  ko'rinmas holatdan chiqadi. Buning o'rniga uchta aniq signal:
+  oyna o'lchami, qurilma burilishi va Telegram'ning viewportChanged
+  hodisasi — ilova yoyilganda yoki yig'ilganda aynan shu keladi.
+*/
+let fitTimer = null;
+function scheduleFit() {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => {
+    if ($('game-screen').classList.contains('active')) fitGrid();
+  }, 60);
+}
+
+function watchTraySize() {
+  window.addEventListener('resize', scheduleFit);
+  window.addEventListener('orientationchange', scheduleFit);
+  if (TG && TG.onEvent) {
+    try { TG.onEvent('viewportChanged', scheduleFit); } catch (_) {}
+  }
+}
+
 function starsFor(done, total) {
   if (done >= total) return 3;
   if (done >= total * 0.6) return 2;
@@ -1015,8 +1044,56 @@ async function openPuzzle(stage, level, idx) {
   $('level-title').textContent = lvl.name + ' · ' + (idx + 1) + '/' + lvl.puzzles.length;
   renderGrid();
   renderWheel();
+  // Kataklarni moslash G'ILDIRAKDAN KEYIN.
+  //
+  // #game-screen — vertikal flex: taxta qolgan joyni oladi, g'ildirak
+  // esa o'z balandligini talab qiladi. renderGrid ichida o'lchansa,
+  // g'ildirak hali chizilmagan bo'ladi va taxta haqiqiydan ancha baland
+  // ko'rinadi — natijada kataklar kattaroq tanlanib, keyin sig'may
+  // qolardi. Ikkita rAF: birinchisi uslub qo'llanishini, ikkinchisi
+  // joylashuv yakunlanishini kutadi.
+  //
+  // Taymer ham qo'shilgan: requestAnimationFrame sahifa CHIZILMAYOTGAN
+  // paytda (ilova fonda qolganda) umuman chaqirilmaydi va o'lcham eski
+  // holida qolib ketardi. fitGrid takrorlansa zarari yo'q.
+  requestAnimationFrame(() => requestAnimationFrame(fitGrid));
+  setTimeout(fitGrid, 90);
   updateCoins();
   Store.save();
+}
+
+const CELL_MAX = 32, CELL_MIN = 14;
+
+/*
+  Kataklarni mavjud joyga moslaydi.
+
+  Yuqori bosqichlarda so'zlar ham uzun, ham ko'p bo'ladi. Qat'iy 32px
+  bilan ular taxtaga sig'may, yuqori va pastki qatorlar kesilib qolardi.
+
+  O'lcham FORMULA bilan emas, O'LCHASH bilan topiladi: so'zlar qatorlarga
+  qanday joylashishi flex-wrap ga bog'liq va uni oldindan hisoblab
+  bo'lmaydi. Shuning uchun ikkilik qidiruv — sig'adigan eng katta
+  o'lchamni bir necha qadamda topadi.
+*/
+function fitGrid() {
+  const tray = $('tray'), grid = $('grid');
+  if (!grid.children.length) return;
+
+  const style = getComputedStyle(tray);
+  const availH = tray.clientHeight -
+                 parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  if (availH <= 0) return;
+
+  let lo = CELL_MIN, hi = CELL_MAX, best = CELL_MIN;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    grid.style.setProperty('--cell', mid + 'px');
+    // scrollHeight — o'lchash uchun, shuning uchun bu yerda majburiy
+    // reflow bo'ladi. Bir puzzleda 5 marta — sezilmaydi.
+    if (grid.scrollHeight <= availH) { best = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  grid.style.setProperty('--cell', best + 'px');
 }
 
 function renderGrid() {
@@ -1343,16 +1420,29 @@ function submit(word) {
   if (p.bonus.includes(word)) {
     if (State.foundBonus.has(word)) return flash(word, 'repeat');
     State.foundBonus.add(word);
-    // Bonus so'z ikki narsa beradi: ball va kalit
+
+    // Bonus so'z ball beradi, kalit esa HAR BONUS_PER_KEY tasiga bir
+    // marta. Yuqori bosqichlarda bonus so'zlar juda ko'p chiqadi va
+    // har biriga kalit berilganda kalit umuman qadrsizlanib qolardi.
     State.progress.coins += 1;
-    State.progress.keys += 1;
+    State.progress.bonusN = (State.progress.bonusN || 0) + 1;
+    const got = State.progress.bonusN % BONUS_PER_KEY === 0;
+    if (got) State.progress.keys += 1;
+
     updateCoins();
     Store.save();
     learn(word);
     haptic('ok');
     Sound.ding();
     flash(word, 'hit', 700);
-    toast('🎁 BONUS · ' + word + '   +1 💎  +1 🗝️');
+    if (got) {
+      Sound.reward();
+      toast('🎁 BONUS · ' + word + '   +1 💎  +1 🗝️');
+    } else {
+      const left = BONUS_PER_KEY - (State.progress.bonusN % BONUS_PER_KEY);
+      toast('🎁 BONUS · ' + word + '   +1 💎  ·  ' + left +
+            ' more for 🗝️');
+    }
     return;
   }
 
@@ -1712,15 +1802,53 @@ function shareInvite() {
   shuning uchun natija DARHOL saqlanadi — aks holda ilova yopilib
   qolsa mukofot yo'qolardi.
 */
+/*
+  Stars orqali kalit sotib olish.
+
+  To'lov oynasini Telegram o'zi ochadi va natijani qaytaradi. Kalit
+  esa MIJOZDA emas, server tomonda yoziladi (successful_payment) —
+  shuning uchun "paid" javobidan keyin kutayotgan kalitlar so'raladi.
+  Telegram to'lovni tasdiqlashi bilan javob berish orasida kichik
+  kechikish bo'lishi mumkin, shuning uchun bir marta qayta uriniladi.
+*/
+async function buyKeys() {
+  const btn = $('btn-buy-keys');
+  if (!(TG && TG.initData)) { toast('Available inside Telegram'); return; }
+  if (!TG.openInvoice) {
+    toast('Please update Telegram to pay with Stars');
+    return;
+  }
+
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.textContent = 'Opening…';
+  const r = await api('/api/buy-hints');
+  btn.textContent = prev;
+  btn.disabled = false;
+
+  if (!r || r.error || !r.link) { toast('Could not open payment'); return; }
+
+  TG.openInvoice(r.link, async (status) => {
+    if (status !== 'paid') {
+      if (status === 'failed') toast('Payment failed');
+      return;
+    }
+    if (!(await collectPendingKeys())) {
+      setTimeout(collectPendingKeys, 2500);
+    }
+  });
+}
+
 async function collectPendingKeys() {
-  if (!(TG && TG.initData)) return;
+  if (!(TG && TG.initData)) return false;
   const r = await api('/api/claim-keys');
-  if (!r || r.error || !r.keys) return;
+  if (!r || r.error || !r.keys) return false;
   addKeys(r.keys);
   Store.saveNow();
   Sound.reward();
   haptic('ok');
-  toast('🗝️ +' + r.keys + ' keys from your invites!');
+  toast('🗝️ +' + r.keys + ' keys added!');
+  return true;
 }
 
 async function claimDaily() {
@@ -1936,6 +2064,7 @@ async function boot() {
   $('btn-claim-daily').onclick = claimDaily;
   $('btn-claim-channel').onclick = claimChannel;
   $('btn-invite').onclick = shareInvite;
+  $('btn-buy-keys').onclick = buyKeys;
   $('btn-open-channel').onclick = () => {
     const url = 'https://t.me/apexwords';
     if (TG && TG.openTelegramLink) TG.openTelegramLink(url);
@@ -1970,6 +2099,7 @@ async function boot() {
   });
 
   watchMapSize();
+  watchTraySize();
 
   // Vazifa va reyting ma'lumotini darhol so'raymiz — o'yinchi bo'limga
   // o'tgunicha javob kelib ulguradi va kutish sezilmaydi

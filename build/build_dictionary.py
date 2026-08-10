@@ -181,7 +181,13 @@ PLACES_AND_BRANDS = {
 # qo'yish yangi lug'at o'rgatmaydi va o'yin zerikarli ko'rinadi. Lekin o'yinchi
 # ularni tasodifan yasab qolsa "bunday so'z yo'q" deyish ham noto'g'ri.
 # Shuning uchun core'dan chiqariladi, full'da qoladi -> topilsa +1 bonus.
-BONUS_ONLY = {
+# Olmoshlar. Ular FAQAT bonus so'z bo'ladi: o'yinchi topsa ball oladi,
+# lekin to'rda ular uchun katak ochilmaydi.
+#
+# Sabab: "her", "its", "one", "all", "some" kabi so'zlar juda tez-tez
+# uchraydi va yechim sifatida qo'yilganda puzzle grammatika mashqiga
+# aylanib qolardi — o'yin esa LUG'AT o'rgatadi.
+PRONOUNS = {
     "i", "me", "my", "mine", "myself",
     "you", "your", "yours", "yourself", "yourselves",
     "he", "him", "his", "himself",
@@ -189,9 +195,19 @@ BONUS_ONLY = {
     "it", "its", "itself",
     "we", "us", "our", "ours", "ourselves",
     "they", "them", "their", "theirs", "themselves",
-    "who", "whom", "whose",
-    "the", "an", "a",
+    "who", "whom", "whose", "whoever", "whatever", "whichever",
+    "which", "what", "that", "this", "these", "those",
+    "anyone", "anybody", "anything",
+    "someone", "somebody", "something",
+    "everyone", "everybody", "everything",
+    "nobody", "nothing", "none", "oneself", "one",
+    "each", "either", "neither", "both", "few", "many", "several",
+    "all", "any", "most", "some",
+    "thee", "thou", "thy", "thine", "ye",
 }
+
+# Artikllar ham yechim bo'lmasin
+BONUS_ONLY = PRONOUNS | {"the", "an", "a"}
 
 # Ko'plik/zamon qoidalariga TASODIFAN tushib qoladigan haqiqiy asos so'zlar.
 # Masalan: 'news' -> 'new' (asos so'z), 'morning' -> 'morn' (asos so'z),
@@ -428,14 +444,19 @@ def main():
         if z >= FULL_ZIPF:
             full.append(w)
             # BONUS_ONLY so'zlari full'da qoladi, lekin core'ga tushmaydi:
-            # o'yinchi ularni topsa +1 oladi, ammo to'rda katak bo'lmaydi.
-            # BONUS_ONLY endi ishlatilmaydi: olmoshlar ham to'liq huquqli
-            # so'z sifatida qabul qilinadi (ular ham o'rganiladigan lug'at).
-            if z >= CORE_ZIPF and not is_inflected(w):
+            # o'yinchi ularni topsa ball oladi, ammo to'rda katak bo'lmaydi.
+            if z >= CORE_ZIPF and not is_inflected(w) and w not in BONUS_ONLY:
                 core.append(w)
 
-    core.sort()
-    full.sort()
+    # Olmoshlar bonus sifatida ISHLASHI KAFOLATLANADI.
+    #
+    # Ularning bir qismi ("theirs", "ourselves") chastota bo'sag'asidan
+    # yoki ko'plik/zamon filtridan o'tmay full'dan tushib qolardi —
+    # natijada o'yinchi to'g'ri olmoshni yozsa ham "noto'g'ri" chiqardi.
+    # Shuning uchun ular bu yerda majburan qo'shiladi.
+    core = sorted(set(core) - BONUS_ONLY)
+    full = sorted(set(full) |
+                  {w for w in BONUS_ONLY if MIN_LEN <= len(w) <= MAX_LEN})
     print(f"      atoqli ot deb chiqarildi           : {dropped_proper:,}")
     print(f"      ko'plik/zamon shakli deb chiqarildi: {dropped_infl:,}")
     print(f"      core (yechim so'zlari): {len(core):,}")

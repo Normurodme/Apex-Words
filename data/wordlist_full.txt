@@ -5645,6 +5645,7 @@ ought
 ounce
 our
 ours
+ourselves
 out
 outage
 outback
@@ -8261,8 +8262,10 @@ that
 thaw
 the
 theater
+thee
 theft
 their
+theirs
 them
 thematic
 theme
@@ -8289,6 +8292,7 @@ thickness
 thief
 thigh
 thin
+thine
 thing
 thingy
 think
@@ -8308,6 +8312,7 @@ thoracic
 thorn
 thorough
 those
+thou
 though
 thought
 thousand
@@ -8335,6 +8340,7 @@ thumbnail
 thunder
 thus
 thwart
+thy
 thyme
 thyroid
 tic

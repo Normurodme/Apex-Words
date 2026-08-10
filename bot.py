@@ -44,7 +44,9 @@ from aiogram.types import (
     InlineQuery,
     InlineQueryResultArticle,
     InputTextMessageContent,
+    LabeledPrice,
     Message,
+    PreCheckoutQuery,
     MenuButtonWebApp,
     WebAppInfo,
 )
@@ -227,6 +229,12 @@ REF_PER = 3
 REF_KEYS = 5
 # Taklif faqat shuncha soniya ichida yaratilgan yangi yozuvga tegishli
 REF_NEW_WINDOW = 300
+
+# Telegram Stars bilan sotib olish: STARS_PRICE yulduzga STARS_KEYS kalit.
+# Valyuta "XTR" — Stars uchun provider_token TALAB QILINMAYDI va bo'sh
+# qoldiriladi (oddiy to'lovlardan asosiy farqi shu).
+STARS_KEYS = 10
+STARS_PRICE = 10
 CHANNEL = os.getenv("CHANNEL_USERNAME", "@apexwords").strip()
 
 # Indeks ALOHIDA turadi va migratsiyadan KEYIN yaratiladi.
@@ -265,6 +273,7 @@ ALLOWED_UPDATES = [
     "message",
     "channel_post",          # kanalda /top ishlashi uchun
     "chat_member",           # qo'shilish/chiqishni darhol bilish uchun
+    "pre_checkout_query",    # Stars to'lovi busiz bekor bo'ladi
     "callback_query",
     "inline_query",
     "chosen_inline_result",
@@ -637,6 +646,21 @@ class DB:
             await db.commit()
         return {"ok": True, "count": count, "granted": granted}
 
+    async def grant_keys(self, uid: int, n: int):
+        """
+        Kalitni "kutayotgan" ro'yxatga qo'shadi.
+
+        To'lov bo'tga keladi, kalit esa Mini App ichida saqlanadi —
+        shuning uchun server uni to'g'ridan-to'g'ri bera olmaydi.
+        Taklif mukofoti bilan bir xil yo'l: pend_keys, keyin
+        /api/claim-keys.
+        """
+        async with self.conn() as db:
+            await db.execute(
+                "UPDATE players SET pend_keys=pend_keys+?, updated_at=? "
+                "WHERE user_id=?", (n, int(time.time()), uid))
+            await db.commit()
+
     async def ref_state(self, uid: int) -> tuple[int, int]:
         """(nechta do'st taklif qilingan, keyingi mukofotgacha nechta qoldi)"""
         async with self.conn() as db:
@@ -902,6 +926,45 @@ async def api_claim_keys(request: web.Request) -> web.Response:
     return web.json_response({"keys": await db.take_pending_keys(user["id"])})
 
 
+async def api_buy_hints(request: web.Request) -> web.Response:
+    """
+    Stars bilan kalit sotib olish uchun hisob-faktura havolasi.
+
+    Mini App bu havolani TG.openInvoice ga beradi. To'lov Telegram
+    tomonda o'tadi, kalit esa successful_payment kelganda beriladi —
+    ya'ni mijoz "to'ladim" desa emas, TELEGRAM tasdiqlasa.
+    """
+    try:
+        body = await request.json()
+    except json.JSONDecodeError:
+        return web.json_response({"error": "bad json"}, status=400)
+    user = verify_init_data(body.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "unauthorized"}, status=401)
+
+    bot = request.app["bot"]
+    if bot is None:
+        return web.json_response({"error": "unavailable"}, status=503)
+
+    try:
+        link = await bot.create_invoice_link(
+            title=f"{STARS_KEYS} hint keys",
+            description=f"{STARS_KEYS} keys to reveal letters in Apex Words.",
+            payload=f"keys:{STARS_KEYS}:{user['id']}",
+            currency="XTR",
+            # Stars uchun provider_token bo'sh bo'lishi SHART
+            provider_token="",
+            prices=[LabeledPrice(label=f"{STARS_KEYS} keys",
+                                 amount=STARS_PRICE)],
+        )
+    except Exception as e:
+        log.warning("Hisob-faktura yaratilmadi: %s", e)
+        return web.json_response({"error": "invoice_failed"}, status=502)
+
+    return web.json_response({"link": link, "keys": STARS_KEYS,
+                              "stars": STARS_PRICE})
+
+
 async def api_claim_channel(request: web.Request) -> web.Response:
     """
     Kanalga a'zolikni tekshiradi va bir marta kalit beradi.
@@ -982,6 +1045,7 @@ def make_app(bot=None) -> web.Application:
     app.router.add_post("/api/claim-daily", api_claim_daily)
     app.router.add_post("/api/claim-channel", api_claim_channel)
     app.router.add_post("/api/claim-keys", api_claim_keys)
+    app.router.add_post("/api/buy-hints", api_buy_hints)
     app.router.add_get("/", index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
@@ -1133,6 +1197,77 @@ async def cmd_start(message: Message, state: FSMContext):
             text + "\n\n⚠️ WEBAPP_URL is not set to an https address yet — "
             "the play button stays hidden."
         )
+
+
+# --------------------------- Stars bilan to'lov -------------------------------
+
+
+@dp.pre_checkout_query()
+async def on_pre_checkout(q: PreCheckoutQuery):
+    """
+    To'lovdan oldingi so'nggi tasdiq.
+
+    Telegram bu so'rovga 10 SONIYA ichida javob kutadi, aks holda
+    to'lov bekor bo'ladi. Shuning uchun bu yerda hech qanday og'ir ish
+    qilinmaydi — kalit successful_payment kelganda beriladi.
+    """
+    try:
+        await q.answer(ok=True)
+    except Exception as e:
+        log.warning("pre_checkout javobi ketmadi: %s", e)
+
+
+@dp.message(lambda m: m.successful_payment is not None)
+async def on_paid(message: Message):
+    """To'lov o'tdi — kalitlarni yozib qo'yamiz."""
+    sp = message.successful_payment
+    uid = message.from_user.id
+
+    # Nechta kalit — payload'dan. Payload BIZ yuborgan qiymat, shuning
+    # uchun unga ishonsa bo'ladi; baribir eng yomon holatga chegara bor.
+    keys = STARS_KEYS
+    try:
+        parts = (sp.invoice_payload or "").split(":")
+        if len(parts) >= 2 and parts[0] == "keys":
+            keys = max(1, min(int(parts[1]), 1000))
+    except (ValueError, TypeError):
+        pass
+
+    await db.get_progress(_user_row(message.from_user))
+    await db.grant_keys(uid, keys)
+
+    # Charge id qaytarish (refund) uchun kerak — logda qolsin.
+    log.info("Stars to'lovi: user=%s stars=%s keys=%s charge=%s",
+             uid, sp.total_amount, keys, sp.telegram_payment_charge_id)
+
+    await message.answer(
+        f"⭐ Payment received — <b>{keys} 🗝️</b> added.\n"
+        "Open the game and they will appear right away.",
+        reply_markup=play_keyboard())
+
+
+@dp.message(Command("refund"), lambda m: m.chat.type == "private")
+async def cmd_refund(message: Message):
+    """
+    Stars to'lovini qaytarish (admin).
+
+    Telegram raqamli tovar sotuvchidan qaytarish imkonini talab qiladi.
+    Foydalanish: /refund <user_id> <charge_id>
+    """
+    if message.from_user.id not in ADMINS:
+        return
+    parts = (message.text or "").split()
+    if len(parts) != 3:
+        await message.answer(
+            "Usage: <code>/refund &lt;user_id&gt; &lt;charge_id&gt;</code>\n"
+            "Charge id is in the logs of the payment.")
+        return
+    try:
+        await message.bot.refund_star_payment(
+            user_id=int(parts[1]), telegram_payment_charge_id=parts[2])
+        await message.answer("✅ Refunded.")
+    except Exception as e:
+        await message.answer(f"❌ Refund failed.\n\n<code>{html_escape(str(e))}</code>")
 
 
 # ------------------------ Kanalga post yuborish -------------------------------

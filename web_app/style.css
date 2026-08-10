@@ -598,7 +598,16 @@ body {
   padding: 16px 12px;
   overflow-y: auto;
   contain: content;
-  display: flex; align-items: center; justify-content: center;
+  /*
+    MARKAZLASH align-items BILAN EMAS, margin:auto BILAN.
+
+    align-items:center bilan markazlashtirilgan flex bolasi konteynerdan
+    baland bo'lsa, uning YUQORI qismi kesilib ketadi va unga aylantirib
+    ham yetib bo'lmaydi — skrinshotdagi "so'zlar sig'may qolgan" holat
+    aynan shu edi. margin:auto esa toshib ketganda markazlashni o'zi
+    to'xtatadi va hamma narsa joyida qoladi.
+  */
+  display: flex;
 }
 #tray::before {
   content: "";
@@ -608,22 +617,30 @@ body {
   pointer-events: none;
 }
 
+/*
+  Katak o'lchami --cell o'zgaruvchisidan keladi va uni JS hisoblaydi
+  (fitGrid). Yuqori bosqichlarda so'zlar ko'p va uzun: qat'iy 32px
+  bilan ular ekranga sig'masdi. Endi o'lcham mavjud joyga moslanadi.
+*/
 #grid {
+  --cell: 32px;
   display: flex; flex-wrap: wrap;
   justify-content: center; align-content: center;
-  gap: 12px 16px; width: 100%;
+  gap: calc(var(--cell) * .34) calc(var(--cell) * .5);
+  width: 100%;
+  margin: auto;              /* toshib ketmaydigan markazlash */
 }
-.word-group { display: flex; align-items: center; gap: 5px; }
+.word-group { display: flex; align-items: center; gap: calc(var(--cell) * .16); }
 
 /* Katak — qog'ozga chizilgan bo'sh xona */
 .cell {
-  width: 32px; height: 32px;
+  width: var(--cell); height: var(--cell);
   border-radius: 5px;
   background: rgba(207,174,112,.3);
   border: 1.5px solid rgba(122,90,30,.45);
   display: grid; place-items: center;
   font-family: inherit;
-  font-weight: 700; font-size: 18px;
+  font-weight: 700; font-size: calc(var(--cell) * .56);
   color: transparent;
 }
 .cell.filled {
@@ -1145,7 +1162,8 @@ body {
 
 @media (max-height: 700px) {
   :root { --tile: 44px; --node: 56px; }
-  .cell { width: 28px; height: 28px; font-size: 16px; }
+  /* Katak o'lchamini fitGrid hisoblaydi — bu yerda qat'iy qiymat
+     berilsa, u hisoblagan mos o'lchamni bosib ketardi. */
   #wheel { width: min(72vw, 262px); }
   #current-word { height: 34px; }
   #current-word span { font-size: 23px; }
