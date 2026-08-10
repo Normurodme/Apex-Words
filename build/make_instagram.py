@@ -175,6 +175,53 @@ def make_post(path, title, subtitle, word=None, size=1080):
     return path
 
 
+def make_cover(path, w=1080, h=1920):
+    """
+    Reels muqovasi (9:16).
+
+    Profil to'rida Reels KVADRAT qilib kesiladi — markazdan. Shuning
+    uchun asosiy narsa o'rtada turadi, tepa va past esa bo'sh qoldiriladi:
+    aks holda to'rda yozuvning yarmi yo'qolardi.
+    """
+    img = parchment(w, h)
+    d = ImageDraw.Draw(img)
+
+    # Kvadrat kesish chegarasi ichidagi hudud
+    mid = h // 2
+    word = "LEARN"
+    avail = w * 0.80
+    n = len(word)
+    ts = int(min(w * 0.16, avail / (n + (n - 1) * 0.14)))
+    gap = int(ts * 0.14)
+    total = n * ts + (n - 1) * gap
+    x = (w - total) // 2
+    for ch in word:
+        t = tile(ts, ch)
+        img.paste(t, (x, mid - int(ts * 0.5)), t)
+        x += ts + gap
+
+    f1 = font(SERIF, int(w * 0.082))
+    f2 = font(SERIF_R, int(w * 0.045))
+    bb = d.textbbox((0, 0), "Ingliz tilini", font=f1)
+    d.text(((w - bb[2] - bb[0]) / 2, mid - int(w * 0.34)), "Ingliz tilini",
+           font=f1, fill=INK)
+    bb = d.textbbox((0, 0), "o'ynab o'rganing", font=f1)
+    d.text(((w - bb[2] - bb[0]) / 2, mid - int(w * 0.24)), "o'ynab o'rganing",
+           font=f1, fill=G3)
+
+    bb = d.textbbox((0, 0), "3000 puzzle · bepul", font=f2)
+    d.text(((w - bb[2] - bb[0]) / 2, mid + int(w * 0.16)),
+           "3000 puzzle · bepul", font=f2, fill=(0x4A, 0x5A, 0x3E))
+
+    f3 = font(SERIF, int(w * 0.042))
+    bb = d.textbbox((0, 0), "@apex.words", font=f3)
+    d.text(((w - bb[2] - bb[0]) / 2, mid + int(w * 0.26)), "@apex.words",
+           font=f3, fill=G3)
+
+    img.save(path, quality=95)
+    return path
+
+
 if __name__ == "__main__":
     made = [make_avatar(OUT / "profile_1080.png")]
     made.append(make_post(OUT / "post_1_hello.png",
@@ -186,5 +233,6 @@ if __name__ == "__main__":
     made.append(make_post(OUT / "post_3_bonus.png",
                           "Bonus words", "Find a real word that isn't listed\nand collect keys.",
                           word="BONUS"))
+    made.append(make_cover(OUT / "reels_cover_1080x1920.png"))
     for p in made:
         print("yozildi:", p.relative_to(ROOT))
