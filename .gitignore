@@ -31,3 +31,8 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Yasalgan videolar repoga tushmasin
+video.mp4
+video.json
+screenshot.jpg
