@@ -689,7 +689,9 @@ const LEVEL_ICON = {
   // 1. Countries
   England: '🏰', Japan: '🗻', Brazil: '🌴', Egypt: '🐫', Canada: '🍁',
   // 2. Cities
-  Paris: '🗼', Tokyo: '⛩️', Dubai: '🕌', Rome: '🏛️', London: '🎡',
+  //   Paris'da 🗼 emas: o'sha belgi Towers/Eiffel'da ishlatiladi va
+  //   xaritada ikkita bir xil minora chiqib qolardi.
+  Paris: '🥐', Tokyo: '⛩️', Dubai: '🏙️', Rome: '🏛️', London: '🎡',
   // 3. Foods
   Pizza: '🍕', Sushi: '🍣', Burger: '🍔', Pasta: '🍝', Tacos: '🌮',
   // 4. Animals
@@ -699,18 +701,43 @@ const LEVEL_ICON = {
   // 6. Fruits
   Apple: '🍎', Mango: '🥭', Banana: '🍌', Cherry: '🍒', Orange: '🍊',
   // 7. Towers
-  Eiffel: '🗼', Pisa: '🏛️', 'Big Ben': '🕰️', Petronas: '🌃', 'Burj Khalifa': '🌇',
+  Eiffel: '🗼', Pisa: '#i-pisa', 'Big Ben': '🕰️', Petronas: '🌃', 'Burj Khalifa': '🌇',
   // 8. Cars
   Tesla: '⚡', Toyota: '🚗', Ferrari: '🏎️', Bugatti: '🏁', Mercedes: '🚙',
   // 9. Mythical
-  Dragon: '🐉', Phoenix: '🔥', Unicorn: '🦄', Kraken: '🐙', Griffin: '🦅',
-  // 10. Gems
-  Diamond: '💎', Ruby: '❤️', Emerald: '💚', Pearl: '🤍', Sapphire: '💙',
+  //   Griffin — arslon va burgut aralashmasi. 🦅 Animals/Eagle'da band,
+  //   shuning uchun gerb qalqoni: grifonlar aynan gerblarda uchraydi.
+  Dragon: '🐉', Phoenix: '🔥', Unicorn: '🦄', Kraken: '🐙', Griffin: '🛡️',
+  // 10. Gems — hammasi chizilgan (emoji'da bu toshlar uchun belgi yo'q)
+  Diamond: '#i-diamond', Ruby: '#i-ruby', Emerald: '#i-emerald',
+  Pearl: '#i-pearl', Sapphire: '#i-sapphire',
   // 11. Legends
   Sherlock: '🕵️', Dracula: '🧛', Aladdin: '🧞', Hercules: '💪', 'Robin Hood': '🏹',
   // 12. Wonders
-  Pyramid: '🔺', Colosseum: '🏟️', Petra: '🏜️', Stonehenge: '🗿', 'Taj Mahal': '🕌'
+  Pyramid: '#i-pyramid', Colosseum: '#i-colosseum', Petra: '🏜️',
+  Stonehenge: '🗿', 'Taj Mahal': '🕌'
 };
+
+/*
+  Belgi tuguni. '#' bilan boshlansa — index.html dagi chizmalardan biri,
+  aks holda oddiy emoji.
+
+  <use> ishlatiladi, chizmaning o'zi nusxalanmaydi: bitta darajada 50 ta
+  katak bor va har biriga to'liq SVG qo'yilsa DOM keraksiz og'irlashardi.
+*/
+function iconNode(icon, cls) {
+  if (icon[0] !== '#') return el('span', cls, icon);
+  const box = el('span', cls);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 48 48');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  // href — zamonaviy, xlink:href — eski WebView uchun
+  use.setAttribute('href', icon);
+  use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', icon);
+  svg.appendChild(use);
+  box.appendChild(svg);
+  return box;
+}
 
 const NODE_GAP = 132;      // tugunlar orasidagi masofa
 const EDGE_PAD = 118;      // yuqoridagi bo'sh joy
@@ -829,7 +856,7 @@ function renderMap(force) {
     // mayda sticker o'rniga. Yozuvni bosmasligi uchun shaffof va pastda.
     const icon = LEVEL_ICON[lv.name];
     if (icon) {
-      const deco = el('div', 'node-deco', icon);
+      const deco = iconNode(icon, 'node-deco');
       deco.style.left = pts[i].x + 'px';
       deco.style.top = pts[i].y + 'px';
       // Yo'lning qaysi tomonida bo'sh joy ko'proq — o'sha tomonga qo'yamiz
@@ -1002,7 +1029,7 @@ function renderPack() {
     b.appendChild(el('span', 'pz-no', String(k + 1)));
     // Har bosqichning o'z belgisi katak ustida suv nishoni bo'lib turadi:
     // Kanadada chinor bargi, Misrda tuya, Yaponiyada sakura...
-    if (icon) b.appendChild(el('span', 'pz-emblem', icon));
+    if (icon) b.appendChild(iconNode(icon, 'pz-emblem'));
     // Adminda qulf yo'q: katak o'sha ko'rinishda qoladi, lekin ochiladi.
     const open = state !== 'locked' || State.admin;
     if (!open) b.appendChild(el('span', 'pz-mark', '🔒'));

@@ -6,13 +6,121 @@
 <title>Apex Words</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=32">
+<link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
 
 <!-- Atmosfera qatlami: butun ilova ostida turadi va hech qachon
      qayta chizilmaydi — shuning uchun ekran almashganda uzilish bo'lmaydi. -->
 <div class="ambience" aria-hidden="true"></div>
+
+<!--
+  DARAJA BELGILARI — chizilgan, emoji emas.
+
+  Ba'zi tushunchalar uchun emoji UMUMAN yo'q: yoqut, zumrad, ko'k yoqut va
+  marvarid. Ular o'rniga odatda rangli yurakchalar qo'yiladi (❤️ 💚 💙 🤍) —
+  natijada "Toshlar" bosqichida olmosdan boshqa hammasi bir xil yurakcha
+  bo'lib ko'rinardi. Piramida uchun 🔺 esa ko'p shriftda oddiy uchburchak
+  (strelka) bo'lib chiqadi, Kolizey uchun 🏟️ esa zamonaviy stadion.
+
+  Shuning uchun ular shu yerda bir marta chizilib, <use> orqali
+  ishlatiladi: 50 ta katakda takrorlansa ham DOM yengil qoladi.
+-->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Olmos: brilliant qirqim -->
+    <symbol id="i-diamond" viewBox="0 0 48 48">
+      <path d="M12 8h24l10 11-22 24L2 19z" fill="#bfe9f7" stroke="#2f6f88" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M2 19h44M12 8l6 11-6 24M36 8l-6 11 6 24M18 19h12" fill="none" stroke="#2f6f88" stroke-width="1.6" opacity=".75"/>
+      <path d="M12 8h12l-6 11z" fill="#fff" opacity=".85"/>
+    </symbol>
+
+    <!-- Yoqut: yostiq qirqim -->
+    <symbol id="i-ruby" viewBox="0 0 48 48">
+      <path d="M16 7h16l10 10v14L32 41H16L6 31V17z" fill="#d5314a" stroke="#7c1024" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M6 17h36M6 31h36M16 7l-4 10 4 24M32 7l4 10-4 24" fill="none" stroke="#7c1024" stroke-width="1.5" opacity=".6"/>
+      <path d="M17 9h9l-3 7z" fill="#fff" opacity=".55"/>
+    </symbol>
+
+    <!-- Zumrad: pog'onali (emerald) qirqim -->
+    <symbol id="i-emerald" viewBox="0 0 48 48">
+      <path d="M15 8h18l7 7v18l-7 7H15l-7-7V15z" fill="#2ea36a" stroke="#0f5535" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M15 14h18v20H15z" fill="none" stroke="#0f5535" stroke-width="1.5" opacity=".65"/>
+      <path d="M8 15l7-1M40 15l-7-1M8 33l7 1M40 33l-7 1" stroke="#0f5535" stroke-width="1.4" opacity=".5"/>
+      <path d="M17 16h7l-3 6z" fill="#fff" opacity=".5"/>
+    </symbol>
+
+    <!-- Ko'k yoqut: oval -->
+    <symbol id="i-sapphire" viewBox="0 0 48 48">
+      <ellipse cx="24" cy="24" rx="15" ry="18" fill="#2f6bd4" stroke="#12306e" stroke-width="2"/>
+      <path d="M24 6v36M9 24h30M13 13l22 22M35 13L13 35" fill="none" stroke="#12306e" stroke-width="1.4" opacity=".45"/>
+      <ellipse cx="19" cy="15" rx="4.5" ry="3" fill="#fff" opacity=".6" transform="rotate(-28 19 15)"/>
+    </symbol>
+
+    <!-- Marvarid: ochiq chig'anoq ichida.
+         Chig'anoq KOSA shaklida (pastga qarab), marvarid esa uning
+         ichida o'tiradi — gumbaz shaklida chizilganda u qo'ziqoringa
+         o'xshab qolar va marvarid ko'rinmasdi. -->
+    <symbol id="i-pearl" viewBox="0 0 48 48">
+      <!-- Marvarid AVVAL chiziladi, chig'anoq esa uning ustiga tushadi va
+           pastki qismini yopadi. Aks holda u chig'anoq ustida turgan
+           to'pga — kubokka o'xshab qolardi. -->
+      <!-- Chig'anoq — yelpig'ich shaklida, pastda ilmog'i bilan. Kosa
+           shaklida chizilganda u likopcha yoki mo'ylovga o'xshab qolardi. -->
+      <path d="M24 43 4 29a21 21 0 0 1 40 0z" fill="#e8d3b4"
+            stroke="#8a6440" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M24 43 9 27M24 43 16 22M24 43v-21M24 43l8-21M24 43l15-16"
+            fill="none" stroke="#8a6440" stroke-width="1.3" opacity=".5"/>
+      <circle cx="24" cy="13" r="6.5" fill="#fdfbf6" stroke="#8a6440" stroke-width="2"/>
+      <circle cx="21.8" cy="10.8" r="2.1" fill="#fff"/>
+    </symbol>
+
+    <!-- Piramida: quyosh bilan -->
+    <symbol id="i-pyramid" viewBox="0 0 48 48">
+      <circle cx="36" cy="12" r="5" fill="#f0c24a" stroke="#9a6d14" stroke-width="1.6"/>
+      <path d="M24 9 44 39H4z" fill="#e0b96b" stroke="#7a5410" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M24 9v30M24 9 4 39M24 9l6 30" fill="none" stroke="#7a5410" stroke-width="1.5" opacity=".55"/>
+      <path d="M24 9 14 39H4z" fill="#f3d79b" opacity=".55"/>
+      <path d="M2 39h44" stroke="#7a5410" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- Kolizey: yumaloq amfiteatr.
+         Tepasi YASSI emas, egri — Kolizey doira shaklida. O'ng chekkasi
+         ataylab pastroq: uning bir qismi vayron bo'lgan va aynan shu
+         siluet uni oddiy binodan ajratib turadi. -->
+    <symbol id="i-colosseum" viewBox="0 0 48 48">
+      <path d="M6 21q0-9 18-9t18 9v19H6z" fill="#e3cfa4" stroke="#7a5410" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M30 13q6 2 8 6v6h-8z" fill="#d3ba8a"/>
+      <path d="M6 21q0-6 18-6t18 6" fill="none" stroke="#7a5410" stroke-width="1.6" opacity=".7"/>
+      <g fill="#8a6440">
+        <path d="M9 25a3 3 0 0 1 6 0v5H9zM19 24a3 3 0 0 1 6 0v6h-6zM29 25a3 3 0 0 1 6 0v5h-6z"/>
+        <path d="M10 34h5v6h-5zM21 34h6v6h-6zM33 34h5v6h-5z"/>
+      </g>
+      <path d="M6 32h36" stroke="#7a5410" stroke-width="1.5" opacity=".7"/>
+      <path d="M4 40h40" stroke="#7a5410" stroke-width="2.6" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- Pizadagi qiya minora.
+         Ko'ndalang chiziqlar KAM va INGICHKA, o'rniga kamar teshiklari
+         bor: bir xil qalinlikdagi ko'p chiziq minorani emas, narvonni
+         eslatardi. -->
+    <symbol id="i-pisa" viewBox="0 0 48 48">
+      <g transform="rotate(8 24 42)">
+        <path d="M17 11h14v31H17z" fill="#f2e6c9" stroke="#7a5410" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M15 7h18v4H15z" fill="#e3cfa4" stroke="#7a5410" stroke-width="1.8" stroke-linejoin="round"/>
+        <g fill="#8a6440">
+          <rect x="19" y="15" width="3.4" height="6" rx="1.7"/>
+          <rect x="25.6" y="15" width="3.4" height="6" rx="1.7"/>
+          <rect x="19" y="25" width="3.4" height="6" rx="1.7"/>
+          <rect x="25.6" y="25" width="3.4" height="6" rx="1.7"/>
+          <rect x="22.3" y="35" width="3.4" height="7" rx="1.7"/>
+        </g>
+        <path d="M17 23h14M17 33h14" stroke="#7a5410" stroke-width="1.2" opacity=".55"/>
+      </g>
+      <path d="M6 42h36" stroke="#7a5410" stroke-width="2.6" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
 
 <!-- Three sections share one shell so the tab bar never moves. -->
 <div id="shell">
@@ -132,7 +240,7 @@
           <!-- Qaysi versiya ochilganini bir qarashda bilish uchun. Kesh yoki
                noto'g'ri manzil tufayli eski nusxa ochilsa, bu raqam eskicha
                qoladi va muammo darhol ko'rinadi. -->
-          <p class="build-stamp">Build <b id="build-no">32</b></p>
+          <p class="build-stamp">Build <b id="build-no">33</b></p>
         </div>
       </div>
     </div>
@@ -267,6 +375,6 @@
 <div id="bubble" hidden><b id="bubble-word"></b><span id="bubble-uz"></span></div>
 <div id="toast" hidden></div>
 
-<script src="app.js?v=32"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>

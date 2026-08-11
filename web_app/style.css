@@ -419,6 +419,10 @@ body {
   box-shadow: var(--shadow);
   opacity: .95;
 }
+/* Chizilgan belgi emoji bilan bir xil joyni egallasin: 1em — yuqoridagi
+   font-size, ya'ni emoji va SVG yonma-yon bir o'lchamda ko'rinadi. */
+.node-deco svg, .pz-emblem svg { width: 1em; height: 1em; display: block; }
+
 .node-deco.left  { margin-left: -102px; }
 .node-deco.right { margin-left:  102px; transform: translate(-50%, -50%) rotate(6deg); }
 
