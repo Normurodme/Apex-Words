@@ -33,6 +33,15 @@ import aiosqlite   # noqa: E402
 import bot as B    # noqa: E402
 
 
+# Ustunlar ATAYLAB nom bilan sanaladi. Ilgari "VALUES (?,?,...)" yozilgan
+# edi va jadvalga yangi ustun qo'shilishi bilan sinov ishlamay qoldi.
+INSERT_SQL = (
+    "INSERT OR REPLACE INTO players "
+    "(user_id, username, first_name, photo_url, score, progress, "
+    " last_daily, streak_day, channel_ok, created_at, updated_at) "
+    "VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+
+
 def fake_progress(n: int) -> str:
     """Haqiqiy hajmga yaqin progress: o'rgangan so'zlar ro'yxati eng katta qism."""
     learned = {"".join(random.choices(string.ascii_uppercase, k=5)): 1
@@ -58,9 +67,7 @@ async def seed(total: int, have: int):
                               random.randint(20, 400)),
                           None, 0, 0, now, now))
             if len(batch) >= 2000:
-                await db.executemany(
-                    "INSERT OR REPLACE INTO players VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    batch)
+                await db.executemany(INSERT_SQL, batch)
                 await db.commit()
                 batch.clear()
         if batch:
@@ -82,7 +89,15 @@ async def timed(label, coro, runs=5):
 
 async def main():
     sizes = [int(a) for a in sys.argv[1:]] or [10_000, 50_000, 200_000]
-    await B.db.init()
+
+    # Jadval TUZILADI, lekin hovuz hali ochilmaydi.
+    #
+    # Ilgari bu yerda to'liq db.init() chaqirilardi va u to'rtta ulanish
+    # ochib qo'yardi. seed() esa alohida ulanish bilan yozmoqchi bo'lib,
+    # yozuv qulfini kutib abadiy osilib qolardi.
+    async with aiosqlite.connect(DB) as d:
+        await d.executescript(B.SCHEMA)
+        await d.commit()
 
     print("=" * 78)
     print("Baza kattalashganda so'rov vaqtlari")
@@ -90,8 +105,13 @@ async def main():
 
     have = 0
     for n in sizes:
+        # Yozishdan oldin hovuz YOPILADI. SQLite'da bir vaqtda faqat
+        # bitta yozuvchi bo'ladi; hovuzdagi ulanishlar ochiq turganda
+        # seeding yozuv qulfini kutib qolardi.
+        await B.db.close()
         await seed(n, have)
         have = n
+        await B.db.init()
         B.db.invalidate_top()
 
         user = {"id": 10_000_005, "first_name": "T", "username": "t",
