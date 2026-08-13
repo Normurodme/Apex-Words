@@ -209,6 +209,30 @@ PRONOUNS = {
 # Artikllar ham yechim bo'lmasin
 BONUS_ONLY = PRONOUNS | {"the", "an", "a"}
 
+# Qisqartmalar. Bular WordNet'da bor, lekin so'z emas — o'yinchi ularni
+# yozmaydi va bonus ro'yxatini bekorga shishirmasligi kerak.
+ABBREV = {
+    "anti", "biz", "bot", "col", "corp", "dec", "grad", "max", "mil",
+    "min", "neo", "non", "pic", "pol", "prof", "ref", "rep", "sec",
+    "semi", "sen", "sept", "spec", "temp", "var", "das", "dak", "deb",
+    "diss", "git", "ism", "kraft", "napa", "cisco", "apache", "fuji",
+    "blanc", "gator", "harper", "draper", "levant", "mater", "ness",
+    "boomer", "brill", "crore", "dada", "duff", "het", "hoy", "lac",
+    "pubic", "shiv", "sic", "skit", "tum", "tung", "ulster", "wight",
+    "wiz", "aba", "ala", "ani", "anon", "bop", "daw", "din", "dun",
+    "dub", "gage", "haw", "ling", "mot", "obi", "pap", "pax", "ret",
+    "roc", "shay", "soma", "sup", "tat", "ting", "topper", "wen",
+}
+
+# Bu so'zlarni na Brown korpusi, na WordNet tanidi, lekin ular haqiqiy
+# lug'atda bor va so'z o'yinlarida odatda qabul qilinadi. Ro'yxat qisqa
+# va ataylab shunday: har biri qo'lda tekshirilgan.
+GAME_WORDS = {
+    "dan",      # dzyudo/karate darajasi
+    "rand",     # JAR valyutasi / tasodifiy
+    "naan",     # non turi
+}
+
 # Ko'plik/zamon qoidalariga TASODIFAN tushib qoladigan haqiqiy asos so'zlar.
 # Masalan: 'news' -> 'new' (asos so'z), 'morning' -> 'morn' (asos so'z),
 # lekin 'news' va 'morning' ko'plik/zamon shakli emas.
@@ -327,6 +351,16 @@ def build_proper_noun_test():
             return True
         n = cap[w] + low[w]
         ratio = cap[w] / n if n >= 3 else None
+        # DALIL TESKARI BO'LSA — so'z saqlanadi.
+        #
+        # Ilgari n < 3 bo'lsa dalil butunlay tashlanardi va ism ro'yxati
+        # yolg'iz hal qilardi. Natijada 'ram' (Brown'da 0 marta bosh
+        # harf, 2 marta kichik) atoqli ot deb chiqarib tashlanardi —
+        # dalil aynan buning aksini ko'rsatib turgan bo'lsa ham.
+        # Endi kichik harfli ishlatilish ko'proq bo'lsa, so'z qoladi.
+        if low[w] > cap[w]:
+            return False
+
         if w in first_names:
             # Ism, lekin oddiy so'z ham bo'lishi mumkin ('may', 'rose', 'will').
             # Brown ko'rsatkichi hal qiladi; ma'lumot bo'lmasa — ism deb bilamiz.
@@ -374,6 +408,28 @@ def inflection_stems(w: str):
             yield w[:-4]                      # running -> run
 
 
+def wordnet_common(w: str) -> bool:
+    """
+    WordNet bu so'zni KICHIK harfli lemma sifatida biladimi?
+
+    Atoqli otlarni ajratishning ishonchli belgisi: WordNet 'Russia',
+    'Canada', 'Tokyo' ni bosh harf bilan saqlaydi, oddiy so'zlarni esa
+    kichik harfda. Shuning uchun 'china' (chinni), 'japan' (qora lok),
+    'smith' (temirchi), 'lee' (panoh) — hammasi haqiqiy so'z sifatida
+    topiladi, 'canada' esa yo'q.
+    """
+    from nltk.corpus import wordnet as wn
+    try:
+        return any(l.name() == w for s in wn.synsets(w) for l in s.lemmas())
+    except Exception:
+        return False
+
+
+# Qutqarilgan so'zlar shu yerga yig'iladi: ular full (bonus) ro'yxatiga
+# tushadi, lekin HECH QACHON core ga — ya'ni to'rda katak olmaydi.
+RESCUED: set[str] = set()
+
+
 def main():
     print("=" * 62)
     print("Apex Words — lug'at bazasi qurilmoqda")
@@ -381,6 +437,17 @@ def main():
 
     print("\n[1/5] NLTK korpusi tekshirilmoqda...")
     ensure_nltk()
+
+    # MANUAL_DROP ichida haqiqiy so'zlar ham bor edi: 'net', 'mar',
+    # 'gal', 'tee', 'boo', 'alas'... O'yinchi ularni yozsa "noto'g'ri"
+    # javob olardi. Endi WordNet tasdiqlaganlari bonus sifatida
+    # qaytariladi, qisqartmalar esa (ABBREV) tashlanganicha qoladi.
+    from wordfreq import zipf_frequency as _z
+    RESCUED.update(w for w in MANUAL_DROP
+                   if w not in ABBREV and _z(w, "en") >= 3.4
+                   and wordnet_common(w))
+    RESCUED.update(GAME_WORDS)
+    print(f"      qo'lda tashlanganlardan qaytarildi: {len(RESCUED)} so'z")
 
     from nltk.corpus import words as nltk_words
     from wordfreq import top_n_list, zipf_frequency
@@ -398,7 +465,9 @@ def main():
             continue
         if not w.islower():                   # atoqli otlar, qisqartmalar
             continue
-        if w in BLOCKLIST or w in MANUAL_DROP:
+        if w in BLOCKLIST:
+            continue
+        if w in MANUAL_DROP and w not in RESCUED:
             continue
         if len(set(w)) == 1:                  # 'aaa', 'zzz'
             continue
@@ -429,12 +498,27 @@ def main():
 
     core, full = [], []
     dropped_infl = dropped_proper = 0
+    bonus_only_extra = 0
     for w in shaped:
-        if w not in known:
+        if w not in known and w not in RESCUED:
             continue
+
+        # Atoqli ot deb topilgan so'z DARHOL TASHLANMAYDI.
+        #
+        # Ilgari shunday edi va o'yinchi 'china', 'japan', 'smith',
+        # 'lee' kabi haqiqiy so'zlarni yozganda "noto'g'ri" javob
+        # olardi — ular bir vaqtning o'zida ism/joy nomi bo'lgani uchun.
+        # Endi WordNet tasdiqlasa, so'z BONUS sifatida qoladi, lekin
+        # core ga tushmaydi: taxtada yechim bo'lib chiqmaydi.
+        bonus_only = w in BONUS_ONLY or w in RESCUED
         if is_proper(w):
-            dropped_proper += 1
-            continue
+            if wordnet_common(w) and w not in ABBREV:
+                bonus_only = True
+                bonus_only_extra += 1
+            else:
+                dropped_proper += 1
+                continue
+
         if is_inflected(w):
             dropped_infl += 1
             if not ALLOW_INFLECTED_BONUS:
@@ -445,7 +529,7 @@ def main():
             full.append(w)
             # BONUS_ONLY so'zlari full'da qoladi, lekin core'ga tushmaydi:
             # o'yinchi ularni topsa ball oladi, ammo to'rda katak bo'lmaydi.
-            if z >= CORE_ZIPF and not is_inflected(w) and w not in BONUS_ONLY:
+            if z >= CORE_ZIPF and not is_inflected(w) and not bonus_only:
                 core.append(w)
 
     # Olmoshlar bonus sifatida ISHLASHI KAFOLATLANADI.
@@ -454,9 +538,11 @@ def main():
     # yoki ko'plik/zamon filtridan o'tmay full'dan tushib qolardi —
     # natijada o'yinchi to'g'ri olmoshni yozsa ham "noto'g'ri" chiqardi.
     # Shuning uchun ular bu yerda majburan qo'shiladi.
-    core = sorted(set(core) - BONUS_ONLY)
+    core = sorted(set(core) - BONUS_ONLY - RESCUED)
     full = sorted(set(full) |
-                  {w for w in BONUS_ONLY if MIN_LEN <= len(w) <= MAX_LEN})
+                  {w for w in BONUS_ONLY if MIN_LEN <= len(w) <= MAX_LEN} |
+                  {w for w in RESCUED if MIN_LEN <= len(w) <= MAX_LEN})
+    print(f"      atoqli ot edi, bonusga o'tdi  : {bonus_only_extra:,}")
     print(f"      atoqli ot deb chiqarildi           : {dropped_proper:,}")
     print(f"      ko'plik/zamon shakli deb chiqarildi: {dropped_infl:,}")
     print(f"      core (yechim so'zlari): {len(core):,}")

@@ -69,7 +69,8 @@ const State = {
   admin: false,         // barcha bosqichlar ochiq, ball reytingga kirmaydi
   puzzle: null,
   found: new Set(),
-  foundBonus: new Set()
+  foundBonus: new Set(),
+  hinted: new Set()      // kalit bilan ochilgan kataklar: "so'z:harf"
 };
 
 /* --------------------------------- Ovoz ----------------------------------- */
@@ -431,6 +432,7 @@ function blankProgress() {
     cur: { stage: 1, level: 1, puzzle: 0 },
     solved: {}, learned: {},
     bonusN: 0,         // topilgan bonus so'zlar soni (kalit hisobi uchun)
+    pz: null,          // yarim qolgan puzzle (topilganlar + ochilgan harflar)
     muted: false,      // ovoz effektlari
     music: true        // fon musiqasi — STANDART HOLATDA YOQIQ.
                        // Doim chalinib turgan fon tez charchatadi va
@@ -452,6 +454,13 @@ function normalize(p) {
     // boshlang'ich miqdor beriladi, aks holda o'yinchi kalitsiz qolardi.
     keys: Number.isFinite(p.keys) ? p.keys : b.keys,
     bonusN: Number.isFinite(p.bonusN) ? p.bonusN : 0,
+    // Yarim qolgan puzzle: shakli buzilgan bo'lsa e'tiborsiz qoldiramiz
+    pz: (p.pz && typeof p.pz === 'object' && typeof p.pz.k === 'string')
+      ? { k: p.pz.k,
+          f: Array.isArray(p.pz.f) ? p.pz.f : [],
+          b: Array.isArray(p.pz.b) ? p.pz.b : [],
+          h: Array.isArray(p.pz.h) ? p.pz.h : [] }
+      : null,
     cur: (p.cur && typeof p.cur === 'object') ? p.cur : b.cur,
     solved: (p.solved && typeof p.solved === 'object') ? p.solved : {},
     learned: (p.learned && typeof p.learned === 'object') ? p.learned : {},
@@ -492,7 +501,11 @@ function mergeProgress(a, b) {
   }
   // Qaysi tomonda ko'proq puzzle yechilgan bo'lsa, o'sha joydan davom etamiz
   const total = (p) => Object.values(p.solved).reduce((s, n) => s + n, 0);
-  out.cur = total(a) >= total(b) ? a.cur : b.cur;
+  const lead = total(a) >= total(b) ? a : b;
+  out.cur = lead.cur;
+  // Yarim qolgan puzzle ham o'sha tomondan olinadi: cur bilan bir
+  // manbadan kelmasa, boshqa puzzlening holati ochilib qolardi.
+  out.pz = lead.pz;
   return out;
 }
 
@@ -661,6 +674,39 @@ async function loadStage(n) {
 
 const key = (stage, level) => stage + '-' + level;
 const solvedIn = (stage, level) => State.progress.solved[key(stage, level)] || 0;
+
+/* ---------------------- Yarim qolgan puzzle holati ------------------------ */
+/*
+  Faqat BITTA puzzle saqlanadi — o'yinchi qaysi biridan chiqib ketgan
+  bo'lsa, o'sha. Hammasini saqlash progress JSON'ini bekorga
+  shishirardi: 3000 puzzle × topilgan so'zlar ro'yxati.
+*/
+const pzKey = (stage, level, idx) => stage + '-' + level + '-' + idx;
+
+function savedPuzzle(stage, level, idx) {
+  const p = State.progress.pz;
+  return (p && p.k === pzKey(stage, level, idx)) ? p : null;
+}
+
+function savePuzzleState() {
+  const c = State.progress.cur;
+  if (!c || !State.puzzle) return;
+  // Hech narsa qilinmagan bo'lsa yozib o'tirmaymiz
+  if (!State.found.size && !State.foundBonus.size && !State.hinted.size) {
+    if (State.progress.pz) State.progress.pz = null;
+    return;
+  }
+  State.progress.pz = {
+    k: pzKey(c.stage, c.level, c.puzzle),
+    f: [...State.found],
+    b: [...State.foundBonus],
+    h: [...State.hinted]
+  };
+}
+
+function clearPuzzleState() {
+  State.progress.pz = null;
+}
 
 function isUnlocked(i) {
   if (State.admin) return true;   // sinov uchun hamma bosqich ochiq
@@ -1063,8 +1109,19 @@ async function openPuzzle(stage, level, idx) {
   // esa keshlangan bosqich faylida yotibdi. To'g'ridan-to'g'ri ishlatilsa,
   // daraja qayta ochilganda harflar aralashgan holida qolib ketardi.
   State.puzzle = Object.assign({}, lvl.puzzles[idx]);
-  State.found = new Set();
-  State.foundBonus = new Set();
+
+  // YARIM QOLGAN PUZZLE TIKLANADI.
+  //
+  // Ilgari har ochilishda hammasi noldan boshlanardi: kalit sarflab
+  // ochilgan harf yo'qolar, topilgan so'zlar qaytadan yopilar edi.
+  // Bundan tashqari bonus so'zlar qayta hisoblanib, kalit qayta
+  // berilardi — ya'ni bitta puzzleni qayta-qayta ochib kalit yig'sa
+  // bo'lardi.
+  const saved = savedPuzzle(stage, level, idx);
+  State.found = new Set(saved ? saved.f : []);
+  State.foundBonus = new Set(saved ? saved.b : []);
+  State.hinted = new Set(saved ? saved.h : []);
+
   hideBubble();
   State.progress.cur = { stage, level, puzzle: idx };
 
@@ -1126,14 +1183,25 @@ function fitGrid() {
 function renderGrid() {
   const grid = $('grid');
   grid.innerHTML = '';
-  State.puzzle.words.forEach((w) => {
+  State.puzzle.words.forEach((w, wi) => {
     const g = el('div', 'word-group');
     g.dataset.word = w;
-    for (const ch of w) {
+    const found = State.found.has(w);
+    [...w].forEach((ch, ci) => {
       const c = el('div', 'cell');
       c.dataset.ch = ch;
+      // Topilgan so'z to'la ochiq, kalit bilan ochilgan harf esa yakka
+      if (found) {
+        c.classList.add('filled');
+        c.textContent = ch;
+      } else if (State.hinted.has(wi + ':' + ci)) {
+        c.classList.add('hinted');
+        c.textContent = ch;
+      }
       g.appendChild(c);
-    }
+    });
+    // Topilgan so'zga tarjima chirog'i ham qaytadi
+    if (found) g.appendChild(makeLamp(w));
     grid.appendChild(g);
   });
 }
@@ -1431,6 +1499,8 @@ function submit(word) {
     // Ochko ALOHIDA so'z uchun berilmaydi — butun puzzle yechilganda beriladi.
     // Aks holda ball juda tez o'sib ketardi va maslahat narxi ma'nosiz bo'lardi.
     learn(word);
+    savePuzzleState();
+    Store.save();
     haptic('ok');
     flash(word, 'hit', 700);
     if (State.found.size === p.words.length) {
@@ -1447,6 +1517,23 @@ function submit(word) {
   if (p.bonus.includes(word)) {
     if (State.foundBonus.has(word)) return flash(word, 'repeat');
     State.foundBonus.add(word);
+    savePuzzleState();
+
+    // ALLAQACHON YECHILGAN puzzleni qayta o'ynasa mukofot berilmaydi.
+    //
+    // Aks holda birinchi puzzleni qayta-qayta ochib, o'sha bonus
+    // so'zlarni yozib cheksiz kalit yig'sa bo'lardi.
+    const c = State.progress.cur;
+    const replay = c && c.puzzle < solvedIn(c.stage, c.level);
+    if (replay) {
+      learn(word);
+      Store.save();
+      haptic('ok');
+      Sound.ding();
+      flash(word, 'hit', 700);
+      toast('🎁 BONUS · ' + word);
+      return;
+    }
 
     // Bonus so'z ball beradi, kalit esa HAR BONUS_PER_KEY tasiga bir
     // marta. Yuqori bosqichlarda bonus so'zlar juda ko'p chiqadi va
@@ -1542,6 +1629,7 @@ function puzzleSolved(stage, level, puzzle) {
   const k = key(stage, level);
   const yangi = (State.progress.solved[k] || 0) <= puzzle;   // birinchi marta yechildimi
   State.progress.solved[k] = Math.max(State.progress.solved[k] || 0, puzzle + 1);
+  clearPuzzleState();                     // yakunlandi — saqlashning hojati yo'q
   if (yangi) addCoins(5);                 // qayta o'ynaganda ochko takror berilmaydi
   else Store.save();
 
@@ -1551,7 +1639,10 @@ function puzzleSolved(stage, level, puzzle) {
   // Har puzzledan keyin qisqa oyna: davom etish yoki ro'yxatga qaytish
   Sound.solved();
   haptic('ok');
-  $('solved-badge').textContent = LEVEL_ICON[lv.name] || '⭐';
+  // textContent EMAS: chizilgan belgilar '#i-diamond' ko'rinishida
+  // saqlanadi va matn sifatida qo'yilsa o'sha yozuvning o'zi chiqardi.
+  $('solved-badge').replaceChildren(
+    iconNode(LEVEL_ICON[lv.name] || '⭐', 'badge-ico'));
   $('solved-sub').textContent = yangi ? '+5 💎' : 'Replayed';
   $('solved-overlay').hidden = false;
 
@@ -1614,8 +1705,9 @@ function showStageDone(stage, next, i) {
   const stageName = info ? info.name : stage + '-bosqich';
   const nextStage = next && next.stage !== stage ? next : null;
 
-  $('stage-badge').textContent = LEVEL_ICON[
-    (State.levels.find((l) => l.stage === stage + 1) || {}).name] || '🏆';
+  $('stage-badge').replaceChildren(iconNode(LEVEL_ICON[
+    (State.levels.find((l) => l.stage === stage + 1) || {}).name] || '🏆',
+    'badge-ico'));
   $('stage-title').textContent = 'CHAPTER ' + stage + ' COMPLETE!';
   $('stage-sub').textContent = nextStage
     ? '"' + stageName + '" is fully cleared. Chapter ' + (stage + 1) +
@@ -1646,14 +1738,20 @@ function useHint() {
     haptic('err');
     return;
   }
-  const groups = [...$('grid').children].filter((g) => !State.found.has(g.dataset.word));
+  const all = [...$('grid').children];
+  const groups = all.filter((g) => !State.found.has(g.dataset.word));
   for (const g of groups) {
-    const cell = [...g.querySelectorAll('.cell')]
+    const cells = [...g.querySelectorAll('.cell')];
+    const cell = cells
       .find((c) => !c.classList.contains('filled') && !c.classList.contains('hinted'));
     if (cell) {
       cell.classList.add('hinted');
       cell.textContent = cell.dataset.ch;
+      // Ochilgan harf eslab qolinadi — qaytib kelganda joyida turadi
+      State.hinted.add(all.indexOf(g) + ':' + cells.indexOf(cell));
+      savePuzzleState();
       if (!State.unlimited) addKeys(-1);
+      else Store.save();
       toast('🗝️ Letter revealed');
       // Kalit kamayganini o'yinchi ko'rishi kerak
       $('key-count').classList.remove('spend');

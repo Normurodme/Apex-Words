@@ -69,6 +69,7 @@ admit
 adopt
 adoption
 adorable
+adore
 adult
 adulthood
 advance
@@ -381,6 +382,7 @@ barely
 bargain
 bark
 barn
+baron
 barrel
 barrier
 base
@@ -547,6 +549,7 @@ boycott
 brace
 bracelet
 bracket
+brad
 brain
 brake
 branch
@@ -649,6 +652,7 @@ caliber
 call
 caller
 calm
+camel
 camera
 camp
 campaign
@@ -1792,6 +1796,7 @@ float
 flock
 flood
 floor
+flora
 floral
 flour
 flow
@@ -1915,6 +1920,7 @@ gag
 gain
 gala
 galaxy
+gale
 gallery
 gallon
 gamble
@@ -1967,6 +1973,7 @@ giant
 gift
 gigantic
 gin
+ginger
 girl
 give
 glad
@@ -2434,6 +2441,7 @@ issue
 item
 ivory
 jacket
+jade
 jail
 jam
 jar
@@ -2445,6 +2453,7 @@ jeep
 jelly
 jerk
 jet
+jewel
 jewelry
 job
 join
@@ -2482,12 +2491,14 @@ kick
 kidney
 kill
 killer
+kin
 kind
 kindle
 kindly
 kindness
 kingdom
 kiss
+kit
 kitchen
 kitten
 knee
@@ -3652,6 +3663,7 @@ rainfall
 rainy
 raise
 rally
+ram
 ramp
 ranch
 random
@@ -4331,6 +4343,7 @@ sphere
 spice
 spicy
 spider
+spike
 spill
 spin
 spinal
@@ -4569,6 +4582,7 @@ synthetic
 syrup
 system
 systemic
+tab
 table
 tablet
 tackle
@@ -4576,6 +4590,7 @@ tactic
 tactical
 tag
 tail
+tailor
 take
 tale
 talent
@@ -4984,6 +4999,7 @@ venue
 verb
 verbal
 verdict
+verge
 verify
 versatile
 verse
@@ -5055,6 +5071,7 @@ volunteer
 vote
 voter
 voyage
+wade
 wage
 wagon
 waist
