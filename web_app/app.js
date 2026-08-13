@@ -1117,10 +1117,26 @@ async function openPuzzle(stage, level, idx) {
   // Bundan tashqari bonus so'zlar qayta hisoblanib, kalit qayta
   // berilardi — ya'ni bitta puzzleni qayta-qayta ochib kalit yig'sa
   // bo'lardi.
+  //
+  // Saqlangan ro'yxat PUZZLE MAZMUNI BILAN SOLISHTIRILADI.
+  //
+  // Kalit — bosqich/daraja/tartib raqami, mazmun emas. Puzzle fayllari
+  // qayta yaratilganda o'sha o'rindagi so'zlar butunlay boshqacha
+  // bo'lishi mumkin. Filtrlanmasa, State.found ichida endi mavjud
+  // bo'lmagan so'zlar qolib ketardi va found.size hech qachon
+  // words.length ga teng bo'lmasdi — ya'ni puzzleni YAKUNLAB
+  // BO'LMASDI, o'yinchi esa darajada abadiy qolib ketardi.
   const saved = savedPuzzle(stage, level, idx);
-  State.found = new Set(saved ? saved.f : []);
-  State.foundBonus = new Set(saved ? saved.b : []);
-  State.hinted = new Set(saved ? saved.h : []);
+  const P = State.puzzle;
+  const wordSet = new Set(P.words);
+  const bonusSet = new Set(P.bonus);
+  State.found = new Set((saved ? saved.f : []).filter((w) => wordSet.has(w)));
+  State.foundBonus = new Set((saved ? saved.b : []).filter((w) => bonusSet.has(w)));
+  // Ochilgan katak koordinatasi ham chegaradan chiqmasin
+  State.hinted = new Set((saved ? saved.h : []).filter((s) => {
+    const [wi, ci] = String(s).split(':').map(Number);
+    return P.words[wi] !== undefined && ci >= 0 && ci < P.words[wi].length;
+  }));
 
   hideBubble();
   State.progress.cur = { stage, level, puzzle: idx };
@@ -1144,6 +1160,16 @@ async function openPuzzle(stage, level, idx) {
   setTimeout(fitGrid, 90);
   updateCoins();
   Store.save();
+
+  // HAMMA SO'Z ALLAQACHON TOPILGAN BO'LSA — puzzle yakunlanadi.
+  //
+  // Yakunlash oxirgi so'zdan 1.1 soniya keyin ishlaydi (g'alaba
+  // animatsiyasi uchun). O'yinchi shu oraliqda ilovani yopsa, holat
+  // to'la topilgan holida saqlanib qolardi: qaytib kelganda taxta
+  // to'la, lekin puzzle o'tmagan va davom etishning ILOJI YO'Q edi.
+  if (State.found.size === P.words.length && P.words.length) {
+    setTimeout(() => puzzleSolved(stage, level, idx), 400);
+  }
 }
 
 const CELL_MAX = 32, CELL_MIN = 14;
@@ -2277,7 +2303,18 @@ async function boot() {
 }
 
 boot().catch((e) => {
-  document.body.insertAdjacentHTML('afterbegin',
-    '<div style="padding:20px;font:14px sans-serif;color:#fff">Xato: ' + e.message + '</div>');
+  // Matn OQ rangda edi — pergament fonda umuman ko'rinmasdi va
+  // o'yinchi sababsiz "Loading" ekranini ko'rib turaverardi.
+  // Endi o'qiladigan rangda va qayta urinish tugmasi bilan.
   console.error(e);
+  const box = el('div', 'boot-error');
+  box.appendChild(el('h2', null, 'Could not start'));
+  box.appendChild(el('p', null,
+    'Check your connection and try again. If it keeps happening, ' +
+    'close the app and reopen it from the bot.'));
+  box.appendChild(el('p', 'boot-error-detail', String(e && e.message || e)));
+  const btn = el('button', 'btn btn-gold', 'Try again');
+  btn.onclick = () => location.reload();
+  box.appendChild(btn);
+  document.body.replaceChildren(box);
 });

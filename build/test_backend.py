@@ -220,6 +220,71 @@ async def main():
     ok.append(("sotib olingan kalitlar yozildi",
                await B.db.take_pending_keys(host) == B.STARS_KEYS))
 
+    # --- Reyting bali soxtalashtirilmasin ---
+    #
+    # Ball MIJOZDA hisoblanadi. Imzo "bu kim" degan savolga javob beradi,
+    # "bu son to'g'ri" deganga emas — shuning uchun server uni yechilgan
+    # puzzlelardan kelib chiqib chegaralaydi.
+    ok.append(("halol ball o'zgarmaydi",
+               B.plausible_score({"coins": 100, "solved": {"1-1": 50}}) == 100))
+    ok.append(("soxta ball chegaralanadi",
+               B.plausible_score({"coins": 999_999_999, "solved": {"1-1": 1}})
+               == B.COINS_PER_PUZZLE + B.MAX_BONUS_PER_PUZZLE))
+    ok.append(("yechilmagan bo'lsa ball 0",
+               B.plausible_score({"coins": 5000, "solved": {}}) == 0))
+    ok.append(("soxta 'solved' ham chegaralanadi",
+               B.plausible_score({"coins": 10**9, "solved": {"1-1": 10**9}})
+               == B.PUZZLES_PER_LEVEL * (B.COINS_PER_PUZZLE + B.MAX_BONUS_PER_PUZZLE)))
+    ok.append(("buzilgan progress yiqitmaydi",
+               B.plausible_score({"coins": "x", "solved": None}) == 0))
+    ok.append(("manfiy ball 0 ga tushadi",
+               B.plausible_score({"coins": -5, "solved": {"1-1": 5}}) == 0))
+
+    # Haqiqiy /api/save orqali ham tekshiramiz
+    cheat = make_init_data(555009, tok)
+    await client.post("/api/state", json={"initData": cheat})
+    await client.post("/api/save", json={
+        "initData": cheat,
+        "progress": {"coins": 10**9, "solved": {"1-1": 2}, "learned": {}}})
+    B.db.invalidate_top()
+    rows = {r[3]: r[2] for r in await B.db.top_rows()}
+    ok.append(("soxta ball reytingga chegaralangan holda tushdi",
+               rows.get(555009, 0) == 2 * (B.COINS_PER_PUZZLE + B.MAX_BONUS_PER_PUZZLE)))
+    # Sinov o'yinchisi keyingi reyting testlariga aralashmasin
+    async with B.db.conn() as _d:
+        await _d.execute("DELETE FROM players WHERE user_id=?", (555009,))
+        await _d.commit()
+    B.db.invalidate_top()
+
+    # --- So'rov chastotasi chegarasi ---
+    #
+    # Bitta buzilgan mijoz butun serverni band qila olmasligi kerak.
+    B._buckets.clear()
+    allowed = sum(1 for _ in range(200) if B.rate_ok(777001))
+    ok.append(("ketma-ket so'rovlar chegaralandi",
+               allowed <= B.RATE_BURST + 2))
+    ok.append(("boshqa o'yinchiga ta'sir qilmaydi", B.rate_ok(777002) is True))
+    r = await client.post("/api/save", json={
+        "initData": cheat, "progress": {"coins": 1, "solved": {}}})
+    B._buckets.clear()
+    ok.append(("chegaradan oshganda 429 qaytadi", r.status in (200, 429)))
+
+    # --- To'lov bir marta hisoblanadi ---
+    #
+    # Telegram tarmoq uzilganda o'sha xabarni QAYTA yuboradi. Idempotent
+    # bo'lmasa, o'yinchi bitta to'lov uchun ikki marta kalit olardi.
+    ch = "test_charge_1"
+    ok.append(("to'lov birinchi marta yozildi",
+               await B.db.record_payment(ch, host, 10, 10) is True))
+    ok.append(("takroriy to'lov rad etildi",
+               await B.db.record_payment(ch, host, 10, 10) is False))
+
+    last = await B.db.last_payment(host)
+    ok.append(("oxirgi to'lov topildi", last is not None and last[0] == ch))
+    await B.db.mark_refunded(ch)
+    ok.append(("qaytarilgan to'lov ro'yxatdan chiqdi",
+               await B.db.last_payment(host) is None))
+
     # --- Puzzle ma'lumotlari: olmoshlar ---
     #
     # Olmosh yechim bo'lib qolsa, o'yin lug'at emas grammatika mashqiga
@@ -456,9 +521,12 @@ async def main():
     # Ikkinchi o'yinchi, ko'proq ball bilan
     other = make_init_data(555003, tok)
     await client.post("/api/state", json={"initData": other})
+    # "solved" ATAYLAB to'ldirilgan: server ballni yechilgan puzzlelardan
+    # kelib chiqib chegaralaydi, shuning uchun yechimsiz 500 ochko
+    # soxta hisoblanadi va 0 ga tushardi.
     await client.post("/api/save", json={
         "initData": other,
-        "progress": {"coins": 500, "solved": {}, "learned": {}},
+        "progress": {"coins": 500, "solved": {"1-1": 10}, "learned": {}},
     })
 
     r = await client.post("/api/top", json={"initData": good})

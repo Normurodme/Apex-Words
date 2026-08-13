@@ -171,6 +171,53 @@ def verify_init_data(init_data: str) -> dict | None:
 
 # --------------------------------- Baza --------------------------------------
 
+# Reyting balini cheklash uchun o'yin qoidalari.
+#
+# NIMA UCHUN KERAK: ball MIJOZDA hisoblanadi va /api/save orqali keladi.
+# Imzo faqat "bu haqiqatan shu o'yinchi" degan kafolat beradi, "bu son
+# to'g'ri" degan kafolat emas. Ya'ni istalgan odam o'z initData'si bilan
+# {"coins": 999999999} yuborib Top 100 ni egallashi mumkin edi.
+#
+# Shuning uchun server balni yechilgan puzzlelardan kelib chiqib
+# CHEGARALAYDI. Halol o'yinchiga bu sezilmaydi, "cheksiz ball" esa
+# imkonsiz bo'ladi.
+PUZZLES_PER_LEVEL = 50
+MAX_LEVELS = 60
+COINS_PER_PUZZLE = 5          # puzzle yechilganda
+MAX_BONUS_PER_PUZZLE = 160    # o'lchandi: eng ko'p bonusli puzzle
+
+
+def plausible_score(progress: dict) -> int:
+    """
+    Progressdan ishonarli ball hisoblaydi.
+
+    Yuqori chegara: har yechilgan puzzle uchun 5 ochko + o'sha puzzledagi
+    bonus so'zlar (eng ko'pi bilan MAX_BONUS_PER_PUZZLE ta, har biri 1).
+    Yechilganlar soni ham chegaralanadi — mijoz "1000000 puzzle yechdim"
+    deb yubora olmasin.
+    """
+    try:
+        coins = int(progress.get("coins", 0))
+    except (TypeError, ValueError):
+        return 0
+    if coins <= 0:
+        return 0
+
+    solved = progress.get("solved")
+    total = 0
+    if isinstance(solved, dict):
+        for i, v in enumerate(solved.values()):
+            if i >= MAX_LEVELS:
+                break
+            try:
+                total += min(max(int(v), 0), PUZZLES_PER_LEVEL)
+            except (TypeError, ValueError):
+                continue
+
+    ceiling = total * (COINS_PER_PUZZLE + MAX_BONUS_PER_PUZZLE)
+    return min(coins, ceiling)
+
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS players (
     user_id    INTEGER PRIMARY KEY,
@@ -188,6 +235,24 @@ CREATE TABLE IF NOT EXISTS players (
     pend_keys  INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
+);
+
+/*
+  To'lovlar. charge_id — BIRLAMCHI KALIT va aynan shu narsa kalitlarni
+  ikki marta berishdan saqlaydi: Telegram yangilanishni qayta yuborishi
+  mumkin (tarmoq uzilsa getUpdates o'sha xabarni takrorlaydi), o'shanda
+  ikkinchi yozuv rad etiladi va mukofot qayta berilmaydi.
+
+  Bundan tashqari pulni qaytarish uchun charge_id kerak — ilgari u
+  faqat logda qolardi va Railway logi bir necha kundan keyin o'chadi.
+*/
+CREATE TABLE IF NOT EXISTS payments (
+    charge_id  TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL,
+    stars      INTEGER NOT NULL,
+    keys       INTEGER NOT NULL,
+    refunded   INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
 );
 """
 
@@ -501,10 +566,7 @@ class DB:
     async def save_progress(self, uid: int, progress: dict):
         # Ball alohida ustunda saqlanadi: reytingni JSON ichidan qidirib emas,
         # indeks bo'yicha saralab olish uchun.
-        try:
-            score = max(0, int(progress.get("coins", 0)))
-        except (TypeError, ValueError):
-            score = 0
+        score = plausible_score(progress)
         async with self.conn() as db:
             await db.execute(
                 "UPDATE players SET progress=?, score=?, updated_at=? WHERE user_id=?",
@@ -659,6 +721,39 @@ class DB:
             await db.execute(
                 "UPDATE players SET pend_keys=pend_keys+?, updated_at=? "
                 "WHERE user_id=?", (n, int(time.time()), uid))
+            await db.commit()
+
+    async def record_payment(self, charge_id: str, uid: int, stars: int,
+                             keys: int) -> bool:
+        """
+        To'lovni yozadi. True — BIRINCHI marta, False — takror.
+
+        INSERT OR IGNORE bilan: charge_id birlamchi kalit bo'lgani uchun
+        takroriy yetkazib berish jimgina rad etiladi.
+        """
+        async with self.conn() as db:
+            cur = await db.execute(
+                "INSERT OR IGNORE INTO payments "
+                "(charge_id, user_id, stars, keys, created_at) "
+                "VALUES (?,?,?,?,?)",
+                (charge_id, uid, stars, keys, int(time.time())))
+            await db.commit()
+            return cur.rowcount > 0
+
+    async def last_payment(self, uid: int) -> tuple | None:
+        """O'yinchining oxirgi qaytarilmagan to'lovi."""
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT charge_id, stars, keys FROM payments "
+                "WHERE user_id=? AND refunded=0 ORDER BY created_at DESC LIMIT 1",
+                (uid,)
+            ) as cur:
+                return await cur.fetchone()
+
+    async def mark_refunded(self, charge_id: str):
+        async with self.conn() as db:
+            await db.execute("UPDATE payments SET refunded=1 WHERE charge_id=?",
+                             (charge_id,))
             await db.commit()
 
     async def ref_state(self, uid: int) -> tuple[int, int]:
@@ -846,6 +941,38 @@ async def api_state(request: web.Request) -> web.Response:
     })
 
 
+# So'rov chastotasi chegarasi.
+#
+# Imzo tekshiruvi "bu kim" degan savolga javob beradi, "u qancha
+# so'rasin" degan savolga emas. Bitta buzilgan yoki yomon yozilgan
+# mijoz sekundiga yuzlab saqlash yuborib butun serverni band qila
+# olardi — barcha o'yinchilar uchun.
+#
+# Oddiy token-chelak: har o'yinchiga RATE_BURST ta zaxira, sekundiga
+# RATE_PER_SEC ta to'ldiriladi. Halol o'yin 25 soniyada bitta saqlash
+# yuboradi, shuning uchun chegara sezilmaydi.
+RATE_PER_SEC = 3.0
+RATE_BURST = 30.0
+_buckets: dict[int, tuple[float, float]] = {}
+
+
+def rate_ok(uid: int) -> bool:
+    now = time.monotonic()
+    tokens, last = _buckets.get(uid, (RATE_BURST, now))
+    tokens = min(RATE_BURST, tokens + (now - last) * RATE_PER_SEC)
+    if tokens < 1.0:
+        _buckets[uid] = (tokens, now)
+        return False
+    _buckets[uid] = (tokens - 1.0, now)
+
+    # Kesh cheksiz o'smasin: uzoq vaqt so'ramaganlar tashlanadi
+    if len(_buckets) > 20_000:
+        cutoff = now - 300
+        for k in [k for k, (_, t) in _buckets.items() if t < cutoff]:
+            _buckets.pop(k, None)
+    return True
+
+
 async def api_save(request: web.Request) -> web.Response:
     """Progressni saqlaydi."""
     try:
@@ -856,6 +983,9 @@ async def api_save(request: web.Request) -> web.Response:
     user = verify_init_data(body.get("initData", ""))
     if not user:
         return web.json_response({"error": "unauthorized"}, status=401)
+
+    if not rate_ok(user["id"]):
+        return web.json_response({"error": "too many requests"}, status=429)
 
     progress = body.get("progress")
     if not isinstance(progress, dict):
@@ -1234,9 +1364,17 @@ async def on_paid(message: Message):
         pass
 
     await db.get_progress(_user_row(message.from_user))
-    await db.grant_keys(uid, keys)
 
-    # Charge id qaytarish (refund) uchun kerak — logda qolsin.
+    # Bir to'lov — bir marta. Telegram xabarni qayta yuborsa, ikkinchi
+    # yozuv rad etiladi va kalit takror berilmaydi.
+    first = await db.record_payment(
+        sp.telegram_payment_charge_id, uid, sp.total_amount, keys)
+    if not first:
+        log.info("Stars to'lovi TAKROR keldi, e'tiborsiz qoldirildi: %s",
+                 sp.telegram_payment_charge_id)
+        return
+
+    await db.grant_keys(uid, keys)
     log.info("Stars to'lovi: user=%s stars=%s keys=%s charge=%s",
              uid, sp.total_amount, keys, sp.telegram_payment_charge_id)
 
@@ -1257,15 +1395,31 @@ async def cmd_refund(message: Message):
     if message.from_user.id not in ADMINS:
         return
     parts = (message.text or "").split()
-    if len(parts) != 3:
+    if len(parts) < 2 or not parts[1].lstrip("-").isdigit():
         await message.answer(
-            "Usage: <code>/refund &lt;user_id&gt; &lt;charge_id&gt;</code>\n"
-            "Charge id is in the logs of the payment.")
+            "Usage: <code>/refund &lt;user_id&gt;</code>\n"
+            "The last payment of that user is refunded. To pick a specific "
+            "one: <code>/refund &lt;user_id&gt; &lt;charge_id&gt;</code>")
         return
+
+    uid = int(parts[1])
+    if len(parts) >= 3:
+        charge, stars, keys = parts[2], None, None
+    else:
+        # Charge id bazadan olinadi. Ilgari uni logdan qidirishga
+        # to'g'ri kelardi, Railway logi esa bir necha kundan keyin o'chadi.
+        row = await db.last_payment(uid)
+        if not row:
+            await message.answer("No refundable payment found for that user.")
+            return
+        charge, stars, keys = row
+
     try:
         await message.bot.refund_star_payment(
-            user_id=int(parts[1]), telegram_payment_charge_id=parts[2])
-        await message.answer("✅ Refunded.")
+            user_id=uid, telegram_payment_charge_id=charge)
+        await db.mark_refunded(charge)
+        extra = f"\n{stars} ⭐ returned ({keys} 🗝️ were granted)." if stars else ""
+        await message.answer(f"✅ Refunded.{extra}")
     except Exception as e:
         await message.answer(f"❌ Refund failed.\n\n<code>{html_escape(str(e))}</code>")
 
@@ -1871,6 +2025,12 @@ async def main():
         await dp.start_polling(bot, handle_signals=False,
                                allowed_updates=ALLOWED_UPDATES)
     finally:
+        # Kanaldagi jonli reytinglar yarim soatgacha ishlaydi. Bekor
+        # qilinmasa, ular yopilayotgan sessiya orqali so'rov yuborishga
+        # urinib, logni "Session is closed" xatolari bilan to'ldirardi.
+        for task in list(_live_boards.values()):
+            task.cancel()
+        _live_boards.clear()
         await runner.cleanup()
         await bot.session.close()
         await db.close()
