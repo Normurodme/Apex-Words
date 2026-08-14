@@ -294,7 +294,7 @@ body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   contain: content;
-  padding: 4px 14px 18px;
+  padding: clamp(4px, 1.2vh, 14px) 14px 18px;
 }
 
 /* =========================== XARITA =========================== */
@@ -866,8 +866,14 @@ body {
   background: linear-gradient(var(--p-1), var(--p-2));
   border: 2px solid var(--gold-3);
   box-shadow: 0 4px 0 var(--gold-3), var(--shadow);
-  padding: 12px 13px 13px;
-  margin-bottom: 10px;
+  /*
+    Bo'shliq EKRAN BALANDLIGIGA moslashadi.
+    Qat'iy 10px bilan baland telefonda pastda katta bo'sh joy qolardi,
+    kichigida esa oxirgi panel chiqib ketardi. clamp ikkalasini ham
+    hal qiladi: past ekranda siqiladi, balandida keng nafas oladi.
+  */
+  padding: clamp(11px, 1.9vh, 18px) 14px;
+  margin-bottom: clamp(8px, 2.4vh, 22px);
   color: var(--ink-1);
 }
 .panel::before {
@@ -895,7 +901,7 @@ body {
 }
 .panel-head + #streak-days,
 .panel-head + .ref-dots,
-.panel-head + .panel-row { margin-top: 11px; }
+.panel-head + .panel-row { margin-top: clamp(10px, 1.6vh, 16px); }
 
 .panel-ico {
   flex: 0 0 auto;

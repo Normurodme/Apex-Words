@@ -1864,9 +1864,15 @@ function renderTasks() {
   const streak = s ? s.streak : 0;
   const claimed = s ? s.claimed_today : false;
 
-  // Bugun olingan bo'lsa zanjirning shu kuni to'lgan hisoblanadi
-  const filled = claimed ? streak : streak;
-  const nextDay = claimed ? streak : streak + 1;
+  // KEYINGI KUNNI SERVER AYTADI.
+  //
+  // Ilgari mijoz uni o'zi hisoblardi (streak + 1) va 7-kundan keyin
+  // "8-kun" chiqib qolardi — bunday kun yo'q. Ustiga u "+3 kalit" deb
+  // va'da qilar, server esa zanjirni noldan boshlab 1 kalit berardi.
+  const nextDay = (s && s.next_day) || 1;
+  // Bugun olingan bo'lsa shu kungacha to'lgan, aks holda keyingi
+  // kungacha bo'lgani to'lgan (sikl yangidan boshlansa — hech biri).
+  const filled = claimed ? streak : nextDay - 1;
 
   const box = $('streak-days');
   box.innerHTML = '';
@@ -1888,7 +1894,8 @@ function renderTasks() {
     btn.disabled = true;
     btn.textContent = 'Claimed today ✓';
   } else {
-    const k = plan[Math.min(nextDay - 1, plan.length - 1)];
+    // Mukofot miqdorini ham server aytadi — bu aynan beriladigan son
+    const k = (s && s.next_keys) || plan[Math.min(nextDay - 1, plan.length - 1)];
     $('streak-note').textContent = k + (k === 1 ? ' key' : ' keys') + ' waiting for day ' + nextDay;
     btn.disabled = false;
     btn.textContent = 'Claim  +' + k + ' 🗝️';

@@ -287,6 +287,28 @@ _ADMIN_SQL = (" AND user_id NOT IN (%s)" % ",".join(str(i) for i in sorted(ADMIN
 # Kunlik mukofot: 1-3 kun 1 kalit, 4-6 kun 2 kalit, 7-kun 3 kalit.
 # Sakkizinchi kuni sikl yangidan boshlanadi.
 DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
+
+
+def next_streak_day(last_s: str | None, streak: int, today: date) -> int:
+    """
+    Keyingi olishda zanjirning nechanchi kuni bo'ladi.
+
+    YAGONA MANBA. Ilgari bu hisob ikki joyda alohida yozilgan edi —
+    mukofot berishda va vazifalar ekranida — va ular bir-biriga
+    to'g'ri kelmasdi. 7-kun olingandan keyin ekranda "8-kun, +3 kalit"
+    deb turar, server esa zanjirni noldan boshlab 1 kalit berardi.
+    Ya'ni o'yinchiga va'da qilingan narsa berilmasdi.
+    """
+    last = None
+    if last_s:
+        try:
+            last = date.fromisoformat(last_s)
+        except ValueError:
+            last = None
+    # Zanjir faqat KECHA olingan bo'lsa va sikl tugamagan bo'lsa davom etadi
+    if last and (today - last).days == 1 and 0 < streak < len(DAILY_KEYS):
+        return streak + 1
+    return 1
 CHANNEL_KEYS = 5
 
 # Taklif tizimi: har REF_PER do'st uchun REF_KEYS kalit.
@@ -384,7 +406,14 @@ _member_cache: dict[tuple[int, int], tuple[bool, float]] = {}
 # qo'llaydi, shuning uchun bir nechta ulanish o'qishni parallellashtiradi.
 # To'rtta — kichik konteyner uchun muvozanatli son: ko'proq ochish
 # yozuvchi navbatini uzaytiradi, foyda bermaydi.
-POOL_SIZE = 4
+# Ulanishlar soni.
+#
+# WAL rejimida O'QISHLAR bir-biriga to'sqinlik qilmaydi, yozuv esa
+# baribir navbatga turadi. Ilova so'rovlarining ko'pchiligi o'qish
+# (/api/state, /api/top, /api/tasks), shuning uchun ulanish ko'proq
+# bo'lsa ular parallel ketadi. Cheksiz oshirishning ma'nosi yo'q:
+# har ulanish alohida oqim (thread) ochadi.
+POOL_SIZE = int(os.getenv("DB_POOL", "8"))
 
 
 class DB:
@@ -536,19 +565,28 @@ class DB:
         now = int(time.time())
         async with self.conn() as db:
             async with db.execute(
-                "SELECT progress FROM players WHERE user_id = ?", (uid,)
+                "SELECT progress, username, first_name, photo_url "
+                "FROM players WHERE user_id = ?", (uid,)
             ) as cur:
                 row = await cur.fetchone()
             if row:
-                # Ism va rasm har kirishda yangilanadi — Telegram'da o'zgargan
-                # bo'lishi mumkin, reyting esa eski ma'lumot bilan qolmasin.
-                await db.execute(
-                    "UPDATE players SET username=?, first_name=?, photo_url=?, "
-                    "updated_at=? WHERE user_id=?",
-                    (user.get("username"), user.get("first_name"),
-                     user.get("photo_url"), now, uid),
-                )
-                await db.commit()
+                # Ism va rasm FAQAT O'ZGARGANDA yangilanadi.
+                #
+                # Ilgari har kirishda UPDATE + commit ketardi. Bu eng
+                # ko'p chaqiriladigan so'rov (/api/state) va o'sha yozuv
+                # deyarli har doim keraksiz edi: ism kamdan-kam
+                # o'zgaradi. SQLite'da yozuv navbatga turadi — ya'ni bu
+                # bitta keraksiz yozuv boshqa o'yinchilarni ham kutdirardi.
+                if (row[1], row[2], row[3]) != (user.get("username"),
+                                                user.get("first_name"),
+                                                user.get("photo_url")):
+                    await db.execute(
+                        "UPDATE players SET username=?, first_name=?, "
+                        "photo_url=?, updated_at=? WHERE user_id=?",
+                        (user.get("username"), user.get("first_name"),
+                         user.get("photo_url"), now, uid),
+                    )
+                    await db.commit()
                 try:
                     return json.loads(row[0]) or {}
                 except json.JSONDecodeError:
@@ -576,15 +614,20 @@ class DB:
 
     async def task_state(self, uid: int) -> dict:
         """Vazifalar bo'limi uchun holat."""
+        # Bitta so'rov: ilgari zanjir uchun alohida, taklif hisobi uchun
+        # alohida so'rov ketardi — bir xil qatordan.
         async with self.conn() as db:
             async with db.execute(
-                "SELECT last_daily, streak_day, channel_ok FROM players WHERE user_id=?",
-                (uid,),
+                "SELECT last_daily, streak_day, channel_ok, ref_count "
+                "FROM players WHERE user_id=?", (uid,),
             ) as cur:
                 row = await cur.fetchone()
-        last, streak, ch = row if row else (None, 0, 0)
-        today = date.today().isoformat()
-        ref_count, ref_left = await self.ref_state(uid)
+        last, streak, ch, ref_count = row if row else (None, 0, 0, 0)
+        ref_count = ref_count or 0
+        ref_left = REF_PER - (ref_count % REF_PER)
+        today_d = date.today()
+        today = today_d.isoformat()
+        nxt = next_streak_day(last, streak or 0, today_d)
         return {
             "ref_count": ref_count,
             "ref_left": ref_left,
@@ -593,8 +636,11 @@ class DB:
             "ref_link": f"{BOT_LINK}?start=ref_{uid}",
             "streak": streak or 0,
             "claimed_today": last == today,
-            "next_keys": DAILY_KEYS[min(streak or 0, 6)] if last != today
-                         else DAILY_KEYS[min((streak or 1) - 1, 6)],
+            # Keyingi kun ham, mukofot ham SERVER hisoblaydi va mijoz
+            # shuni ko'rsatadi — ikki tomonda alohida hisoblanганda
+            # ular bir-biriga to'g'ri kelmay qolardi.
+            "next_day": nxt,
+            "next_keys": DAILY_KEYS[nxt - 1],
             "channel_done": bool(ch),
             "channel_keys": CHANNEL_KEYS,
             "plan": DAILY_KEYS,
@@ -620,19 +666,10 @@ class DB:
             if last_s == today.isoformat():
                 return {"already": True, "streak": streak}
 
-            # Kecha olingan bo'lsa zanjir davom etadi, aks holda uziladi
-            last = None
-            if last_s:
-                try:
-                    last = date.fromisoformat(last_s)
-                except ValueError:
-                    last = None
-            if last and (today - last).days == 1 and streak < 7:
-                streak += 1
-            else:
-                streak = 1          # uzilgan yoki 7 kun tugagan -> yangidan
-
-            keys = DAILY_KEYS[min(streak - 1, 6)]
+            # Kecha olingan bo'lsa zanjir davom etadi, aks holda uziladi.
+            # Hisob task_state bilan BIR XIL funksiyadan olinadi.
+            streak = next_streak_day(last_s, streak, today)
+            keys = DAILY_KEYS[streak - 1]
             await db.execute(
                 "UPDATE players SET last_daily=?, streak_day=?, updated_at=? WHERE user_id=?",
                 (today.isoformat(), streak, int(time.time()), uid),
@@ -875,21 +912,24 @@ class DB:
         """
         rows = await self.top_rows()          # keshdan, deyarli bir zumda
 
+        # O'z bali va o'rni BITTA so'rovda.
+        #
+        # Ilgari ikkita alohida so'rov ketardi: avval ball, keyin undan
+        # yuqoridagilar soni. Reyting eng ko'p ochiladigan bo'limlardan
+        # biri, shuning uchun bu tejash sezilarli.
+        #
+        # Adminlar sanalmaydi — aks holda ko'rsatilgan raqam ro'yxatdagi
+        # haqiqiy joyga to'g'ri kelmay qolardi.
         async with self.conn() as db:
             async with db.execute(
-                "SELECT score FROM players WHERE user_id=?", (uid,)
+                "WITH me AS (SELECT COALESCE(MAX(score), 0) AS s FROM players "
+                "            WHERE user_id=?) "
+                "SELECT me.s, (SELECT COUNT(*) FROM players "
+                "              WHERE score > me.s" + _ADMIN_SQL + ") FROM me",
+                (uid,)
             ) as cur:
-                r = await cur.fetchone()
-            my_score = r[0] if r else 0
-
-            # O'z o'rnim: mendan ko'p ballga ega o'yinchilar soni + 1.
-            # Adminlar bu yerda ham sanalmaydi, aks holda ro'yxatdagi
-            # o'rin bilan raqam bir-biriga to'g'ri kelmay qolardi.
-            async with db.execute(
-                "SELECT COUNT(*) FROM players WHERE score > ?" + _ADMIN_SQL,
-                (my_score,)
-            ) as cur:
-                my_rank = (await cur.fetchone())[0] + 1
+                my_score, above = await cur.fetchone()
+            my_rank = above + 1
 
         top = [
             {

@@ -220,6 +220,63 @@ async def main():
     ok.append(("sotib olingan kalitlar yozildi",
                await B.db.take_pending_keys(host) == B.STARS_KEYS))
 
+    # --- Kirish bazaga bekorga yozmaydi ---
+    #
+    # /api/state eng ko'p chaqiriladigan so'rov. Ilgari u HAR SAFAR
+    # ism/rasmni yangilab yozardi, holbuki ular deyarli hech qachon
+    # o'zgarmaydi. SQLite'da yozuv navbatga turadi — ya'ni bitta
+    # keraksiz yozuv boshqa o'yinchilarni ham kutdirardi.
+    probe = {"id": 556000, "first_name": "Probe", "username": "p",
+             "photo_url": None}
+    await B.db.get_progress(probe)
+
+    async def _updated_at():
+        async with B.db.conn() as _d:
+            async with _d.execute(
+                "SELECT updated_at FROM players WHERE user_id=?", (556000,)
+            ) as c:
+                return (await c.fetchone())[0]
+
+    before = await _updated_at()
+    await asyncio.sleep(1.1)                 # vaqt o'zgarishi ko'rinsin
+    await B.db.get_progress(probe)           # ayni o'sha ma'lumot bilan
+    ok.append(("o'zgarmagan kirish yozuv qilmaydi",
+               await _updated_at() == before))
+
+    await B.db.get_progress(dict(probe, first_name="Renamed"))
+    ok.append(("ism o'zgarsa yoziladi", await _updated_at() != before))
+
+    # --- Kunlik zanjir ---
+    #
+    # Ekranda "8-kun, +3 kalit" deb turar, server esa zanjirni noldan
+    # boshlab 1 kalit berardi. Sabab: hisob ikki joyda alohida yozilgan
+    # edi. Endi yagona funksiya, shuning uchun ular ajralib keta olmaydi.
+    from datetime import date as _date, timedelta as _td
+    today_d = _date(2026, 8, 14)
+    yest = (today_d - _td(days=1)).isoformat()
+    old = (today_d - _td(days=5)).isoformat()
+
+    ok.append(("yangi o'yinchi 1-kundan boshlaydi",
+               B.next_streak_day(None, 0, today_d) == 1))
+    ok.append(("kecha olingan bo'lsa zanjir davom etadi",
+               B.next_streak_day(yest, 3, today_d) == 4))
+    ok.append(("7-kundan keyin sikl yangidan boshlanadi",
+               B.next_streak_day(yest, 7, today_d) == 1))
+    ok.append(("uzilgan zanjir 1-kunga qaytadi",
+               B.next_streak_day(old, 4, today_d) == 1))
+    ok.append(("buzilgan sana yiqitmaydi",
+               B.next_streak_day("axlat", 3, today_d) == 1))
+    # Ekranda ko'rsatiladigan mukofot AYNAN beriladigan mukofot bo'lsin
+    ok.append(("8-kun degan narsa yo'q",
+               all(1 <= B.next_streak_day(yest, s, today_d) <= len(B.DAILY_KEYS)
+                   for s in range(0, 10))))
+
+    ts = await B.db.task_state(host)
+    ok.append(("vazifalarda keyingi kun bor",
+               1 <= ts.get("next_day", 0) <= len(B.DAILY_KEYS)))
+    ok.append(("va'da qilingan kalit rejadan olinadi",
+               ts["next_keys"] == B.DAILY_KEYS[ts["next_day"] - 1]))
+
     # --- Reyting bali soxtalashtirilmasin ---
     #
     # Ball MIJOZDA hisoblanadi. Imzo "bu kim" degan savolga javob beradi,
