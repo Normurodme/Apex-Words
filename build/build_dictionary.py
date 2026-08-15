@@ -72,18 +72,14 @@ FULL_ZIPF = 3.05
 # WordNet — lug'at, korpus emas, ya'ni unda bo'lgan narsa haqiqiy so'z.
 FULL_ZIPF_WORDNET = 2.60
 
-# Ko'plik va zamon shakllari BONUS sifatida qabul qilinadi.
+# FAQAT O'ZAK SO'ZLAR. Ko'plik, fe'lning tuslangan shakllari va
+# "to be" shakllari o'yinga UMUMAN kirmaydi — na yechim, na bonus.
 #
-# Yechim bo'lolmaydi (to'rda faqat asos shakl turadi — o'yin lug'at
-# o'rgatadi, grammatika emas), lekin o'yinchi to'g'ri inglizcha so'z
-# yozgan bo'lsa uni rad etish noto'g'ri.
-#
-# Nima uchun o'zgartirildi: qamrov tekshiruvi (audit_coverage.py)
-# ko'rsatdiki, rad etilayotgan eng ko'p uchraydigan so'z — 'ARE'
-# (chastota 6.74, ingliz tilidagi eng keng tarqalgan so'zlardan biri).
-# 'ATE', 'RAN', 'WAS' ham shunday. O'yinchi bunday so'zni yozib
-# "noto'g'ri" javob olsa, o'yinga ishonchi yo'qoladi.
-ALLOW_INFLECTED_BONUS = True
+# Sabab pedagogik: o'yin lug'at o'rgatadi. "CATS" ni qabul qilish
+# o'yinchiga yangi so'z bermaydi — u "CAT" ni allaqachon biladi —
+# lekin lug'atni shakllar bilan shishirib, haqiqiy yangi so'zlarning
+# ulushini kamaytiradi.
+ALLOW_INFLECTED_BONUS = False
 
 VOWELS = set("aeiou")
 
@@ -264,10 +260,6 @@ GAME_WORDS = {
     "dan",      # dzyudo/karate darajasi
     "rand",     # JAR valyutasi / tasodifiy
     "naan",     # non turi
-    # Noto'g'ri fe'l shakllari: WordNet ularni asos so'zga bog'laydi
-    # ("sat" -> "sit"), shuning uchun "kichik harfli lemma" tekshiruvi
-    # ularni tanimaydi va ular qo'lda tashlanganlar orasida qolib ketardi.
-    "sat", "held", "paid",
 }
 
 # Ko'plik/zamon qoidalariga TASODIFAN tushib qoladigan haqiqiy asos so'zlar.
@@ -537,21 +529,11 @@ def main():
     dropped_infl = dropped_proper = 0
     bonus_only_extra = 0
     for w in shaped:
+        # NLTK words — ASOS SHAKLLAR lug'ati: unda "word" bor, "words"
+        # yo'q. Aynan shu narsa bizga kerak — o'yinga faqat o'zak
+        # so'zlar tushsin.
         if w not in known and w not in RESCUED:
-            # KO'PLIK VA ZAMON SHAKLLARI KORPUSDA YO'Q.
-            #
-            # NLTK words — asos shakllar lug'ati: unda "word" bor,
-            # "words" yo'q; "play" bor, "played" yo'q. Shuning uchun
-            # o'yinchi WORDS, GAMES, FRIENDS, PLAYED, ASKED yozganda
-            # "noto'g'ri" javob olardi — o'lchov bo'yicha 961 ta keng
-            # tarqalgan so'z shu sababdan rad etilardi.
-            #
-            # Asosi tanish bo'lsa, so'z haqiqiy deb qabul qilinadi.
-            # U faqat BONUS bo'ladi: quyidagi core sharti is_inflected
-            # bo'lganlarni baribir o'tkazmaydi.
-            if not (ALLOW_INFLECTED_BONUS
-                    and any(s in known for s in inflection_stems(w))):
-                continue
+            continue
 
         # Atoqli ot deb topilgan so'z DARHOL TASHLANMAYDI.
         #
@@ -592,9 +574,14 @@ def main():
     #
     # Ilgari bunday emas edi va qat'iy taqiqlangan so'z ("dell" — brend)
     # "qutqarilganlar" ro'yxati orqali bonusga qaytib tushardi.
+    # Majburan qo'shishda ham SHAKL FILTRI ishlaydi: aks holda
+    # "qutqarilganlar" ro'yxati orqali ko'plik yoki tuslangan shakl
+    # o'yinga qaytib tushardi.
     def _add(pool):
         return {w for w in pool
-                if MIN_LEN <= len(w) <= MAX_LEN and w not in BLOCKLIST}
+                if MIN_LEN <= len(w) <= MAX_LEN
+                and w not in BLOCKLIST
+                and (ALLOW_INFLECTED_BONUS or not is_inflected(w))}
 
     core = sorted(set(core) - BONUS_ONLY - RESCUED - BLOCKLIST)
     full = sorted(set(full) - BLOCKLIST | _add(BONUS_ONLY) | _add(RESCUED))
