@@ -417,6 +417,128 @@ UZ = {
 "YOUR": "sening", "YOURS": "seniki", "WHO": "kim", "WHOM": "kimga",
 "WHOSE": "kimning", "THE": "aniq artikl", "MINE": "meniki", "MYSELF": "o'zim",
 "BATH": "vanna", "CARRY": "olib yurmoq", "FAITH": "ishonch, e'tiqod",
+
+# --- Avtomatik tarjima BOSHQA TILDA qaytargan so'zlar ---
+#
+# Google ba'zan o'zbekcha o'rniga turkcha yoki ruscha beradi. Ko'zga
+# tashlanmaydi: "ranchо" ichidagi 'о' — kirill harfi, lotinchasidan
+# farq qilmaydi. Shuning uchun ular audit_translations.py bilan
+# topiladi va shu yerda qo'lda tuzatiladi.
+"BUST": "byust; kasodga uchramoq", "CLICHE": "klishe",
+"EMERY": "nayzak (jilvirlash toshi)", "HINGE": "sharnir; ilgak",
+"LUMEN": "lyumen", "PLUSH": "plyush", "RAIL": "rels; temiryo'l",
+"SAGE": "donishmand; adaqoq (o't)", "TWILIGHT": "shom; g'ira-shira",
+"RANCH": "rancho (chorvachilik fermasi)",
+
+# --- Tarjimasiz qolgan haqiqiy so'zlar ---
+#
+# Bularni Google tarjima qila olmay, inglizchasini qaytargan. O'yinchi
+# bunday so'zni topsa ma'nosini bilmaydi — ya'ni o'yin o'z vazifasini
+# bajarmaydi. Xalqaro so'zlar (radio, atom, vitamin) ataylab
+# tegilmagan: ular o'zbekchada ham xuddi shunday.
+"ADO": "ovora-sarson", "AEGIS": "homiylik", "ALE": "el (pivo turi)",
+"ALOE": "aloe (sabur)", "AMBER": "qahrabo", "ARBOR": "so'ri; o'q",
+"ASP": "ilon (zaharli)", "ASPEN": "tog'terak", "ASTRAL": "yulduzli",
+"BARKER": "jarchi", "BAY": "qo'ltiq", "BAYOU": "botqoq irmoq",
+"BEAGLE": "bigl (ov iti)", "BELLE": "go'zal qiz", "BEN": "cho'qqi",
+"BERRY": "reza meva", "BLOB": "tomchi; dog'", "BOB": "tebranmoq",
+"BOD": "gavda", "BONG": "gulduros ovoz", "BRAT": "tarbiyasiz bola",
+"BURR": "tikanak", "BUTLER": "xizmatkor boshlig'i", "CHALET": "tog' uyi",
+"CHAD": "qog'oz parchasi", "CHI": "chi (yunon harfi)", "CHOP": "chopmoq",
+"DOE": "urg'ochi kiyik", "DONG": "jaranglamoq", "DRAKE": "erkak o'rdak",
+"DUNK": "botirmoq", "ELF": "elf (afsonaviy mavjudot)", "EMU": "emu (qush)",
+"FEAT": "jasorat", "FLAK": "zenit o'ti; tanqid", "FLOP": "muvaffaqiyatsizlik",
+"FOLIO": "varaq", "FORD": "kechuv", "FORTE": "kuchli tomon",
+"GAL": "qiz", "GALA": "tantana", "GEEK": "qiziquvchan bilimdon",
+"GLEN": "tor vodiy", "GONG": "gong", "GOO": "yopishqoq modda",
+"GRUB": "qurt; ovqat", "HACK": "buzmoq; chopmoq", "HANK": "kalava",
+"HART": "erkak bug'u", "HASH": "maydalangan taom", "HOLLY": "xushtaka (o'simlik)",
+"HUFF": "xafa bo'lmoq", "HULK": "bahaybat", "JAB": "sanchmoq",
+"JAY": "zog'cha", "JIVE": "jayv (raqs)", "KEG": "bochka",
+"KOI": "koi (baliq)", "LAGER": "lager (pivo)", "LAIRD": "yer egasi",
+"LAM": "qochmoq", "LAMA": "lama (rohib)", "LARK": "to'rg'ay",
+"LEA": "o'tloq", "LIMBO": "noaniq holat", "LOCO": "aqldan ozgan",
+"MANTIS": "bug'doyiq", "MAR": "buzmoq", "MART": "bozor",
+"MASH": "ezmoq", "MASON": "g'isht teruvchi", "MEAD": "asal sharobi",
+"MESA": "yassi tepalik", "MINION": "quyi xizmatkor", "MITT": "qo'lqop",
+"NAAN": "non", "NAVE": "ibodatxona o'rtasi", "OGRE": "odamxo'r dev",
+"OPAL": "opal (qimmatbaho tosh)", "OTTER": "qunduz", "PARRY": "qaytarmoq",
+"PASTOR": "ruhoniy", "PECK": "cho'qimoq", "PERCH": "qo'nmoq; olabug'a",
+"PIKE": "cho'rtan baliq", "PING": "jiringlamoq", "PIP": "urug'",
+"PIPER": "naychi", "PLAID": "katakli mato", "PLAT": "chizma",
+"POD": "qo'zoq", "PORTER": "yuk tashuvchi", "PUNT": "qayiq; tepmoq",
+"RAD": "zo'r", "RAJ": "hukmronlik", "RAJA": "roja (hukmdor)",
+"ROACH": "suvarak", "ROBIN": "qizilto'sh", "ROUGE": "upa-elik",
+"ROWAN": "chetan", "RUE": "afsuslanmoq", "RUFF": "burma yoqa",
+"SARI": "sari (hind kiyimi)", "SCRUM": "to'polon", "SEXTON": "cherkov qorovuli",
+"SHAH": "shoh", "SKID": "sirg'anmoq", "SLASH": "kesmoq",
+"SLING": "osma bog'ich", "SNOOP": "poylamoq", "SOL": "quyosh",
+"SPRITE": "parichehra", "STIGMA": "tamg'a", "STOKE": "olovni kuchaytirmoq",
+"STUB": "qoldiq", "TAB": "yorliq", "TAM": "yassi qalpoq",
+"TANG": "o'tkir ta'm", "TENDON": "pay", "TINDER": "chaqmoqtosh po'stlog'i",
+"TOME": "yirik kitob", "TONER": "toner; teri suyuqligi", "TOR": "qoyali tepa",
+"TROLL": "trol (afsonaviy)", "TROPE": "ko'chma ma'no", "TRUSS": "ferma; bog'lam",
+"TUNDRA": "tundra", "VALE": "vodiy", "VALET": "xizmatkor",
+"WAN": "rangpar", "WREN": "chittak", "YAK": "yak (qo'tos)",
+"YIN": "in (falsafada)", "YANG": "yan (falsafada)", "ZIG": "burilish",
+"PIA": "yumshoq parda", "PRIMA": "birinchi", "PROTO": "dastlabki",
+"SILVA": "o'rmon", "SURREY": "yengil arava", "TOD": "tulki",
+"TREY": "uchlik", "TAROT": "taro (folbin kartalari)", "RUDD": "qizilqanot baliq",
+
+# --- Egalik qo'shimchasi bilan qolgan otlar ---
+#
+# Google so'zni gap ichidagidek tarjima qiladi va uchinchi shaxs egalik
+# qo'shimchasini qo'shib yuboradi: "havzasi", "tugmasi", "belgisi".
+# Lug'atda so'z BOSH SHAKLDA turishi kerak — o'yinchi uni shu holda
+# o'rganadi. audit_translations.py shu naqshni topadi.
+"ACADEMY": "akademiya", "BASIN": "havza", "BIOGRAPHY": "biografiya",
+"BUTTON": "tugma", "CONTENT": "mazmun", "EXTENT": "daraja; hajm",
+"FLAGSHIP": "flagman", "FOUNDER": "asoschi", "FUNCTION": "funksiya; vazifa",
+"GRANDSON": "nabira", "HORNET": "eshakari", "LOVER": "sevgili",
+"MISTRESS": "beka; ma'shuqa", "MIXTURE": "aralashma", "NUCLEI": "yadrolar",
+"TINGLING": "jimirlash",
+"PALETTE": "palitra", "PATRON": "homiy", "PEAK": "cho'qqi",
+"RATE": "daraja; narx", "RECORDER": "yozib oluvchi qurilma",
+"SIGN": "belgi", "SPECIES": "tur; turlar", "SPONSOR": "homiy",
+"SUCCESSOR": "voris", "SURNAME": "familiya", "TECHNIQUE": "texnika; uslub",
+"TORSO": "gavda", "TURNOVER": "aylanma", "WIFE": "xotin",
+
+# --- Ma'nosi noto'g'ri berilgan so'zlar ---
+#
+# Bular namunani qo'lda ko'zdan kechirganda topildi: tarjima o'zbekcha,
+# lekin ma'no boshqa. Mashina tarjimasi eng ko'p shu yerda adashadi —
+# bir necha ma'noli so'zning noto'g'ri ma'nosini tanlaydi.
+"GUST": "shamol epkini",          # "shamol" emas: bu KESKIN esish
+"STUD": "qadama; ayg'ir",         # "zirh" (sovut) mutlaqo boshqa narsa
+"CAROL": "bayram qo'shig'i",      # "kerol" — tarjima emas, transliteratsiya
+"DENTAL": "tishga oid",           # "stomatologiya" — ot, bu esa sifat
+
+# --- Ko'plik va zamon shakllari ---
+#
+# Bular endi bonus sifatida qabul qilinadi (ALLOW_INFLECTED_BONUS),
+# lekin avtomatik tarjimon ularning bir qismiga javob qaytarmadi.
+# Tarjimasiz so'z o'yinchiga ma'nosini ko'rsatmaydi — shuning uchun
+# qo'lda yozildi. Qavs ichida asos shakl: o'yinchi bog'lanishni ko'rsin.
+"ARCHES": "kamarlar", "AVERTED": "oldini oldi", "BACKED": "qo'llab-quvvatladi",
+"BASES": "asoslar", "BLEED": "qon ketmoq", "BONDED": "bog'landi",
+"BRAINS": "miyalar", "BRED": "yetishtirdi (breed)", "DOGS": "itlar",
+"DOING": "qilish", "DONE": "bajarilgan", "DRAWN": "chizilgan (draw)",
+"LED": "boshlab bordi (lead)", "NEEDS": "ehtiyojlar",
+"NOSED": "burunli", "OPTICS": "optika", "PANTS": "shim",
+"QUITS": "tark etadi", "RAVING": "alahlash", "THROWN": "tashlangan (throw)",
+
+# --- Lug'at kengaygandan keyin topilgan nuqsonlar ---
+#
+# Turkcha qaytganlar (Google o'zbekcha o'rniga turkcha beradi):
+"BREAM": "tangabaliq", "CELIAC": "tseliakiya (kasallik)",
+"EAVES": "tom chekkasi", "FRYER": "qovurgich", "PANTY": "ichki ishton",
+"SEEP": "sizib chiqmoq", "WART": "so'gal", "WINCH": "chig'ir",
+# Umuman tarjima qilinmay, inglizchasi qolganlar:
+"FARROW": "cho'chqa bolalamoq", "HEW": "chopmoq", "MAW": "og'iz; oshqozon",
+"MEW": "miyovlamoq", "TWIT": "ahmoq; mazax qilmoq",
+"WOLD": "yalang tepalik", "WORT": "shira (pivo suyuqligi)",
+"YAW": "yon tomonga burilish", "YEW": "tis daraxti",
+"MEWS": "otxona ko'chasi", "STRAPS": "tasmalar",
 }
 
 
@@ -462,6 +584,16 @@ def main():
 
     dropped = len(merged) - len(used & set(merged))
     merged = {k: v for k, v in sorted(merged.items()) if k in used}
+
+    # TUTUQ BELGISI BIR XIL BO'LSIN.
+    #
+    # Manbalar har xil: qo'lda yozilgani oddiy apostrof (') ishlatadi,
+    # Google esa ba'zan ' yoki ʻ qaytaradi. Ko'zga farqi bilinmaydi,
+    # lekin bu ayni bir harf uch xil kodlanishi demak. Shu yerda
+    # bir xillashtiriladi va boshqa ajralib keta olmaydi.
+    fix = str.maketrans({"‘": "'", "’": "'", "ʻ": "'",
+                         "´": "'", "`": "'"})
+    merged = {k: v.translate(fix).strip() for k, v in merged.items()}
     out.write_text(json.dumps(merged, ensure_ascii=False, indent=0), encoding="utf-8")
 
     # data/ ichiga ham nusxa (manba sifatida)

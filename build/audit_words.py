@@ -144,6 +144,30 @@ def main() -> int:
     if pron_bonus == 0:
         problems.append("olmoshlar bonus sifatida umuman uchramaydi")
 
+    # Server ballni MAX_BONUS_PER_PUZZLE bilan cheklaydi. U haqiqiy eng
+    # katta bonus sonidan kichik bo'lsa, hamma bonusni topgan o'yinchi
+    # ballidan ayrilib qolardi.
+    biggest = max(
+        (len(pz["bonus"])
+         for st in index["stages"]
+         for lvl in json.loads((DATA / "puzzles" /
+                                f"stage_{st['stage']:02d}.json")
+                               .read_text(encoding="utf-8"))["levels"]
+         for pz in lvl["puzzles"]), default=0)
+    print(f"  bitta puzzledagi eng ko'p bonus: {biggest}")
+    try:
+        sys.path.insert(0, str(ROOT))
+        import os
+        os.environ.setdefault("BOT_TOKEN", "1:" + "x" * 34)
+        import bot as B
+        if biggest > B.MAX_BONUS_PER_PUZZLE:
+            problems.append(
+                f"bot.py MAX_BONUS_PER_PUZZLE={B.MAX_BONUS_PER_PUZZLE} "
+                f"haqiqiy eng katta sondan ({biggest}) kichik — "
+                "ball noto'g'ri cheklanadi")
+    except Exception as e:
+        print(f"  (bot.py tekshirilmadi: {e})")
+
     print()
     if problems:
         print(f"MUAMMO TOPILDI: {len(problems)}")

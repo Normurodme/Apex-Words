@@ -184,7 +184,10 @@ def verify_init_data(init_data: str) -> dict | None:
 PUZZLES_PER_LEVEL = 50
 MAX_LEVELS = 60
 COINS_PER_PUZZLE = 5          # puzzle yechilganda
-MAX_BONUS_PER_PUZZLE = 160    # o'lchandi: eng ko'p bonusli puzzle
+# O'lchandi: eng ko'p bonusli puzzlede 281 ta. Zaxira bilan olingan —
+# lug'at kengaysa bu son o'sadi, chegara esa halol o'yinchini
+# cheklab qo'ymasligi kerak. Tekshiruv: build/audit_words.py
+MAX_BONUS_PER_PUZZLE = 400
 
 
 def plausible_score(progress: dict) -> int:

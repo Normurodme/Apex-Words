@@ -1283,7 +1283,6 @@ dilemma
 dim
 dime
 dimension
-ding
 dinner
 dinosaur
 dioxide
@@ -2167,7 +2166,6 @@ hero
 heroic
 heroin
 hesitate
-hey
 hide
 hierarchy
 high

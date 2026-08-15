@@ -61,9 +61,29 @@ CORE_ZIPF = 3.60   # yechim so'zlari uchun — o'rtacha o'quvchi taniydigan dara
 # va shu bilan birga bonus mexanikasi yetarlicha tez-tez ishlaydi.
 FULL_ZIPF = 3.05
 
-# Bonus ro'yxatida ham ko'plik/zamon shakllari bo'lmasin.
-# True qilinsa, o'yinchi 'CATS' yozganda +1 bonus oladi (lekin so'z o'rgatilmaydi).
-ALLOW_INFLECTED_BONUS = False
+# Kamroq uchraydigan, lekin HAQIQIY so'zlar uchun past bo'sag'a.
+#
+# 3.05 dan pastda "oar" (eshkak), "oat" (suli), "eon", "tern", "rote"
+# kabi butunlay oddiy so'zlar qolib ketardi — o'yinchi ularni yozsa
+# "noto'g'ri" javob olardi. Bo'sag'ani shunchaki pasaytirish esa
+# axlatni kiritadi ("rea", "aer", "nei" — NLTK korpusidagi bo'laklar).
+#
+# Shuning uchun past bo'sag'a FAQAT WordNet tanigan so'zlarga tegishli:
+# WordNet — lug'at, korpus emas, ya'ni unda bo'lgan narsa haqiqiy so'z.
+FULL_ZIPF_WORDNET = 2.60
+
+# Ko'plik va zamon shakllari BONUS sifatida qabul qilinadi.
+#
+# Yechim bo'lolmaydi (to'rda faqat asos shakl turadi — o'yin lug'at
+# o'rgatadi, grammatika emas), lekin o'yinchi to'g'ri inglizcha so'z
+# yozgan bo'lsa uni rad etish noto'g'ri.
+#
+# Nima uchun o'zgartirildi: qamrov tekshiruvi (audit_coverage.py)
+# ko'rsatdiki, rad etilayotgan eng ko'p uchraydigan so'z — 'ARE'
+# (chastota 6.74, ingliz tilidagi eng keng tarqalgan so'zlardan biri).
+# 'ATE', 'RAN', 'WAS' ham shunday. O'yinchi bunday so'zni yozib
+# "noto'g'ri" javob olsa, o'yinga ishonchi yo'qoladi.
+ALLOW_INFLECTED_BONUS = True
 
 VOWELS = set("aeiou")
 
@@ -79,6 +99,19 @@ BLOCKLIST = {
     "scrotum", "semen", "sex", "sexy", "shit", "shitty", "slut", "smut", "sperm",
     "spic", "tit", "tits", "titty", "turd", "twat", "vagina", "viagra",
     "wank", "whore", "wop", "hooker", "booker", "pimp", "stripper",
+
+    # --- Ismlar va brendlar ---
+    #
+    # BLOCKLIST ATAYLAB: bu ro'yxat eng birinchi tekshiriladi va uni
+    # WordNet "qutqaruvi" ham bekor qila olmaydi. Bu so'zlarning ba'zisi
+    # lug'atda bor ("dell" — vodiy, "brит" — britaniyalik), lekin
+    # o'yinchi uchun ular avvalo ism yoki brend bo'lib ko'rinadi va
+    # ingliz tilini o'rganishga hech narsa qo'shmaydi.
+    "amelia", "ana", "anna", "bach", "berlin", "beth", "billy", "brent",
+    "brit", "burke", "buster", "butch", "chapman", "dell", "donna",
+    "kali", "kat", "lev", "lulu", "mac", "marc", "molly", "muller",
+    "sally", "slater", "yahoo", "amir", "bey", "randy", "perry",
+    "fay", "mina", "bam", "blah", "hey", "boo", "ding", "rev", "mag",
 }
 
 # Chastotasi yuqori, lekin so'z emas: qisqartma, sleng, internet tokenlari.
@@ -231,6 +264,10 @@ GAME_WORDS = {
     "dan",      # dzyudo/karate darajasi
     "rand",     # JAR valyutasi / tasodifiy
     "naan",     # non turi
+    # Noto'g'ri fe'l shakllari: WordNet ularni asos so'zga bog'laydi
+    # ("sat" -> "sit"), shuning uchun "kichik harfli lemma" tekshiruvi
+    # ularni tanimaydi va ular qo'lda tashlanganlar orasida qolib ketardi.
+    "sat", "held", "paid",
 }
 
 # Ko'plik/zamon qoidalariga TASODIFAN tushib qoladigan haqiqiy asos so'zlar.
@@ -501,7 +538,20 @@ def main():
     bonus_only_extra = 0
     for w in shaped:
         if w not in known and w not in RESCUED:
-            continue
+            # KO'PLIK VA ZAMON SHAKLLARI KORPUSDA YO'Q.
+            #
+            # NLTK words — asos shakllar lug'ati: unda "word" bor,
+            # "words" yo'q; "play" bor, "played" yo'q. Shuning uchun
+            # o'yinchi WORDS, GAMES, FRIENDS, PLAYED, ASKED yozganda
+            # "noto'g'ri" javob olardi — o'lchov bo'yicha 961 ta keng
+            # tarqalgan so'z shu sababdan rad etilardi.
+            #
+            # Asosi tanish bo'lsa, so'z haqiqiy deb qabul qilinadi.
+            # U faqat BONUS bo'ladi: quyidagi core sharti is_inflected
+            # bo'lganlarni baribir o'tkazmaydi.
+            if not (ALLOW_INFLECTED_BONUS
+                    and any(s in known for s in inflection_stems(w))):
+                continue
 
         # Atoqli ot deb topilgan so'z DARHOL TASHLANMAYDI.
         #
@@ -525,7 +575,7 @@ def main():
                 continue
 
         z = zipf_frequency(w, "en")
-        if z >= FULL_ZIPF:
+        if z >= FULL_ZIPF or (z >= FULL_ZIPF_WORDNET and wordnet_common(w)):
             full.append(w)
             # BONUS_ONLY so'zlari full'da qoladi, lekin core'ga tushmaydi:
             # o'yinchi ularni topsa ball oladi, ammo to'rda katak bo'lmaydi.
@@ -538,10 +588,16 @@ def main():
     # yoki ko'plik/zamon filtridan o'tmay full'dan tushib qolardi —
     # natijada o'yinchi to'g'ri olmoshni yozsa ham "noto'g'ri" chiqardi.
     # Shuning uchun ular bu yerda majburan qo'shiladi.
-    core = sorted(set(core) - BONUS_ONLY - RESCUED)
-    full = sorted(set(full) |
-                  {w for w in BONUS_ONLY if MIN_LEN <= len(w) <= MAX_LEN} |
-                  {w for w in RESCUED if MIN_LEN <= len(w) <= MAX_LEN})
+    # Majburan qo'shishda ham BLOCKLIST ustun turadi.
+    #
+    # Ilgari bunday emas edi va qat'iy taqiqlangan so'z ("dell" — brend)
+    # "qutqarilganlar" ro'yxati orqali bonusga qaytib tushardi.
+    def _add(pool):
+        return {w for w in pool
+                if MIN_LEN <= len(w) <= MAX_LEN and w not in BLOCKLIST}
+
+    core = sorted(set(core) - BONUS_ONLY - RESCUED - BLOCKLIST)
+    full = sorted(set(full) - BLOCKLIST | _add(BONUS_ONLY) | _add(RESCUED))
     print(f"      atoqli ot edi, bonusga o'tdi  : {bonus_only_extra:,}")
     print(f"      atoqli ot deb chiqarildi           : {dropped_proper:,}")
     print(f"      ko'plik/zamon shakli deb chiqarildi: {dropped_infl:,}")

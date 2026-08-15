@@ -19,8 +19,10 @@ Ishga tushirish:
 from __future__ import annotations
 
 import json
+import socket
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,7 +30,17 @@ DATA = ROOT / "data"
 CACHE = DATA / "uz_auto.json"
 
 BATCH = 40          # bir so'rovda nechta so'z
-PAUSE = 0.6         # so'rovlar orasidagi tanaffus (soniya)
+WORKERS = 6         # bir vaqtda nechta so'rov
+
+# SO'ROV MUDDATI.
+#
+# Bu qator bo'lmagani uchun skript qotib qolgan edi: bitta javobsiz
+# so'rov butun jarayonni CHEKSIZ to'xtatib turadi. deep_translator
+# timeout parametrini tashqariga chiqarmaydi, shuning uchun chegara
+# soket darajasida qo'yiladi — u barcha tarmoq amallariga tegishli.
+socket.setdefaulttimeout(25)
+# Tanaffus endi kerak emas: so'rovlar parallel ketadi va ular orasida
+# sun'iy kutish faqat umumiy vaqtni cho'zardi.
 
 
 def puzzle_words() -> set[str]:
@@ -75,46 +87,73 @@ def main() -> int:
     from deep_translator import GoogleTranslator
     tr = GoogleTranslator(source="en", target="uz")
 
-    done = 0
-    for i in range(0, len(need), BATCH):
-        chunk = need[i:i + BATCH]
-        res = None
+    def fetch(chunk: list[str]) -> list:
+        """
+        Bir bo'lakni tarjima qiladi. Yiqilsa — IKKIGA BO'LADI.
+
+        Ilgari yiqilgan bo'lak bittalab qayta so'ralardi: 40 so'z uchun
+        40 ta alohida so'rov. Ikkiga bo'lish esa ~log2 qadamda aybdor
+        so'zni ajratadi va qolganlarini bitta so'rovda oladi.
+        """
+        if not chunk:
+            return []
         try:
-            res = tr.translate_batch([w.lower() for w in chunk])
+            return tr.translate_batch([w.lower() for w in chunk])
         except Exception:
-            # Guruh so'rovi bitta yomon so'z tufayli butunlay yiqiladi.
-            # Shunda bittalab o'tamiz: qolganlari baribir tarjima bo'ladi.
-            res = []
-            for w in chunk:
-                try:
-                    res.append(tr.translate(w.lower()))
-                except Exception:
-                    res.append(None)
-                time.sleep(0.15)
+            if len(chunk) == 1:
+                return [None]
+            mid = len(chunk) // 2
+            return fetch(chunk[:mid]) + fetch(chunk[mid:])
 
-        for w, uz in zip(chunk, res):
-            if not uz:
-                continue
-            uz = uz.strip().lower()
-            if not uz:
-                continue
-            # Tarjima inglizchaga TENG bo'lsa ham yozamiz.
-            #
-            # Ilgari bunday so'zlar tashlab yuborilardi va ular hech qachon
-            # keshga tushmasdi — har ishga tushirishda qaytadan so'ralardi
-            # va o'yinchi "tarjima topilmadi" ko'rardi. Aslida ko'p so'z
-            # o'zbekchada ham xuddi shunday yoziladi (radio, taksi, futbol),
-            # ya'ni bu haqiqiy tarjima. Yozib qo'ygan afzal.
-            cache[w] = uz
-        done += len(chunk)
+    chunks = [need[i:i + BATCH] for i in range(0, len(need), BATCH)]
+    done = 0
+    t0 = time.time()
 
-        # Har bo'lakdan keyin saqlaymiz: uzilib qolsa ish yo'qolmaydi
-        CACHE.write_text(json.dumps(cache, ensure_ascii=False,
-                                    indent=0, sort_keys=True), encoding="utf-8")
-        print(f"  {done:>5}/{len(need)}  (keshda {len(cache):,})")
-        time.sleep(PAUSE)
+    # PARALLEL. Ish tarmoqqa bog'liq: jarayonning deyarli butun vaqti
+    # javob kutishga ketadi. Ketma-ket bajarilganda 240 ta so'rov
+    # birin-ketin kutilardi; bir nechta oqim bilan ular ustma-ust tushadi.
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        futures = {pool.submit(fetch, c): c for c in chunks}
+        for fut in as_completed(futures):
+            chunk = futures[fut]
+            try:
+                res = fut.result()
+            except Exception as e:
+                print(f"  bo'lak o'tkazib yuborildi: {e}")
+                res = []
 
+            for w, uz in zip(chunk, res):
+                if not uz:
+                    continue
+                uz = uz.strip().lower()
+                if not uz:
+                    continue
+                # Tarjima inglizchaga TENG bo'lsa ham yozamiz.
+                #
+                # Ilgari bunday so'zlar tashlab yuborilardi va ular hech qachon
+                # keshga tushmasdi — har ishga tushirishda qaytadan so'ralardi
+                # va o'yinchi "tarjima topilmadi" ko'rardi. Aslida ko'p so'z
+                # o'zbekchada ham xuddi shunday yoziladi (radio, taksi, futbol),
+                # ya'ni bu haqiqiy tarjima. Yozib qo'ygan afzal.
+                cache[w] = uz
+            done += len(chunk)
+
+            # Vaqti-vaqti bilan saqlaymiz: uzilib qolsa ish yo'qolmaydi
+            if done % (BATCH * 5) < BATCH or done >= len(need):
+                CACHE.write_text(json.dumps(cache, ensure_ascii=False,
+                                            indent=0, sort_keys=True),
+                                 encoding="utf-8")
+            el = time.time() - t0
+            rate = done / el if el else 0
+            left = (len(need) - done) / rate if rate else 0
+            print(f"  {done:>5}/{len(need)}  (keshda {len(cache):,})  "
+                  f"{rate:.0f} so'z/s  taxminan {left / 60:.1f} daq qoldi",
+                  flush=True)
+
+    CACHE.write_text(json.dumps(cache, ensure_ascii=False,
+                                indent=0, sort_keys=True), encoding="utf-8")
     print(f"\nTayyor. Keshda jami {len(cache):,} tarjima -> {CACHE.name}")
+    print(f"Vaqt: {(time.time() - t0) / 60:.1f} daqiqa")
     return 0
 
 

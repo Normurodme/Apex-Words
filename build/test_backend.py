@@ -342,6 +342,22 @@ async def main():
     ok.append(("qaytarilgan to'lov ro'yxatdan chiqdi",
                await B.db.last_payment(host) is None))
 
+    # --- Lug'at va tarjima tekshiruvlari ---
+    #
+    # To'liq tekshiruvni audit_words.py va audit_translations.py
+    # bajaradi. Bu yerda ular ISHGA TUSHADI: aks holda ular yozilgan-u,
+    # hech qachon chaqirilmaydigan skript bo'lib qolardi.
+    import subprocess
+    for script in ("audit_words.py", "audit_translations.py"):
+        r = subprocess.run([sys.executable, str(ROOT / "build" / script)],
+                           capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        ok.append((f"{script} toza o'tdi", r.returncode == 0))
+        if r.returncode != 0:
+            tail = (r.stdout or "").strip().splitlines()[-6:]
+            for line in tail:
+                print("        " + line)
+
     # --- Puzzle ma'lumotlari: olmoshlar ---
     #
     # Olmosh yechim bo'lib qolsa, o'yin lug'at emas grammatika mashqiga
