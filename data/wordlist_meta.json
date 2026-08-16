@@ -1,6 +1,6 @@
 {
-  "core_count": 5255,
-  "full_count": 13639,
+  "core_count": 5424,
+  "full_count": 14718,
   "core_zipf": 3.6,
   "full_zipf": 3.05,
   "inflected_excluded": true,

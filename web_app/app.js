@@ -1800,7 +1800,10 @@ function useHint() {
   o'zgartirib yoki sahifani yangilab qayta olishning oldi olinadi. Mijoz
   faqat serverdan kelgan kalitlarni hisobga qo'shadi.
 */
-const DAILY_PLAN = [1, 1, 1, 2, 2, 2, 3];
+/* Server javob bermaguncha ko'rsatiladigan zaxira reja.
+   bot.py dagi DAILY_KEYS bilan bir xil bo'lishi kerak — haqiqiy
+   qiymat baribir serverdan keladi. */
+const DAILY_PLAN = [1, 1, 1, 1, 1, 2, 2];
 let taskState = null;
 
 async function api(path) {
@@ -1939,13 +1942,32 @@ function renderReferral() {
   $('btn-invite').disabled = !(TG && TG.initData && s && s.ref_link);
 }
 
+/*
+  Taklifni do'stga yuborish.
+
+  switchInlineQuery — Telegram chat tanlash oynasini ochadi va tanlangan
+  chatga bot tayyorlagan KARTANI yuboradi: xabar ostida bosiladigan
+  tugma turadi. Ilgari t.me/share/url ishlatilardi va do'stga oddiy
+  matn borardi — havolani qo'lda ochishi kerak edi.
+
+  Eski Telegram'da switchInlineQuery yo'q, shuning uchun eski usul
+  zaxira sifatida qoladi.
+*/
 function shareInvite() {
   const s = taskState;
   if (!(s && s.ref_link)) return;
+  haptic('tap');
+
+  if (TG && TG.switchInlineQuery) {
+    try {
+      TG.switchInlineQuery('invite', ['users', 'groups']);
+      return;
+    } catch (_) { /* quyidagi zaxira yo'l */ }
+  }
+
   const url = 'https://t.me/share/url?url=' + encodeURIComponent(s.ref_link) +
               '&text=' + encodeURIComponent(
                 'Learn English by playing Apex Words with me!');
-  haptic('tap');
   if (TG && TG.openTelegramLink) TG.openTelegramLink(url);
   else window.open(url, '_blank');
 }

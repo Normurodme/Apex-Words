@@ -289,7 +289,8 @@ _ADMIN_SQL = (" AND user_id NOT IN (%s)" % ",".join(str(i) for i in sorted(ADMIN
 
 # Kunlik mukofot: 1-3 kun 1 kalit, 4-6 kun 2 kalit, 7-kun 3 kalit.
 # Sakkizinchi kuni sikl yangidan boshlanadi.
-DAILY_KEYS = [1, 1, 1, 2, 2, 2, 3]
+# Kunlik mukofot: 1-5 kunlar bittadan, 6-7 kunlar ikkitadan.
+DAILY_KEYS = [1, 1, 1, 1, 1, 2, 2]
 
 
 def next_streak_day(last_s: str | None, streak: int, today: date) -> int:
@@ -1663,11 +1664,13 @@ async def cmd_invite(message: Message):
     count, left = await db.ref_state(uid)
     link = f"{BOT_LINK}?start=ref_{uid}"
 
-    share = ("https://t.me/share/url?url=" + urllib.parse.quote(link) +
-             "&text=" + urllib.parse.quote(
-                 "Learn English by playing Apex Words with me!"))
+    # switch_inline_query — Telegram chat tanlash oynasini ochadi va
+    # tanlangan chatga TUGMALI karta yuboradi. Ilgari t.me/share/url
+    # ishlatilardi: u faqat matn yuborardi va do'st havolani qo'lda
+    # ochishi kerak edi.
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="📤 Share with friends", url=share)
+        InlineKeyboardButton(text="📤 Invite a friend",
+                             switch_inline_query="invite")
     ]])
     await message.answer(
         f"👥 <b>Invite friends</b>\n\n"
@@ -1957,19 +1960,56 @@ def _inline_play_card(link: str) -> InlineQueryResultArticle:
     )
 
 
+def _inline_invite_card(uid: int, name: str) -> InlineQueryResultArticle:
+    """
+    Taklif kartasi — do'stga TUGMALI xabar bo'lib boradi.
+
+    Ilgari taklif t.me/share/url orqali oddiy matn bo'lib ketardi:
+    do'st havolani ko'chirib olishi kerak edi. Inline natija esa
+    xabar ostiga tugma qo'yadi va bir bosishda botga olib boradi.
+
+    Havolada taklif qiluvchining ID'si bor, shuning uchun karta
+    SHAXSIY: har o'yinchi o'z havolasini oladi.
+    """
+    link = f"{BOT_LINK}?start=ref_{uid}"
+    who = html_escape(name or "A friend")
+    return InlineQueryResultArticle(
+        id=f"invite{uid}",
+        title="👥 Invite a friend",
+        description=f"They join, you get keys — every {REF_PER} friends "
+                    f"= {REF_KEYS} 🗝️",
+        input_message_content=InputTextMessageContent(
+            message_text=(
+                f"🎮 <b>{who}</b> invites you to <b>Apex Words</b>\n\n"
+                "Swipe letters into words and learn English — "
+                "3,000 puzzles, completely free."
+            ),
+            parse_mode=ParseMode.HTML,
+        ),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🎮 Start playing", url=link)
+        ]]),
+    )
+
+
 async def _answer_inline(query: InlineQuery):
     """
-    Inline natijalar.
+    Inline natijalar: taklif kartasi va o'yin kartasi.
 
-    FAQAT bitta karta — o'yinga taklif. Reyting kartasi ATAYLAB
-    olib tashlandi: inline so'rovda Telegram qaysi guruhdan kelganini
-    aytmaydi (chat_id berilmaydi, faqat chat_type). Shuning uchun u
-    yerda faqat UMUMIY reyting ko'rsatish mumkin edi, guruhniki emas.
-    Guruhda esa odamga o'z guruhining reytingi kerak — umumiysi
-    chalg'itadi. Guruh reytingini /top beradi, u chat_id ni biladi.
+    Reyting kartasi ATAYLAB yo'q: inline so'rovda Telegram qaysi
+    guruhdan kelganini aytmaydi (chat_id berilmaydi, faqat chat_type).
+    Shuning uchun u yerda faqat UMUMIY reyting ko'rsatish mumkin edi,
+    guruhniki emas. Guruhda esa odamga o'z guruhining reytingi kerak.
+    Guruh reytingini /top beradi, u chat_id ni biladi.
     """
-    await query.answer([_inline_play_card(BOT_LINK)],
-                       cache_time=300, is_personal=False)
+    u = query.from_user
+    results = [
+        _inline_invite_card(u.id, u.first_name),
+        _inline_play_card(BOT_LINK),
+    ]
+    # is_personal SHART: natijada o'yinchining o'z havolasi bor,
+    # shuning uchun uni boshqalarga keshlab berish mumkin emas.
+    await query.answer(results, cache_time=30, is_personal=True)
 
 
 @dp.message(lambda m: m.text and m.text.startswith("/stats"))

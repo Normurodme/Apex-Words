@@ -342,6 +342,28 @@ async def main():
     ok.append(("qaytarilgan to'lov ro'yxatdan chiqdi",
                await B.db.last_payment(host) is None))
 
+    # --- Taklif inline karta bo'lib boradi ---
+    #
+    # Ilgari taklif t.me/share/url orqali oddiy MATN bo'lib ketardi va
+    # do'st havolani qo'lda ochishi kerak edi. Endi inline natija:
+    # xabar ostida bosiladigan tugma turadi.
+    card = B._inline_invite_card(700123, "Ali")
+    btn = card.reply_markup.inline_keyboard[0][0]
+    ok.append(("taklif kartasida tugma bor", btn.url is not None))
+    ok.append(("tugma havolasida taklif ID'si bor",
+               btn.url.endswith("start=ref_700123")))
+    ok.append(("taklif qiluvchi ismi xabarda",
+               "Ali" in card.input_message_content.message_text))
+    # Ism HTML tegi bo'lib ketmasin
+    evil = B._inline_invite_card(1, "<b>x</b>")
+    ok.append(("ism zararsizlantirilgan",
+               "&lt;b&gt;" in evil.input_message_content.message_text))
+
+    # /invite tugmasi chat tanlash oynasini ochishi kerak
+    src = inspect.getsource(B.cmd_invite)
+    ok.append(("/invite switch_inline_query ishlatadi",
+               "switch_inline_query" in src))
+
     # --- Lug'at va tarjima tekshiruvlari ---
     #
     # To'liq tekshiruvni audit_words.py va audit_translations.py
@@ -508,7 +530,8 @@ async def main():
 
     r = await client.post("/api/claim-daily", json={"initData": good})
     d1 = await r.json()
-    ok.append(("1-kun 1 kalit beradi", d1.get("streak") == 1 and d1.get("keys") == 1))
+    ok.append(("1-kun rejadagi mukofotni beradi",
+               d1.get("streak") == 1 and d1.get("keys") == B.DAILY_KEYS[0]))
 
     r = await client.post("/api/claim-daily", json={"initData": good})
     d2 = await r.json()
@@ -525,22 +548,31 @@ async def main():
                              streak, 555001))
             await d.commit()
 
+    # Mukofot miqdori REJADAN olinadi, testga qattiq yozilmaydi —
+    # aks holda reja o'zgarganda test yolg'on qizil beraveradi.
     await set_daily(-1, 3)                      # kecha 3-kun olingan
     r = await client.post("/api/claim-daily", json={"initData": good})
     d4 = await r.json()
-    ok.append(("kecha olingan bo'lsa zanjir davom etadi (4-kun, 2 kalit)",
-               d4.get("streak") == 4 and d4.get("keys") == 2))
+    ok.append(("kecha olingan bo'lsa zanjir davom etadi (4-kun)",
+               d4.get("streak") == 4 and d4.get("keys") == B.DAILY_KEYS[3]))
 
     await set_daily(-1, 6)
     r = await client.post("/api/claim-daily", json={"initData": good})
     d7 = await r.json()
-    ok.append(("7-kun 3 kalit beradi", d7.get("streak") == 7 and d7.get("keys") == 3))
+    ok.append(("7-kun rejadagi mukofotni beradi",
+               d7.get("streak") == 7 and d7.get("keys") == B.DAILY_KEYS[6]))
+
+    # Siz so'ragan tartib: 1-5 kunlar bittadan, 6-7 kunlar ikkitadan
+    ok.append(("zanjir rejasi: 1-5 kun bittadan",
+               B.DAILY_KEYS[:5] == [1, 1, 1, 1, 1]))
+    ok.append(("zanjir rejasi: 6-7 kun ikkitadan",
+               B.DAILY_KEYS[5:] == [2, 2]))
 
     await set_daily(-1, 7)                      # 7 kun to'ldi -> yangidan
     r = await client.post("/api/claim-daily", json={"initData": good})
     d8 = await r.json()
     ok.append(("8-kuni zanjir 1 dan boshlanadi",
-               d8.get("streak") == 1 and d8.get("keys") == 1))
+               d8.get("streak") == 1 and d8.get("keys") == B.DAILY_KEYS[0]))
 
     await set_daily(-3, 5)                      # uch kun kelinmadi -> uziladi
     r = await client.post("/api/claim-daily", json={"initData": good})

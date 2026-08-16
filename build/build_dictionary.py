@@ -529,10 +529,17 @@ def main():
     dropped_infl = dropped_proper = 0
     bonus_only_extra = 0
     for w in shaped:
-        # NLTK words — ASOS SHAKLLAR lug'ati: unda "word" bor, "words"
-        # yo'q. Aynan shu narsa bizga kerak — o'yinga faqat o'zak
-        # so'zlar tushsin.
-        if w not in known and w not in RESCUED:
+        # IKKI MANBA: NLTK words va WordNet.
+        #
+        # NLTK words — ASOS SHAKLLAR ro'yxati (unda "word" bor, "words"
+        # yo'q), aynan shu bizga kerak. Lekin u eski korpus va
+        # so'zlashuv so'zlarini saqlamaydi: "mom" (chastota 5.12),
+        # "kid" (4.99) unda YO'Q va o'yin ularni rad etardi.
+        #
+        # WordNet — haqiqiy lug'at va u bunday so'zlarni biladi.
+        # Unda ham asosan asos shakllar turadi, shuning uchun "faqat
+        # o'zak so'z" qoidasi buzilmaydi.
+        if w not in known and not wordnet_common(w) and w not in RESCUED:
             continue
 
         # Atoqli ot deb topilgan so'z DARHOL TASHLANMAYDI.

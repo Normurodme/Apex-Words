@@ -539,6 +539,7 @@ UZ = {
 "WOLD": "yalang tepalik", "WORT": "shira (pivo suyuqligi)",
 "YAW": "yon tomonga burilish", "YEW": "tis daraxti",
 "MEWS": "otxona ko'chasi", "STRAPS": "tasmalar",
+"MASONRY": "g'ishtchilik", "AWOL": "ruxsatsiz ketgan",
 }
 
 
