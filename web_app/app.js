@@ -67,6 +67,7 @@ const State = {
   levelIndex: 0,        // hozir o'ynalayotgan darajaning tartib raqami
   unlimited: false,     // cheksiz kalit (serverdan keladi)
   admin: false,         // barcha bosqichlar ochiq, ball reytingga kirmaydi
+  banned: false,        // server 403 qaytarsa yoqiladi
   puzzle: null,
   found: new Set(),
   foundBonus: new Set(),
@@ -522,6 +523,9 @@ const Store = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: TG.initData })
       });
+      // Ban — alohida holat. Umumiy xatoga qo'shilsa, o'yinchi
+      // "tarmoq ishlamayapti" deb o'ylab qayta-qayta urinaverardi.
+      if (r.status === 403) { State.banned = true; return null; }
       if (!r.ok) throw new Error(r.status);
       const d = await r.json();
       // Cheksiz kalit bayrog'i SERVERDAN keladi — u progress ichida
@@ -2212,6 +2216,17 @@ async function boot() {
 
   await Promise.all([loadIndex(), loadDict()]);
   State.progress = await Store.load();
+
+  // Ban qilingan bo'lsa — o'yin ochilmaydi va sabab aytiladi.
+  if (State.banned) {
+    const box = el('div', 'boot-error');
+    box.appendChild(el('h2', null, 'Account blocked'));
+    box.appendChild(el('p', null,
+      'Your account can no longer play Apex Words. ' +
+      'If you think this is a mistake, contact the bot.'));
+    document.body.replaceChildren(box);
+    return;
+  }
 
   const wheel = $('wheel');
   wheel.addEventListener('pointerdown', onDown);

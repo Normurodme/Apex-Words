@@ -342,6 +342,77 @@ async def main():
     ok.append(("qaytarilgan to'lov ro'yxatdan chiqdi",
                await B.db.last_payment(host) is None))
 
+    # --- Admin paneli ---
+    names = [h.callback.__name__ for h in B.dp.message.handlers]
+    for cmd in ("cmd_admin", "cmd_uinfo", "cmd_ban", "cmd_unban",
+                "cmd_give", "cmd_suspects", "cmd_broadcast"):
+        ok.append((f"{cmd} ro'yxatdan o'tgan", cmd in names))
+
+    st = await B.db.admin_stats()
+    ok.append(("admin ko'rsatkichlari to'liq",
+               all(k in st for k in ("total", "new_day", "active_week",
+                                     "banned", "flagged", "pay_stars"))))
+
+    # ID va @username bo'yicha topish
+    ok.append(("ID bo'yicha topiladi",
+               (await B.db.find_user("555001")) is not None))
+    ok.append(("@username bo'yicha topiladi",
+               (await B.db.find_user("@h")) is not None))
+    ok.append(("yo'q odam topilmaydi",
+               (await B.db.find_user("999999999")) is None))
+
+    # --- Ban SERVERDA tekshiriladi ---
+    #
+    # Faqat mijozda yashirilsa, o'yinchi eski nusxa yoki to'g'ridan-to'g'ri
+    # so'rov bilan o'ynashda davom etardi.
+    ban_init = make_init_data(556100, tok)
+    await client.post("/api/state", json={"initData": ban_init})
+    await B.db.set_banned(556100, True, "sinov")
+    r = await client.post("/api/state", json={"initData": ban_init})
+    ok.append(("ban qilingan o'yinchi /api/state dan 403 oladi", r.status == 403))
+    r = await client.post("/api/save", json={
+        "initData": ban_init, "progress": {"coins": 1, "solved": {}}})
+    ok.append(("ban qilingan saqlay olmaydi", r.status == 403))
+
+    await B.db.save_progress(556100, {"coins": 500, "solved": {"1-1": 50}})
+    B.db.invalidate_top()
+    ok.append(("ban qilingan reytingda ko'rinmaydi",
+               556100 not in {r[3] for r in await B.db.top_rows()}))
+
+    await B.db.set_banned(556100, False)
+    r = await client.post("/api/state", json={"initData": ban_init})
+    ok.append(("bandan chiqarilgan yana kira oladi", r.status == 200))
+
+    # Sinov o'yinchisi keyingi reyting testlariga aralashmasin
+    async with B.db.conn() as _d:
+        await _d.execute("DELETE FROM players WHERE user_id=?", (556100,))
+        await _d.commit()
+    B.db.invalidate_top()
+
+    # --- Suiiste'mol belgisi ---
+    #
+    # "Suiiste'mol" = o'yin bera oladigan balldan ko'proq talab qilish.
+    # Avtomatik ban YO'Q: bu eski nusxa yoki sinxronlash tufayli ham
+    # bo'lishi mumkin, shuning uchun faqat sanaladi.
+    cheater = 556200
+    await B.db.get_progress({"id": cheater, "first_name": "C",
+                             "username": "c", "photo_url": None})
+    await B.db.save_progress(cheater, {"coins": 10**9, "solved": {"1-1": 1}})
+    row = await B.db.find_user(str(cheater))
+    ok.append(("chegaradan oshgani qayd etildi", row[6] == 1))
+    await B.db.save_progress(cheater, {"coins": 5, "solved": {"1-1": 1}})
+    row = await B.db.find_user(str(cheater))
+    ok.append(("halol saqlash hisobni oshirmaydi", row[6] == 1))
+    ok.append(("shubhalilar ro'yxatida chiqadi",
+               cheater in {r[0] for r in await B.db.suspects()}))
+    ok.append(("avtomatik ban qilinmadi", not row[4]))
+
+    # Xabar yuborishda ban qilinganlar chiqarib tashlanadi
+    await B.db.set_banned(cheater, True, "sinov")
+    ok.append(("ban qilingan xabar ro'yxatiga kirmaydi",
+               cheater not in await B.db.broadcast_ids()))
+    await B.db.set_banned(cheater, False)
+
     # --- Taklif inline karta bo'lib boradi ---
     #
     # Ilgari taklif t.me/share/url orqali oddiy MATN bo'lib ketardi va

@@ -32,11 +32,16 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
+from aiogram.exceptions import (
+    TelegramBadRequest,
+    TelegramForbiddenError,
+    TelegramRetryAfter,
+)
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State as FState, StatesGroup
 from aiogram.types import (
+    BotCommand,
     CallbackQuery,
     ChatMemberUpdated,
     InlineKeyboardButton,
@@ -236,6 +241,12 @@ CREATE TABLE IF NOT EXISTS players (
     ref_count  INTEGER NOT NULL DEFAULT 0,
     ref_paid   INTEGER NOT NULL DEFAULT 0,
     pend_keys  INTEGER NOT NULL DEFAULT 0,
+    banned     INTEGER NOT NULL DEFAULT 0,
+    ban_reason TEXT,
+    -- Ball chegaradan oshib ketgan holatlar soni. Bir marta oshishi
+    -- tasodif bo'lishi mumkin (eski nusxa, sinxronlash), takrorlanishi
+    -- esa allaqachon belgi — /suspects shu bo'yicha saralaydi.
+    cheat_hits INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -532,6 +543,9 @@ class DB:
             ("ref_count", "ALTER TABLE players ADD COLUMN ref_count INTEGER NOT NULL DEFAULT 0"),
             ("ref_paid", "ALTER TABLE players ADD COLUMN ref_paid INTEGER NOT NULL DEFAULT 0"),
             ("pend_keys", "ALTER TABLE players ADD COLUMN pend_keys INTEGER NOT NULL DEFAULT 0"),
+            ("banned", "ALTER TABLE players ADD COLUMN banned INTEGER NOT NULL DEFAULT 0"),
+            ("ban_reason", "ALTER TABLE players ADD COLUMN ban_reason TEXT"),
+            ("cheat_hits", "ALTER TABLE players ADD COLUMN cheat_hits INTEGER NOT NULL DEFAULT 0"),
         ):
             if name not in cols:
                 await db.execute(ddl)
@@ -609,10 +623,25 @@ class DB:
         # Ball alohida ustunda saqlanadi: reytingni JSON ichidan qidirib emas,
         # indeks bo'yicha saralab olish uchun.
         score = plausible_score(progress)
+
+        # Chegaradan OSHIB KETGAN holat qayd etiladi.
+        #
+        # Bir marta oshishi tasodif bo'lishi mumkin (eski nusxa, ikki
+        # qurilma sinxronlashuvi). Takrorlanishi esa belgi — /suspects
+        # aynan shu hisob bo'yicha saralaydi va admin qaror qabul qiladi.
+        # Avtomatik ban YO'Q: halol o'yinchini xato bloklamaslik muhimroq.
+        try:
+            claimed = int(progress.get("coins", 0))
+        except (TypeError, ValueError):
+            claimed = 0
+        cheated = claimed > score
+
         async with self.conn() as db:
             await db.execute(
-                "UPDATE players SET progress=?, score=?, updated_at=? WHERE user_id=?",
-                (json.dumps(progress, ensure_ascii=False), score, int(time.time()), uid),
+                "UPDATE players SET progress=?, score=?, updated_at=?, "
+                "cheat_hits = cheat_hits + ? WHERE user_id=?",
+                (json.dumps(progress, ensure_ascii=False), score,
+                 int(time.time()), 1 if cheated else 0, uid),
             )
             await db.commit()
 
@@ -870,7 +899,7 @@ class DB:
         async with self.conn() as db:
             async with db.execute(
                 "SELECT first_name, photo_url, score, user_id FROM players "
-                "WHERE score > 0" + _ADMIN_SQL +
+                "WHERE score > 0 AND banned = 0" + _ADMIN_SQL +
                 " ORDER BY score DESC, updated_at ASC LIMIT ?",
                 (TOP_LIMIT,),
             ) as cur:
@@ -896,7 +925,7 @@ class DB:
         async with self.conn() as db:
             async with db.execute(
                 "SELECT first_name, photo_url, score, user_id FROM players "
-                "WHERE score > 0" + _ADMIN_SQL +
+                "WHERE score > 0 AND banned = 0" + _ADMIN_SQL +
                 " ORDER BY score DESC, updated_at ASC LIMIT ?",
                 (SCAN_LIMIT,),
             ) as cur:
@@ -929,7 +958,8 @@ class DB:
                 "WITH me AS (SELECT COALESCE(MAX(score), 0) AS s FROM players "
                 "            WHERE user_id=?) "
                 "SELECT me.s, (SELECT COUNT(*) FROM players "
-                "              WHERE score > me.s" + _ADMIN_SQL + ") FROM me",
+                "              WHERE score > me.s AND banned = 0"
+                + _ADMIN_SQL + ") FROM me",
                 (uid,)
             ) as cur:
                 my_score, above = await cur.fetchone()
@@ -946,6 +976,93 @@ class DB:
             for i, (name, photo, score, row_uid) in enumerate(rows)
         ]
         return {"top": top, "me": {"rank": my_rank, "score": my_score}}
+
+    # ------------------------------ Admin ------------------------------
+
+    async def is_banned(self, uid: int) -> bool:
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT banned FROM players WHERE user_id=?", (uid,)
+            ) as cur:
+                row = await cur.fetchone()
+        return bool(row and row[0])
+
+    async def find_user(self, token: str) -> tuple | None:
+        """
+        ID yoki @username bo'yicha o'yinchini topadi.
+
+        Admin buyruqlarida ikkalasi ham qulay: ID logdan, username esa
+        chatdan ko'chiriladi.
+        """
+        token = token.strip()
+        async with self.conn() as db:
+            if token.lstrip("-").isdigit():
+                sql, arg = "user_id=?", int(token)
+            else:
+                sql, arg = "LOWER(username)=?", token.lstrip("@").lower()
+            async with db.execute(
+                "SELECT user_id, username, first_name, score, banned, "
+                "ban_reason, cheat_hits, ref_count, pend_keys, created_at, "
+                "updated_at, progress FROM players WHERE " + sql, (arg,)
+            ) as cur:
+                return await cur.fetchone()
+
+    async def set_banned(self, uid: int, banned: bool, reason: str = ""):
+        async with self.conn() as db:
+            await db.execute(
+                "UPDATE players SET banned=?, ban_reason=?, updated_at=? "
+                "WHERE user_id=?",
+                (1 if banned else 0, reason or None, int(time.time()), uid))
+            await db.commit()
+        self.invalidate_top()
+
+    async def suspects(self, limit: int = 20) -> list:
+        """Ball chegarasidan ko'p marta oshgan o'yinchilar."""
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT user_id, username, first_name, score, cheat_hits, banned "
+                "FROM players WHERE cheat_hits > 0 "
+                "ORDER BY cheat_hits DESC, score DESC LIMIT ?", (limit,)
+            ) as cur:
+                return await cur.fetchall()
+
+    async def broadcast_ids(self) -> list[int]:
+        """Xabar yuboriladigan o'yinchilar (ban qilinganlarsiz)."""
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT user_id FROM players WHERE banned=0"
+            ) as cur:
+                return [r[0] for r in await cur.fetchall()]
+
+    async def admin_stats(self) -> dict:
+        """Admin paneli uchun ko'rsatkichlar — bitta so'rovda."""
+        now = int(time.time())
+        day, week = now - 86400, now - 7 * 86400
+        async with self.conn() as db:
+            async with db.execute(
+                "SELECT COUNT(*),"
+                " SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN banned=1 THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN cheat_hits > 0 THEN 1 ELSE 0 END),"
+                " SUM(CASE WHEN channel_ok=1 THEN 1 ELSE 0 END),"
+                " SUM(score), MAX(score), SUM(ref_count)"
+                " FROM players", (day, week, day, week)
+            ) as cur:
+                r = await cur.fetchone()
+            async with db.execute(
+                "SELECT COUNT(*), COALESCE(SUM(stars),0), COALESCE(SUM(keys),0) "
+                "FROM payments WHERE refunded=0"
+            ) as cur:
+                pay = await cur.fetchone()
+        keys = ("total", "new_day", "new_week", "active_day", "active_week",
+                "banned", "flagged", "channel", "score_sum", "score_max",
+                "refs")
+        out = {k: (v or 0) for k, v in zip(keys, r)}
+        out["pay_count"], out["pay_stars"], out["pay_keys"] = pay
+        return out
 
     async def stats(self) -> tuple[int, int]:
         async with self.conn() as db:
@@ -976,6 +1093,10 @@ async def api_state(request: web.Request) -> web.Response:
         return web.json_response({"error": "unauthorized"}, status=401)
 
     progress = await db.get_progress(user)
+    if await db.is_banned(user["id"]):
+        # Ban serverda tekshiriladi. Faqat mijozda yashirilsa, o'yinchi
+        # eski nusxa yoki to'g'ridan-to'g'ri so'rov bilan davom etardi.
+        return web.json_response({"error": "banned"}, status=403)
     return web.json_response({
         "progress": progress or None,
         # Kalit chegarasi shu bayroqqa qarab olib tashlanadi
@@ -1030,6 +1151,9 @@ async def api_save(request: web.Request) -> web.Response:
 
     if not rate_ok(user["id"]):
         return web.json_response({"error": "too many requests"}, status=429)
+
+    if await db.is_banned(user["id"]):
+        return web.json_response({"error": "banned"}, status=403)
 
     progress = body.get("progress")
     if not isinstance(progress, dict):
@@ -1371,6 +1495,213 @@ async def cmd_start(message: Message, state: FSMContext):
             text + "\n\n⚠️ WEBAPP_URL is not set to an https address yet — "
             "the play button stays hidden."
         )
+
+
+# ------------------------------ ADMIN PANEL -----------------------------------
+#
+# Barcha buyruqlar ADMINS ro'yxatidagilarga tegishli. Boshqalar uchun
+# ular JIMGINA e'tiborsiz qoldiriladi — "sizda ruxsat yo'q" javobi
+# buyruqning borligini oshkor qilardi.
+
+
+def admin_only(m: Message) -> bool:
+    return (m.from_user is not None and m.from_user.id in ADMINS
+            and m.chat.type == "private")
+
+
+def _fmt_user(row) -> str:
+    (uid, uname, name, score, banned, reason, hits, refs,
+     pend, created, updated, progress) = row
+    solved = 0
+    try:
+        p = json.loads(progress or "{}")
+        solved = sum(int(v) for v in (p.get("solved") or {}).values())
+    except Exception:
+        pass
+    lines = [
+        f"👤 <b>{html_escape(name or 'Player')}</b>"
+        + (f" (@{html_escape(uname)})" if uname else ""),
+        f"ID: <code>{uid}</code>",
+        f"💎 Ball: <b>{score}</b>   ·   Yechilgan: <b>{solved}</b>",
+        f"👥 Taklif: {refs}   ·   🗝️ Kutayotgan: {pend}",
+        f"Kirgan: {time.strftime('%Y-%m-%d', time.localtime(created))}   ·   "
+        f"Oxirgi: {time.strftime('%Y-%m-%d %H:%M', time.localtime(updated))}",
+    ]
+    if hits:
+        lines.append(f"⚠️ Ball chegaradan oshgan: <b>{hits}</b> marta")
+    if banned:
+        lines.append(f"🚫 <b>BAN</b>" + (f" — {html_escape(reason)}" if reason else ""))
+    return "\n".join(lines)
+
+
+@dp.message(Command("admin"), admin_only)
+async def cmd_admin(message: Message):
+    s = await db.admin_stats()
+    await message.answer(
+        "🛠 <b>ADMIN PANEL</b>\n\n"
+        "👥 <b>O'yinchilar</b>\n"
+        f"   Jami: <b>{s['total']}</b>\n"
+        f"   Bugun yangi: <b>+{s['new_day']}</b> | Haftada: <b>+{s['new_week']}</b>\n"
+        f"   🚫 Ban: <b>{s['banned']}</b> | ⚠️ Belgilangan: <b>{s['flagged']}</b>\n\n"
+        "🟢 <b>Faollik</b>\n"
+        f"   Bugun: <b>{s['active_day']}</b> | Haftada: <b>{s['active_week']}</b>\n"
+        f"   🕊️ Kanalga a'zo: <b>{s['channel']}</b> | 👥 Taklif: <b>{s['refs']}</b>\n\n"
+        "💎 <b>Ball</b>\n"
+        f"   Eng yuqori: <b>{s['score_max']}</b> | Jami: <b>{s['score_sum']}</b>\n\n"
+        "⭐ <b>To'lovlar</b>\n"
+        f"   {s['pay_count']} ta | {s['pay_stars']} ⭐ | {s['pay_keys']} 🗝️\n\n"
+        "<b>Buyruqlar</b>\n"
+        "<code>/uinfo ID|@user</code> — o'yinchi ma'lumoti\n"
+        "<code>/ban ID|@user [sabab]</code> — ban qilish\n"
+        "<code>/unban ID|@user</code> — bandan chiqarish\n"
+        "<code>/give ID|@user N</code> — N ta kalit berish\n"
+        "<code>/suspects</code> — shubhali hisoblar\n"
+        "<code>/broadcast matn</code> — hammaga xabar\n"
+        "<code>/post @kanal</code> — kanalga post (matn + rasm)\n"
+        "<code>/refund ID</code> — Stars to'lovini qaytarish\n"
+        "<code>/stats</code> — qisqa hisobot\n"
+        "<code>/top</code> — reyting"
+    )
+
+
+@dp.message(Command("uinfo"), admin_only)
+async def cmd_uinfo(message: Message):
+    parts = (message.text or "").split()
+    if len(parts) < 2:
+        await message.answer("Foydalanish: <code>/uinfo ID|@username</code>")
+        return
+    row = await db.find_user(parts[1])
+    if not row:
+        await message.answer("❌ Topilmadi.")
+        return
+    await message.answer(_fmt_user(row))
+
+
+@dp.message(Command("ban"), admin_only)
+async def cmd_ban(message: Message):
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 2:
+        await message.answer("Foydalanish: <code>/ban ID|@username [sabab]</code>")
+        return
+    row = await db.find_user(parts[1])
+    if not row:
+        await message.answer("❌ Topilmadi.")
+        return
+    uid = row[0]
+    if uid in ADMINS:
+        await message.answer("❌ Adminni ban qilib bo'lmaydi.")
+        return
+    reason = parts[2] if len(parts) > 2 else ""
+    await db.set_banned(uid, True, reason)
+    await message.answer(
+        f"🚫 <code>{uid}</code> ban qilindi."
+        + (f"\nSabab: {html_escape(reason)}" if reason else ""))
+    # Xabar bermaslik ham mumkin, lekin odam sababini bilgani adolatli
+    try:
+        await message.bot.send_message(
+            uid, "🚫 Your account has been blocked."
+                 + (f"\nReason: {html_escape(reason)}" if reason else ""))
+    except Exception:
+        pass
+
+
+@dp.message(Command("unban"), admin_only)
+async def cmd_unban(message: Message):
+    parts = (message.text or "").split()
+    if len(parts) < 2:
+        await message.answer("Foydalanish: <code>/unban ID|@username</code>")
+        return
+    row = await db.find_user(parts[1])
+    if not row:
+        await message.answer("❌ Topilmadi.")
+        return
+    await db.set_banned(row[0], False)
+    await message.answer(f"✅ <code>{row[0]}</code> bandan chiqarildi.")
+    try:
+        await message.bot.send_message(row[0], "✅ Your account is active again.")
+    except Exception:
+        pass
+
+
+@dp.message(Command("give"), admin_only)
+async def cmd_give(message: Message):
+    parts = (message.text or "").split()
+    if len(parts) < 3 or not parts[2].lstrip("-").isdigit():
+        await message.answer("Foydalanish: <code>/give ID|@username 10</code>")
+        return
+    row = await db.find_user(parts[1])
+    if not row:
+        await message.answer("❌ Topilmadi.")
+        return
+    n = max(-1000, min(int(parts[2]), 1000))
+    await db.grant_keys(row[0], n)
+    await message.answer(
+        f"🗝️ <code>{row[0]}</code> uchun <b>{n}</b> kalit yozildi.\n"
+        "<i>O'yinchi ilovani ochganda qo'shiladi.</i>")
+
+
+@dp.message(Command("suspects"), admin_only)
+async def cmd_suspects(message: Message):
+    rows = await db.suspects()
+    if not rows:
+        await message.answer("✅ Shubhali hisob yo'q.")
+        return
+    lines = []
+    for uid, uname, name, score, hits, banned in rows:
+        tag = "🚫 " if banned else ""
+        lines.append(
+            f"{tag}<b>{html_escape(name or 'Player')}</b>"
+            + (f" (@{html_escape(uname)})" if uname else "")
+            + f"\n   <code>{uid}</code> · {score} 💎 · ⚠️ {hits} marta")
+    await message.answer(
+        "⚠️ <b>Shubhali hisoblar</b>\n"
+        "<i>Ball o'yin bera oladigan chegaradan oshgan. Bu eski nusxa yoki "
+        "sinxronlash tufayli ham bo'lishi mumkin — avtomatik ban yo'q.</i>\n\n"
+        + "\n".join(lines))
+
+
+@dp.message(Command("broadcast"), admin_only)
+async def cmd_broadcast(message: Message):
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer("Foydalanish: <code>/broadcast xabar matni</code>")
+        return
+    body = parts[1]
+    ids = await db.broadcast_ids()
+    note = await message.answer(f"📢 {len(ids)} ta o'yinchiga yuborilmoqda...")
+
+    sent = failed = blocked = 0
+    kb = play_keyboard()
+    for i, uid in enumerate(ids, 1):
+        try:
+            await message.bot.send_message(uid, body, reply_markup=kb)
+            sent += 1
+        except TelegramRetryAfter as e:
+            # Telegram "sekinlashtir" desa — aynan shuncha kutamiz
+            await asyncio.sleep(min(e.retry_after, 30))
+            try:
+                await message.bot.send_message(uid, body, reply_markup=kb)
+                sent += 1
+            except Exception:
+                failed += 1
+        except TelegramForbiddenError:
+            blocked += 1        # bot bloklangan yoki chat o'chirilgan
+        except Exception:
+            failed += 1
+
+        # Telegram ommaviy yuborishda ~30 xabar/s dan ko'pini qabul
+        # qilmaydi. 25 ta/s — xavfsiz tezlik.
+        await asyncio.sleep(0.04)
+        if i % 200 == 0:
+            try:
+                await note.edit_text(f"📢 {i}/{len(ids)} ...")
+            except Exception:
+                pass
+
+    await message.answer(
+        f"✅ Yuborildi: <b>{sent}</b>\n"
+        f"🚫 Bloklagan: <b>{blocked}</b>\n"
+        f"❌ Xato: <b>{failed}</b>")
 
 
 # --------------------------- Stars bilan to'lov -------------------------------
@@ -2090,6 +2421,20 @@ async def main():
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     log.info("Web server: http://0.0.0.0:%d", PORT)
+
+    # Buyruqlar menyusi — chatdagi "/" tugmasida ko'rinadi.
+    #
+    # Admin buyruqlari ATAYLAB kiritilmagan: bu ro'yxatni hamma ko'radi
+    # va /ban, /broadcast kabi buyruqlarni oshkor qilishning hojati yo'q.
+    try:
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Play Apex Words"),
+            BotCommand(command="invite", description="Invite friends, earn keys"),
+            BotCommand(command="top", description="Leaderboard"),
+        ])
+        log.info("Buyruqlar menyusi sozlandi")
+    except Exception as e:
+        log.warning("Buyruqlar menyusi sozlanmadi: %s", e)
 
     if WEBAPP_URL.startswith("https://"):
         try:
